@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -84,6 +85,55 @@ class DatabaseTest {
     assertFalse(backups.contains("mailboxes-2020-01-06.db"));
     assertTrue(backups.contains("mailboxes-2020-01-07.db"));
     assertTrue(Files.exists(BACKUP_DIR.resolve("notes.txt")));
+  }
+
+  @Test
+  void keepsNumberOfBackupsFromSettings() throws IOException, SQLException {
+    Database.prepareDataDir();
+    Database.initSchema();
+    new SettingsRepository().put(Setting.BACKUPS_TO_KEEP, "5");
+    Files.createDirectories(BACKUP_DIR);
+    for (var day = 1; day <= 10; day++) {
+      Files.createFile(BACKUP_DIR.resolve(String.format("mailboxes-2020-01-%02d.db", day)));
+    }
+
+    Database.backupDaily();
+
+    var backups = listBackups();
+    assertEquals(5, backups.size());
+    assertTrue(backups.contains("mailboxes-" + LocalDate.now() + ".db"));
+    assertTrue(backups.contains("mailboxes-2020-01-07.db"));
+    assertFalse(backups.contains("mailboxes-2020-01-06.db"));
+  }
+
+  @Test
+  void keepsTodaysBackupEvenIfSettingIsZero() throws IOException, SQLException {
+    Database.prepareDataDir();
+    Database.initSchema();
+    new SettingsRepository().put(Setting.BACKUPS_TO_KEEP, "0");
+    Files.createDirectories(BACKUP_DIR);
+    Files.createFile(BACKUP_DIR.resolve("mailboxes-2020-01-01.db"));
+
+    Database.backupDaily();
+
+    assertEquals(java.util.List.of("mailboxes-" + LocalDate.now() + ".db"), listBackups());
+  }
+
+  @Test
+  void upgradesDatabaseCreatedBeforeSettingsExisted() throws SQLException {
+    Database.prepareDataDir();
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("CREATE TABLE mailboxes (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+          + "first_name TEXT NOT NULL, last_name TEXT NOT NULL, business_title TEXT, "
+          + "box_number TEXT NOT NULL, box_name TEXT, phone TEXT NOT NULL, email TEXT, "
+          + "end_date TEXT)");
+    }
+
+    Database.initSchema();
+    var settings = new SettingsRepository();
+    settings.put(Setting.RENEWAL_WINDOW_DAYS, "45");
+
+    assertEquals(45, settings.getInt(Setting.RENEWAL_WINDOW_DAYS));
   }
 
   private static java.util.List<String> listBackups() throws IOException {

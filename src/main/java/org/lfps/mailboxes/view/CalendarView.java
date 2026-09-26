@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
@@ -104,8 +103,7 @@ public class CalendarView {
     var layout = new VBox(8, backBtn, header, calendarGrid, statusLabel);
     layout.setPadding(new Insets(15));
 
-    stage.setScene(new Scene(layout));
-    stage.show();
+    AppWindow.show(stage, layout);
   }
 
   private static VBox buildDayCell(int day, List<Mailbox> mailboxes) {

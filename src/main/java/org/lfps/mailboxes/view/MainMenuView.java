@@ -2,7 +2,6 @@ package org.lfps.mailboxes.view;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
@@ -43,8 +42,7 @@ public class MainMenuView {
     grid.add(calendarBtn, 0, 1);
     grid.add(renewalsBtn, 1, 1);
 
-    stage.setScene(new Scene(grid));
-    stage.show();
+    AppWindow.show(stage, grid);
   }
 
   private MainMenuView() {

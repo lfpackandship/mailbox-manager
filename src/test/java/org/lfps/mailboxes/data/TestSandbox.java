@@ -5,7 +5,7 @@ import java.nio.file.Paths;
 /**
  * Guards tests that write to or delete the data directory.
  */
-final class TestSandbox {
+public final class TestSandbox {
 
   /**
    * Fails unless the data directory is inside {@code target/test-home}, as
@@ -15,7 +15,7 @@ final class TestSandbox {
    *
    * @throws IllegalStateException if the data directory is the real one
    */
-  static void require() {
+  public static void require() {
     var sandbox = Paths.get("target", "test-home").toString();
     if (!Database.dataDir().toString().contains(sandbox)) {
       throw new IllegalStateException("Refusing to run against the real data directory "

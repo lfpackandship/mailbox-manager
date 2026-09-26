@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
@@ -21,16 +20,16 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.MailboxRepository;
+import org.lfps.mailboxes.data.Setting;
+import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.model.Mailbox;
 
 /**
  * Lists mailboxes whose box rental has already expired and those expiring
- * within the next {@value #UPCOMING_WINDOW_DAYS} days, each sorted with the
- * most urgent entry first.
+ * within the number of days set by {@link Setting#RENEWAL_WINDOW_DAYS}, each
+ * sorted with the most urgent entry first.
  */
 public class RenewalsView {
-
-  private static final int UPCOMING_WINDOW_DAYS = 30;
 
   /**
    * Builds and displays the renewals list on the given stage.
@@ -42,22 +41,13 @@ public class RenewalsView {
     var today = LocalDate.now();
     var pastDue = List.<Mailbox>of();
     var upcoming = List.<Mailbox>of();
+    var windowDays = Integer.parseInt(Setting.RENEWAL_WINDOW_DAYS.defaultValue());
 
     try {
+      windowDays = new SettingsRepository().getInt(Setting.RENEWAL_WINDOW_DAYS);
       var mailboxes = new MailboxRepository().findAll();
-
-      pastDue = mailboxes.stream()
-          .filter(m -> m.getEndDate() != null && m.getEndDate().isBefore(today))
-          .sorted(Comparator.comparing(Mailbox::getEndDate))
-          .collect(Collectors.toList());
-
-      var windowEnd = today.plusDays(UPCOMING_WINDOW_DAYS);
-      upcoming = mailboxes.stream()
-          .filter(m -> m.getEndDate() != null
-              && !m.getEndDate().isBefore(today)
-              && !m.getEndDate().isAfter(windowEnd))
-          .sorted(Comparator.comparing(Mailbox::getEndDate))
-          .collect(Collectors.toList());
+      pastDue = pastDue(mailboxes, today);
+      upcoming = upcoming(mailboxes, today, windowDays);
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
       statusLabel.setText("Failed to load mailboxes: " + e.getMessage());
@@ -90,7 +80,7 @@ public class RenewalsView {
     var pastDueHeader = new Label("Past Due");
     pastDueHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
 
-    var upcomingHeader = new Label("Upcoming (next " + UPCOMING_WINDOW_DAYS + " days)");
+    var upcomingHeader = new Label("Upcoming (next " + windowDays + " days)");
     upcomingHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
 
     var backBtn = new Button("Back");
@@ -107,8 +97,31 @@ public class RenewalsView {
         statusLabel);
     layout.setPadding(new Insets(20));
 
-    stage.setScene(new Scene(layout));
-    stage.show();
+    AppWindow.show(stage, layout);
+  }
+
+  /**
+   * Returns the mailboxes whose end date is before today, earliest first.
+   */
+  static List<Mailbox> pastDue(List<Mailbox> mailboxes, LocalDate today) {
+    return mailboxes.stream()
+        .filter(m -> m.getEndDate() != null && m.getEndDate().isBefore(today))
+        .sorted(Comparator.comparing(Mailbox::getEndDate))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Returns the mailboxes whose end date is from today through
+   * {@code windowDays} days from now inclusive, earliest first.
+   */
+  static List<Mailbox> upcoming(List<Mailbox> mailboxes, LocalDate today, int windowDays) {
+    var windowEnd = today.plusDays(windowDays);
+    return mailboxes.stream()
+        .filter(m -> m.getEndDate() != null
+            && !m.getEndDate().isBefore(today)
+            && !m.getEndDate().isAfter(windowEnd))
+        .sorted(Comparator.comparing(Mailbox::getEndDate))
+        .collect(Collectors.toList());
   }
 
   private static TableView<Mailbox> buildTable(LocalDate today) {

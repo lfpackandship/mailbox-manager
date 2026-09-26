@@ -22,8 +22,6 @@ public class Database {
 
   private static final String FILE_NAME = "mailboxes.db";
 
-  private static final int BACKUPS_TO_KEEP = 30;
-
   private static final Path DATA_DIR = resolveDataDir();
 
   private static final Path DB_PATH = DATA_DIR.resolve(FILE_NAME);
@@ -73,7 +71,8 @@ public class Database {
 
   /**
    * Writes today's backup to the {@code backups} folder if one doesn't exist
-   * yet, then deletes all but the newest {@value #BACKUPS_TO_KEEP} backups.
+   * yet, then deletes all but the newest backups, keeping as many as the
+   * {@link Setting#BACKUPS_TO_KEEP} setting allows.
    *
    * @throws RuntimeException if the backup cannot be written
    */
@@ -88,11 +87,13 @@ public class Database {
         }
       }
 
+      // Always keep at least today's backup, even if the setting is out of range.
+      var backupsToKeep = Math.max(1, new SettingsRepository().getInt(Setting.BACKUPS_TO_KEEP));
       try (Stream<Path> backups = Files.list(BACKUP_DIR)) {
         var old = backups
             .filter(p -> p.getFileName().toString().matches("mailboxes-\\d{4}-\\d{2}-\\d{2}\\.db"))
             .sorted(Comparator.reverseOrder())
-            .skip(BACKUPS_TO_KEEP)
+            .skip(backupsToKeep)
             .collect(Collectors.toList());
         for (var path : old) {
           Files.delete(path);
@@ -104,9 +105,9 @@ public class Database {
   }
 
   /**
-   * Creates the {@code mailboxes} and {@code business_names} tables if they
-   * don't already exist, and migrates older databases that predate the
-   * {@code box_name} and {@code end_date} columns.
+   * Creates the {@code mailboxes}, {@code business_names}, and
+   * {@code settings} tables if they don't already exist, and migrates older
+   * databases that predate the {@code box_name} and {@code end_date} columns.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -128,9 +129,14 @@ public class Database {
         + "name TEXT NOT NULL, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
+    var createSettings = "CREATE TABLE IF NOT EXISTS settings ("
+        + "key TEXT PRIMARY KEY, "
+        + "value TEXT NOT NULL)";
+
     try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
       stmt.execute(createMailboxes);
       stmt.execute(createBusinessNames);
+      stmt.execute(createSettings);
 
       try {
         stmt.execute("ALTER TABLE mailboxes ADD COLUMN box_name TEXT");

@@ -9,7 +9,6 @@ import org.lfps.mailboxes.model.Mailbox;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
@@ -146,8 +145,7 @@ public class ManageBoxesView {
         statusLabel);
     layout.setPadding(new Insets(20));
 
-    stage.setScene(new Scene(layout));
-    stage.show();
+    AppWindow.show(stage, layout);
   }
 
   /**

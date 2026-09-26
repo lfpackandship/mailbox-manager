@@ -4,7 +4,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 
 import javafx.geometry.Insets;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
@@ -148,8 +147,7 @@ public class AddBoxView {
     var layout = new VBox(8, backBtn, grid, submitBtn, resultLabel);
     layout.setPadding(new Insets(15));
 
-    stage.setScene(new Scene(layout));
-    stage.show();
+    AppWindow.show(stage, layout);
   }
 
   private AddBoxView() {
