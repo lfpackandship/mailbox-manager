@@ -1,13 +1,16 @@
 package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -48,6 +51,21 @@ public class AddBoxView {
 
     var emailField = new TextField();
     emailField.setPromptText("optional");
+
+    var endDateField = new DatePicker();
+    endDateField.setPrefWidth(160);
+
+    var oneMonthBtn = new Button("1 Month");
+    oneMonthBtn.setOnAction(e -> endDateField.setValue(LocalDate.now().plusMonths(1)));
+
+    var threeMonthsBtn = new Button("3 Months");
+    threeMonthsBtn.setOnAction(e -> endDateField.setValue(LocalDate.now().plusMonths(3)));
+
+    var sixMonthsBtn = new Button("6 Months");
+    sixMonthsBtn.setOnAction(e -> endDateField.setValue(LocalDate.now().plusMonths(6)));
+
+    var twelveMonthsBtn = new Button("12 Months");
+    twelveMonthsBtn.setOnAction(e -> endDateField.setValue(LocalDate.now().plusMonths(12)));
 
     for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
         boxNumber, boxNameField, phoneField, emailField }) {
@@ -91,7 +109,7 @@ public class AddBoxView {
 
       var mailbox = new Mailbox(0, firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumber.getText(), boxNameField.getText(), phone, email,
-          businessNamesEditor.getNames());
+          businessNamesEditor.getNames(), endDateField.getValue());
 
       try {
         repository.insert(mailbox);
@@ -113,9 +131,10 @@ public class AddBoxView {
     grid.addRow(0, new Label("First Name:"), firstNameField, new Label("Last Name:"), lastNameField);
     grid.addRow(1, new Label("Business Title:"), businessTitleField, new Label("Box Number:"), boxNumber);
     grid.addRow(2, new Label("Box Name:"), boxNameField, new Label("Phone Number:"), phoneField);
-    grid.addRow(3, new Label("Email:"), emailField);
-    grid.add(new Label("Alternate Business Names:"), 0, 4, 4, 1);
-    grid.add(businessNamesEditor, 0, 5, 4, 1);
+    grid.addRow(3, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
+    grid.add(new HBox(8, oneMonthBtn, threeMonthsBtn, sixMonthsBtn, twelveMonthsBtn), 0, 4, 4, 1);
+    grid.add(new Label("Alternate Business Names:"), 0, 5, 4, 1);
+    grid.add(businessNamesEditor, 0, 6, 4, 1);
 
     var layout = new VBox(8, backBtn, grid, submitBtn, resultLabel);
     layout.setPadding(new Insets(15));

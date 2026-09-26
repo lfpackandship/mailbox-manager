@@ -1,5 +1,6 @@
 package org.lfps.mailboxes.model;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +20,7 @@ public final class Mailbox {
   private final String phone;
   private final String email;
   private final List<String> alternateBusinessNames;
+  private final LocalDate endDate;
 
   /**
    * Creates a mailbox record.
@@ -33,10 +35,11 @@ public final class Mailbox {
    * @param email the holder's email address, or blank/null if none
    * @param alternateBusinessNames additional business names (DBAs) that also
    *     receive mail at this box; {@code null} is treated as empty
+   * @param endDate the date the box rental ends, or {@code null} if not set
    */
   public Mailbox(int id, String firstName, String lastName, String businessTitle,
       String boxNumber, String boxName, String phone, String email,
-      List<String> alternateBusinessNames) {
+      List<String> alternateBusinessNames, LocalDate endDate) {
     this.id = id;
     this.firstName = firstName;
     this.lastName = lastName;
@@ -48,6 +51,7 @@ public final class Mailbox {
     this.alternateBusinessNames = alternateBusinessNames == null
         ? Collections.emptyList()
         : Collections.unmodifiableList(new ArrayList<>(alternateBusinessNames));
+    this.endDate = endDate;
   }
 
   /**
@@ -130,6 +134,15 @@ public final class Mailbox {
    */
   public List<String> getAlternateBusinessNames() {
     return alternateBusinessNames;
+  }
+
+  /**
+   * Returns the date the box rental ends.
+   *
+   * @return the end date, or {@code null} if not set
+   */
+  public LocalDate getEndDate() {
+    return endDate;
   }
 
 }

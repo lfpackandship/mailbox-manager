@@ -25,7 +25,7 @@ public class Database {
   /**
    * Creates the {@code mailboxes} and {@code business_names} tables if they
    * don't already exist, and migrates older databases that predate the
-   * {@code box_name} column.
+   * {@code box_name} and {@code end_date} columns.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -38,7 +38,8 @@ public class Database {
         + "box_number TEXT NOT NULL, "
         + "box_name TEXT, "
         + "phone TEXT NOT NULL, "
-        + "email TEXT)";
+        + "email TEXT, "
+        + "end_date TEXT)";
 
     var createBusinessNames = "CREATE TABLE IF NOT EXISTS business_names ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -54,6 +55,12 @@ public class Database {
         stmt.execute("ALTER TABLE mailboxes ADD COLUMN box_name TEXT");
       } catch (SQLException alreadyMigrated) {
         // box_name column already exists on a pre-existing database.
+      }
+
+      try {
+        stmt.execute("ALTER TABLE mailboxes ADD COLUMN end_date TEXT");
+      } catch (SQLException alreadyMigrated) {
+        // end_date column already exists on a pre-existing database.
       }
     } catch (SQLException e) {
       throw new RuntimeException("Failed to initialize database schema", e);

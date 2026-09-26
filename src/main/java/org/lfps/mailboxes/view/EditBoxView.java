@@ -1,13 +1,16 @@
 package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -37,6 +40,21 @@ public class EditBoxView {
 
     var businessNamesEditor = new BusinessNamesEditor();
     businessNamesEditor.setNames(mailbox.getAlternateBusinessNames());
+
+    var endDateField = new DatePicker(mailbox.getEndDate());
+    endDateField.setPrefWidth(160);
+
+    var oneMonthBtn = new Button("1 Month");
+    oneMonthBtn.setOnAction(e -> extendEndDate(endDateField, 1));
+
+    var threeMonthsBtn = new Button("3 Months");
+    threeMonthsBtn.setOnAction(e -> extendEndDate(endDateField, 3));
+
+    var sixMonthsBtn = new Button("6 Months");
+    sixMonthsBtn.setOnAction(e -> extendEndDate(endDateField, 6));
+
+    var twelveMonthsBtn = new Button("12 Months");
+    twelveMonthsBtn.setOnAction(e -> extendEndDate(endDateField, 12));
 
     for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
         boxNumberField, boxNameField, phoneField, emailField }) {
@@ -80,7 +98,7 @@ public class EditBoxView {
 
       var updated = new Mailbox(mailbox.getId(), firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumberField.getText(), boxNameField.getText(), phone, email,
-          businessNamesEditor.getNames());
+          businessNamesEditor.getNames(), endDateField.getValue());
 
       try {
         repository.update(updated);
@@ -101,15 +119,23 @@ public class EditBoxView {
     grid.addRow(0, new Label("First Name:"), firstNameField, new Label("Last Name:"), lastNameField);
     grid.addRow(1, new Label("Business Title:"), businessTitleField, new Label("Box Number:"), boxNumberField);
     grid.addRow(2, new Label("Box Name:"), boxNameField, new Label("Phone Number:"), phoneField);
-    grid.addRow(3, new Label("Email:"), emailField);
-    grid.add(new Label("Alternate Business Names:"), 0, 4, 4, 1);
-    grid.add(businessNamesEditor, 0, 5, 4, 1);
+    grid.addRow(3, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
+    grid.add(new HBox(8, oneMonthBtn, threeMonthsBtn, sixMonthsBtn, twelveMonthsBtn), 0, 4, 4, 1);
+    grid.add(new Label("Alternate Business Names:"), 0, 5, 4, 1);
+    grid.add(businessNamesEditor, 0, 6, 4, 1);
 
     var layout = new VBox(8, cancelBtn, grid, saveBtn, resultLabel);
     layout.setPadding(new Insets(15));
 
     stage.setScene(new Scene(layout, 640, 480));
     stage.show();
+  }
+
+  private static void extendEndDate(DatePicker endDateField, int months) {
+    var current = endDateField.getValue();
+    endDateField.setValue(current == null
+        ? LocalDate.now().plusMonths(months)
+        : current.plusMonths(months));
   }
 
   private EditBoxView() {

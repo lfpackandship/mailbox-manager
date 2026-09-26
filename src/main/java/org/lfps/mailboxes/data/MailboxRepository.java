@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,14 +18,16 @@ import org.lfps.mailboxes.model.Mailbox;
 public class MailboxRepository {
 
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
-      + "(first_name, last_name, business_title, box_number, box_name, phone, email) "
-      + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+      + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date) "
+      + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
   private static final String SELECT_ALL_SQL = "SELECT id, first_name, last_name, "
-      + "business_title, box_number, box_name, phone, email FROM mailboxes ORDER BY box_number";
+      + "business_title, box_number, box_name, phone, email, end_date "
+      + "FROM mailboxes ORDER BY box_number";
 
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
-      + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ? WHERE id = ?";
+      + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ? "
+      + "WHERE id = ?";
 
   private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
 
@@ -89,7 +92,8 @@ public class MailboxRepository {
             rs.getString("box_name"),
             rs.getString("phone"),
             rs.getString("email"),
-            findBusinessNames(conn, id)));
+            findBusinessNames(conn, id),
+            rs.getString("end_date") == null ? null : LocalDate.parse(rs.getString("end_date"))));
       }
     }
 
@@ -108,7 +112,7 @@ public class MailboxRepository {
       try {
         try (PreparedStatement stmt = conn.prepareStatement(UPDATE_SQL)) {
           bindMailboxFields(stmt, mailbox);
-          stmt.setInt(8, mailbox.getId());
+          stmt.setInt(9, mailbox.getId());
           stmt.executeUpdate();
         }
         deleteBusinessNames(conn, mailbox.getId());
@@ -152,6 +156,7 @@ public class MailboxRepository {
     stmt.setString(5, mailbox.getBoxName());
     stmt.setString(6, mailbox.getPhone());
     stmt.setString(7, mailbox.getEmail());
+    stmt.setString(8, mailbox.getEndDate() == null ? null : mailbox.getEndDate().toString());
   }
 
   private void insertBusinessNames(Connection conn, int mailboxId, List<String> names) throws SQLException {

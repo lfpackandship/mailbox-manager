@@ -1,6 +1,7 @@
 package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
@@ -64,6 +65,9 @@ public class ManageBoxesView {
     var emailCol = new TableColumn<Mailbox, String>("Email");
     emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
+    var endDateCol = new TableColumn<Mailbox, LocalDate>("End Date");
+    endDateCol.setCellValueFactory(new PropertyValueFactory<>("endDate"));
+
     var columns = table.getColumns();
     columns.add(firstNameCol);
     columns.add(lastNameCol);
@@ -73,6 +77,7 @@ public class ManageBoxesView {
     columns.add(boxNameCol);
     columns.add(phoneCol);
     columns.add(emailCol);
+    columns.add(endDateCol);
 
     try {
       table.setItems(FXCollections.observableArrayList(repository.findAll()));
