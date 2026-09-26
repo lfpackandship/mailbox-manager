@@ -16,7 +16,7 @@ import javafx.scene.input.KeyEvent;
  * its thread, and pressing keys. Windows appear briefly on screen while the
  * tests run; CI provides a virtual display.
  */
-final class FxTestSupport {
+public final class FxTestSupport {
 
   private static final boolean MAC = System.getProperty("os.name", "").toLowerCase().contains("mac");
 
@@ -24,7 +24,7 @@ final class FxTestSupport {
    * Starts the JavaFX runtime if it isn't running, and keeps it running when
    * a test closes the last open window.
    */
-  static void start() {
+  public static void start() {
     try {
       Platform.startup(() -> { });
     } catch (IllegalStateException alreadyStarted) {
@@ -37,7 +37,7 @@ final class FxTestSupport {
    * Runs an action on the JavaFX thread and waits for its result, rethrowing
    * anything it throws.
    */
-  static <T> T call(Callable<T> action) {
+  public static <T> T call(Callable<T> action) {
     var result = new CompletableFuture<T>();
     Platform.runLater(() -> {
       try {
@@ -64,7 +64,7 @@ final class FxTestSupport {
   /**
    * Runs an action on the JavaFX thread and waits for it to finish.
    */
-  static void run(Runnable action) {
+  public static void run(Runnable action) {
     call(() -> {
       action.run();
       return null;
@@ -75,7 +75,7 @@ final class FxTestSupport {
    * Presses a key on a node, as the user would with it focused. Must be
    * called on the JavaFX thread.
    */
-  static void press(Node target, KeyCode key) {
+  public static void press(Node target, KeyCode key) {
     press(target, key, false);
   }
 
@@ -83,7 +83,7 @@ final class FxTestSupport {
    * Presses a key together with the platform's shortcut modifier (Cmd on
    * macOS, Ctrl elsewhere). Must be called on the JavaFX thread.
    */
-  static void pressWithShortcut(Node target, KeyCode key) {
+  public static void pressWithShortcut(Node target, KeyCode key) {
     press(target, key, true);
   }
 

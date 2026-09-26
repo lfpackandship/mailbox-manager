@@ -2,6 +2,7 @@ package org.lfps.mailboxes.data;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +25,14 @@ class DatabaseTest {
   @BeforeEach
   void freshDataDir() throws IOException {
     TestSandbox.require();
+    deleteRecursively(Database.dataDir());
+    Files.deleteIfExists(Paths.get("mailboxes.db"));
+  }
+
+  @AfterEach
+  void removeDataDir() throws IOException {
+    // Some tests leave a fake or broken database behind; don't let later
+    // test classes open it.
     deleteRecursively(Database.dataDir());
     Files.deleteIfExists(Paths.get("mailboxes.db"));
   }
@@ -104,6 +114,32 @@ class DatabaseTest {
     assertTrue(backups.contains("mailboxes-" + LocalDate.now() + ".db"));
     assertTrue(backups.contains("mailboxes-2020-01-07.db"));
     assertFalse(backups.contains("mailboxes-2020-01-06.db"));
+  }
+
+  @Test
+  void replacesLeftoverFromEarlierFailedBackup() throws IOException {
+    Database.prepareDataDir();
+    Database.initSchema();
+    Files.createDirectories(BACKUP_DIR);
+    var partial = BACKUP_DIR.resolve("mailboxes-" + LocalDate.now() + ".db.partial");
+    Files.writeString(partial, "half-written");
+
+    Database.backupDaily();
+
+    assertFalse(Files.exists(partial));
+    assertTrue(Files.size(BACKUP_DIR.resolve("mailboxes-" + LocalDate.now() + ".db")) > 0);
+  }
+
+  @Test
+  void failedBackupLeavesNothingThatLooksLikeTodaysBackup() throws IOException {
+    Database.prepareDataDir();
+    Files.writeString(Database.dataDir().resolve("mailboxes.db"), "this is not a SQLite database");
+
+    assertThrows(RuntimeException.class, Database::backupDaily);
+
+    try (Stream<Path> files = Files.list(BACKUP_DIR)) {
+      assertEquals(java.util.List.of(), files.collect(Collectors.toList()));
+    }
   }
 
   @Test

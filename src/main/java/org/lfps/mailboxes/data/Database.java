@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -72,7 +73,9 @@ public class Database {
   /**
    * Writes today's backup to the {@code backups} folder if one doesn't exist
    * yet, then deletes all but the newest backups, keeping as many as the
-   * {@link Setting#BACKUPS_TO_KEEP} setting allows.
+   * {@link Setting#BACKUPS_TO_KEEP} setting allows. The backup is written
+   * under a temporary name and renamed once complete, so a failed backup
+   * never leaves a partial file that looks like a finished one.
    *
    * @throws RuntimeException if the backup cannot be written
    */
@@ -81,9 +84,18 @@ public class Database {
     try {
       Files.createDirectories(BACKUP_DIR);
       if (!Files.exists(target)) {
-        try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
-          // VACUUM INTO produces a consistent copy even if the database is in use.
-          stmt.execute("VACUUM INTO '" + target.toString().replace("'", "''") + "'");
+        var partial = BACKUP_DIR.resolve(target.getFileName() + ".partial");
+        // VACUUM INTO refuses to overwrite a non-empty file, so clear out any
+        // leftover from an earlier failed attempt.
+        Files.deleteIfExists(partial);
+        try {
+          try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
+            // VACUUM INTO produces a consistent copy even if the database is in use.
+            stmt.execute("VACUUM INTO '" + partial.toString().replace("'", "''") + "'");
+          }
+          Files.move(partial, target, StandardCopyOption.ATOMIC_MOVE);
+        } finally {
+          Files.deleteIfExists(partial);
         }
       }
 
