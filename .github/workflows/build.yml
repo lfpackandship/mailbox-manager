@@ -37,6 +37,21 @@ jobs:
       # The phone formatter tests start JavaFX, which needs a display.
       - run: sudo apt-get update && sudo apt-get install -y xvfb
       - run: xvfb-run ./mvnw -B test
+      # Start the release jar the way users do, to catch problems that don't
+      # show up under Maven (such as the jar refusing to start on Java 21).
+      # The app must still be running after 15 seconds.
+      - name: Smoke-test the jar
+        run: |
+          ./mvnw -B -q package -DskipTests
+          mkdir -p "$RUNNER_TEMP/home"
+          xvfb-run java -Duser.home="$RUNNER_TEMP/home" -jar target/*-shaded.jar > jar.log 2>&1 &
+          sleep 15
+          if ! pgrep -f -- '-shaded.jar' > /dev/null; then
+            echo "The jar exited during start-up:"
+            cat jar.log
+            exit 1
+          fi
+          pkill -f -- '-shaded.jar'
 
   jar:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'

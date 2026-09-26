@@ -25,6 +25,11 @@ computer.
    java -jar mailbox-manager-<version>-<platform>.jar
    ```
 
+If double-clicking shows "A Java Exception has occurred" or nothing happens,
+run the jar from a terminal as above to see the actual error, and check that
+`java -version` reports 17 or newer. Double-clicking uses whichever Java your
+computer has set up for jar files, which may be an older one.
+
 To upgrade, download the new jar and run it instead of the old one. Your data
 is stored separately (see below) and carries over automatically.
 
