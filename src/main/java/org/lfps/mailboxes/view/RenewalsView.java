@@ -124,6 +124,20 @@ public class RenewalsView {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Describes how far a rental end date is from today, such as "In 3 days",
+   * "Due today", or "2 days overdue".
+   */
+  static String dueStatus(LocalDate endDate, LocalDate today) {
+    var days = ChronoUnit.DAYS.between(today, endDate);
+    if (days < 0) {
+      return -days + " day" + (days == -1 ? "" : "s") + " overdue";
+    } else if (days == 0) {
+      return "Due today";
+    }
+    return "In " + days + " day" + (days == 1 ? "" : "s");
+  }
+
   private static TableView<Mailbox> buildTable(LocalDate today) {
     var table = new TableView<Mailbox>();
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
@@ -143,19 +157,8 @@ public class RenewalsView {
     endDateCol.setCellValueFactory(new PropertyValueFactory<>("endDate"));
 
     var statusCol = new TableColumn<Mailbox, String>("Status");
-    statusCol.setCellValueFactory(cellData -> {
-      var endDate = cellData.getValue().getEndDate();
-      var days = ChronoUnit.DAYS.between(today, endDate);
-      String text;
-      if (days < 0) {
-        text = -days + " day" + (days == -1 ? "" : "s") + " overdue";
-      } else if (days == 0) {
-        text = "Due today";
-      } else {
-        text = "In " + days + " day" + (days == 1 ? "" : "s");
-      }
-      return new SimpleStringProperty(text);
-    });
+    statusCol.setCellValueFactory(cellData ->
+        new SimpleStringProperty(dueStatus(cellData.getValue().getEndDate(), today)));
 
     var columns = table.getColumns();
     columns.add(nameCol);

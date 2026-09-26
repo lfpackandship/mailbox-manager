@@ -3,6 +3,15 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/wgoodzey/mailbox-manager/releases).
 
+## Unreleased
+
+### Changed
+
+- Manage Boxes shows only the box number, name, business title, and phone, so
+  the table is easier to scan. Double-click a box, or select it and click
+  **View** or press Enter, to see its full details in a separate window, with
+  an **Edit** button.
+
 ## 1.3.0 – 2026-09-26
 
 ### Added

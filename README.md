@@ -78,12 +78,15 @@ The main menu has four screens:
   rental ends, and any forwarding addresses. The rental length buttons (1, 3,
   6, and 12 months unless changed in Settings) set the end date that far from
   today.
-- **Manage Boxes** – every box in one table, with a search field. Search
-  matches any part of a name, business name, box number, box name, phone
-  number, email, or forwarding address (including its note), and phone
-  numbers match with or without formatting. Select a row to edit or delete it.
-  When editing, the rental length buttons extend the current end date, which
-  makes renewals quick.
+- **Manage Boxes** – every box in one table showing its box number, holder's
+  name, business title, and phone, with a search field. Search matches any
+  part of a name, business name, box number, box name, phone number, email,
+  or forwarding address (including its note), and phone numbers match with or
+  without formatting. To see everything recorded for a box, double-click it,
+  or select it and click **View** or press Enter; the details open in their
+  own window with an **Edit** button. Select a row to edit or delete it. When
+  editing, the rental length buttons extend the current end date, which makes
+  renewals quick.
 - **Calendar** – a month view with each box shown on the day its rental ends.
   Hover over an entry for the holder's name.
 - **Renewals** – boxes that are past due, and boxes due within the next 30 days

@@ -1,7 +1,8 @@
 package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
-import java.time.LocalDate;
+import java.util.List;
+import java.util.function.Consumer;
 
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
@@ -14,18 +15,21 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /**
- * Lists all mailboxes in a searchable table with actions to edit or delete a
- * selected entry.
+ * Lists all mailboxes in a searchable table showing the key details of each,
+ * with actions to view the full entry (also by double-clicking a row or
+ * pressing Enter), edit it, or delete it.
  */
 public class ManageBoxesView {
 
@@ -43,7 +47,12 @@ public class ManageBoxesView {
     var statusLabel = new Label();
 
     var table = new TableView<Mailbox>();
+    table.setId("boxTable");
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+
+    // Only the details needed to pick out a box; View shows the rest.
+    var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
+    boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
 
     var firstNameCol = new TableColumn<Mailbox, String>("First Name");
     firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
@@ -54,35 +63,10 @@ public class ManageBoxesView {
     var businessTitleCol = new TableColumn<Mailbox, String>("Business Title");
     businessTitleCol.setCellValueFactory(new PropertyValueFactory<>("businessTitle"));
 
-    var alternateBusinessNamesCol = new TableColumn<Mailbox, String>("Alternate Business Names");
-    alternateBusinessNamesCol.setCellValueFactory(cellData -> new SimpleStringProperty(
-        String.join(", ", cellData.getValue().getAlternateBusinessNames())));
-
-    var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
-    boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
-
-    var boxNameCol = new TableColumn<Mailbox, String>("Box Name");
-    boxNameCol.setCellValueFactory(new PropertyValueFactory<>("boxName"));
-
     var phoneCol = new TableColumn<Mailbox, String>("Phone");
     phoneCol.setCellValueFactory(new PropertyValueFactory<>("phone"));
 
-    var emailCol = new TableColumn<Mailbox, String>("Email");
-    emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
-
-    var endDateCol = new TableColumn<Mailbox, LocalDate>("End Date");
-    endDateCol.setCellValueFactory(new PropertyValueFactory<>("endDate"));
-
-    var columns = table.getColumns();
-    columns.add(firstNameCol);
-    columns.add(lastNameCol);
-    columns.add(businessTitleCol);
-    columns.add(alternateBusinessNamesCol);
-    columns.add(boxNumberCol);
-    columns.add(boxNameCol);
-    columns.add(phoneCol);
-    columns.add(emailCol);
-    columns.add(endDateCol);
+    table.getColumns().setAll(List.of(boxNumberCol, firstNameCol, lastNameCol, businessTitleCol, phoneCol));
 
     var allMailboxes = FXCollections.<Mailbox>observableArrayList();
     try {
@@ -95,21 +79,45 @@ public class ManageBoxesView {
     table.setItems(mailboxes);
 
     var searchField = new TextField();
+    searchField.setId("searchField");
     searchField.setPromptText("Search by name, business, box, phone, email, or forwarding address");
     searchField.textProperty().addListener((obs, oldQuery, query) ->
         mailboxes.setPredicate(m -> matches(m, query)));
     searchField.setText(initialQuery);
 
-    var editBtn = new Button("Edit");
-    editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
-    editBtn.setOnAction(e -> {
+    Consumer<Mailbox> edit = mailbox ->
+        EditBoxView.show(stage, mailbox, () -> show(stage, searchField.getText()));
+    Consumer<Mailbox> view = mailbox -> BoxDetailsView.show(stage, mailbox, () -> edit.accept(mailbox));
+
+    // Double-click a row, or press Enter on it, to see the full entry.
+    table.setRowFactory(tableView -> {
+      var row = new TableRow<Mailbox>();
+      row.setOnMouseClicked(e -> {
+        if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2 && !row.isEmpty()) {
+          view.accept(row.getItem());
+        }
+      });
+      return row;
+    });
+    table.setOnKeyPressed(e -> {
       var selected = table.getSelectionModel().getSelectedItem();
-      if (selected != null) {
-        EditBoxView.show(stage, selected, () -> show(stage, searchField.getText()));
+      if (e.getCode() == KeyCode.ENTER && selected != null) {
+        view.accept(selected);
       }
     });
 
+    var viewBtn = new Button("View");
+    viewBtn.setId("viewButton");
+    viewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+    viewBtn.setOnAction(e -> view.accept(table.getSelectionModel().getSelectedItem()));
+
+    var editBtn = new Button("Edit");
+    editBtn.setId("editButton");
+    editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+    editBtn.setOnAction(e -> edit.accept(table.getSelectionModel().getSelectedItem()));
+
     var deleteBtn = new Button("Delete");
+    deleteBtn.setId("deleteButton");
     deleteBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
     deleteBtn.setOnAction(e -> {
       var selected = table.getSelectionModel().getSelectedItem();
@@ -121,11 +129,13 @@ public class ManageBoxesView {
           "Delete box " + selected.getBoxNumber() + " for "
               + selected.getFirstName() + " " + selected.getLastName() + "?",
           ButtonType.YES, ButtonType.NO);
+      AppWindow.applyTextSize(confirm);
       confirm.showAndWait()
           .filter(response -> response == ButtonType.YES)
           .ifPresent(response -> {
             try {
               repository.delete(selected.getId());
+              BoxDetailsView.close();
               show(stage, searchField.getText());
             } catch (SQLException ex) {
               statusLabel.setStyle("-fx-text-fill: red;");
@@ -141,7 +151,7 @@ public class ManageBoxesView {
         backBtn,
         searchField,
         table,
-        new HBox(10, editBtn, deleteBtn),
+        new HBox(10, viewBtn, editBtn, deleteBtn),
         statusLabel);
     layout.setPadding(new Insets(20));
 
