@@ -1,5 +1,7 @@
 package org.lfps.mailboxes;
 
+import java.sql.SQLException;
+
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -31,9 +33,20 @@ public class AddBoxView {
 
     var submitBtn = new Button("Submit");
     var resultLabel = new Label();
+    var repository = new MailboxRepository();
 
     submitBtn.setOnAction(e -> {
       var errors = new StringBuilder();
+
+      if (firstNameField.getText().isBlank()) {
+        errors.append("First name is required.\n");
+      }
+      if (lastNameField.getText().isBlank()) {
+        errors.append("Last name is required.\n");
+      }
+      if (boxNumber.getText().isBlank()) {
+        errors.append("Box number is required.\n");
+      }
 
       var phone = phoneField.getText();
       if (phone.isBlank()) {
@@ -50,9 +63,19 @@ public class AddBoxView {
       if (errors.length() > 0) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText(errors.toString().trim());
-      } else {
+        return;
+      }
+
+      var mailbox = new Mailbox(0, firstNameField.getText(), lastNameField.getText(),
+          businessTitleField.getText(), boxNumber.getText(), phone, email);
+
+      try {
+        repository.insert(mailbox);
         resultLabel.setStyle("-fx-text-fill: green;");
-        resultLabel.setText("Submitted");
+        resultLabel.setText("Saved");
+      } catch (SQLException ex) {
+        resultLabel.setStyle("-fx-text-fill: red;");
+        resultLabel.setText("Failed to save: " + ex.getMessage());
       }
     });
 

@@ -10,6 +10,7 @@ public class App extends Application {
 
   @Override
   public void start(Stage stage) {
+    Database.initSchema();
     stage.setTitle("Mailbox Manager");
     MainMenuView.show(stage);
   }
