@@ -12,13 +12,16 @@ import org.lfps.mailboxes.view.MainMenuView;
 public class App extends Application {
 
   /**
-   * Initializes the database schema and shows the main menu.
+   * Locates the database, initializes its schema, takes the daily backup,
+   * and shows the main menu.
    *
    * @param stage the primary window supplied by the JavaFX runtime
    */
   @Override
   public void start(Stage stage) {
+    Database.prepareDataDir();
     Database.initSchema();
+    Database.backupDaily();
     stage.setTitle("Mailbox Manager");
     stage.setWidth(700);
     stage.setHeight(600);

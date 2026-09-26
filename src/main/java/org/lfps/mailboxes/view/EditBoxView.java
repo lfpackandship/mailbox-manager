@@ -78,6 +78,14 @@ public class EditBoxView {
       }
       if (boxNumberField.getText().isBlank()) {
         errors.append("Box number is required.\n");
+      } else {
+        try {
+          if (repository.isBoxNumberTaken(boxNumberField.getText(), mailbox.getId())) {
+            errors.append("Box " + boxNumberField.getText().trim() + " is already assigned to someone else.\n");
+          }
+        } catch (SQLException ex) {
+          errors.append("Could not check box number: " + ex.getMessage() + "\n");
+        }
       }
 
       var phone = phoneField.getText();

@@ -29,6 +29,9 @@ public class MailboxRepository {
       + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ? "
       + "WHERE id = ?";
 
+  private static final String BOX_NUMBER_TAKEN_SQL =
+      "SELECT 1 FROM mailboxes WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? LIMIT 1";
+
   private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
 
   private static final String INSERT_BUSINESS_NAME_SQL =
@@ -121,6 +124,26 @@ public class MailboxRepository {
       } catch (SQLException e) {
         conn.rollback();
         throw e;
+      }
+    }
+  }
+
+  /**
+   * Checks whether another mailbox already uses the given box number,
+   * ignoring surrounding whitespace and letter case.
+   *
+   * @param boxNumber the box number to look for
+   * @param excludeId the id of the mailbox being edited, or {@code 0} when adding
+   * @return {@code true} if a different mailbox already has this box number
+   * @throws SQLException if the query fails
+   */
+  public boolean isBoxNumberTaken(String boxNumber, int excludeId) throws SQLException {
+    try (Connection conn = Database.connect();
+        PreparedStatement stmt = conn.prepareStatement(BOX_NUMBER_TAKEN_SQL)) {
+      stmt.setString(1, boxNumber.trim());
+      stmt.setInt(2, excludeId);
+      try (ResultSet rs = stmt.executeQuery()) {
+        return rs.next();
       }
     }
   }

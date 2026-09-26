@@ -7,6 +7,7 @@ import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
 
 import javafx.collections.FXCollections;
+import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -17,14 +18,15 @@ import javafx.scene.control.Label;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /**
- * Lists all mailboxes in a table with actions to edit or delete a selected
- * entry.
+ * Lists all mailboxes in a searchable table with actions to edit or delete a
+ * selected entry.
  */
 public class ManageBoxesView {
 
@@ -34,6 +36,10 @@ public class ManageBoxesView {
    * @param stage the window to render the list into
    */
   public static void show(Stage stage) {
+    show(stage, "");
+  }
+
+  private static void show(Stage stage, String initialQuery) {
     var repository = new MailboxRepository();
     var statusLabel = new Label();
 
@@ -79,19 +85,28 @@ public class ManageBoxesView {
     columns.add(emailCol);
     columns.add(endDateCol);
 
+    var allMailboxes = FXCollections.<Mailbox>observableArrayList();
     try {
-      table.setItems(FXCollections.observableArrayList(repository.findAll()));
+      allMailboxes.setAll(repository.findAll());
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
       statusLabel.setText("Failed to load mailboxes: " + e.getMessage());
     }
+    var mailboxes = new FilteredList<>(allMailboxes);
+    table.setItems(mailboxes);
+
+    var searchField = new TextField();
+    searchField.setPromptText("Search by name, business, box, phone, or email");
+    searchField.textProperty().addListener((obs, oldQuery, query) ->
+        mailboxes.setPredicate(m -> matches(m, query)));
+    searchField.setText(initialQuery);
 
     var editBtn = new Button("Edit");
     editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
     editBtn.setOnAction(e -> {
       var selected = table.getSelectionModel().getSelectedItem();
       if (selected != null) {
-        EditBoxView.show(stage, selected, () -> show(stage));
+        EditBoxView.show(stage, selected, () -> show(stage, searchField.getText()));
       }
     });
 
@@ -112,7 +127,7 @@ public class ManageBoxesView {
           .ifPresent(response -> {
             try {
               repository.delete(selected.getId());
-              show(stage);
+              show(stage, searchField.getText());
             } catch (SQLException ex) {
               statusLabel.setStyle("-fx-text-fill: red;");
               statusLabel.setText("Failed to delete: " + ex.getMessage());
@@ -125,6 +140,7 @@ public class ManageBoxesView {
 
     var layout = new VBox(10,
         backBtn,
+        searchField,
         table,
         new HBox(10, editBtn, deleteBtn),
         statusLabel);
@@ -132,6 +148,38 @@ public class ManageBoxesView {
 
     stage.setScene(new Scene(layout));
     stage.show();
+  }
+
+  /**
+   * Checks whether a mailbox matches every word of a search query. Each word
+   * may appear, case-insensitively, in any text field or alternate business
+   * name; a word made of digits also matches the phone number ignoring its
+   * formatting.
+   */
+  private static boolean matches(Mailbox mailbox, String query) {
+    if (query == null || query.isBlank()) {
+      return true;
+    }
+
+    var haystack = new StringBuilder();
+    for (var value : new String[] { mailbox.getFirstName(), mailbox.getLastName(),
+        mailbox.getBusinessTitle(), mailbox.getBoxNumber(), mailbox.getBoxName(),
+        mailbox.getPhone(), mailbox.getEmail() }) {
+      if (value != null) {
+        haystack.append(value).append('\n');
+      }
+    }
+    mailbox.getAlternateBusinessNames().forEach(name -> haystack.append(name).append('\n'));
+    var text = haystack.toString().toLowerCase();
+    var phoneDigits = mailbox.getPhone() == null ? "" : mailbox.getPhone().replaceAll("[^0-9]", "");
+
+    for (var word : query.toLowerCase().trim().split("\\s+")) {
+      var isNumber = word.matches("[0-9]+");
+      if (!text.contains(word) && !(isNumber && phoneDigits.contains(word))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private ManageBoxesView() {
