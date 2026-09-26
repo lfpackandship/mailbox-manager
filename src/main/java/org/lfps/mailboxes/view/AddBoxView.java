@@ -9,7 +9,6 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -53,23 +52,14 @@ public class AddBoxView {
     emailField.setPromptText("optional");
 
     var endDateField = new DatePicker();
-    endDateField.setPrefWidth(160);
+    endDateField.setStyle("-fx-pref-width: 12em;");
 
-    var oneMonthBtn = new Button("1 Month");
-    oneMonthBtn.setOnAction(e -> endDateField.setValue(LocalDate.now().plusMonths(1)));
-
-    var threeMonthsBtn = new Button("3 Months");
-    threeMonthsBtn.setOnAction(e -> endDateField.setValue(LocalDate.now().plusMonths(3)));
-
-    var sixMonthsBtn = new Button("6 Months");
-    sixMonthsBtn.setOnAction(e -> endDateField.setValue(LocalDate.now().plusMonths(6)));
-
-    var twelveMonthsBtn = new Button("12 Months");
-    twelveMonthsBtn.setOnAction(e -> endDateField.setValue(LocalDate.now().plusMonths(12)));
+    var rentalLengthButtons = RentalLengthButtons.create(
+        months -> endDateField.setValue(LocalDate.now().plusMonths(months)));
 
     for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
         boxNumber, boxNameField, phoneField, emailField }) {
-      field.setPrefWidth(160);
+      field.setStyle("-fx-pref-width: 12em;");
     }
 
     var submitBtn = new Button("Submit");
@@ -140,7 +130,7 @@ public class AddBoxView {
     grid.addRow(1, new Label("Business Title:"), businessTitleField, new Label("Box Number:"), boxNumber);
     grid.addRow(2, new Label("Box Name:"), boxNameField, new Label("Phone Number:"), phoneField);
     grid.addRow(3, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
-    grid.add(new HBox(8, oneMonthBtn, threeMonthsBtn, sixMonthsBtn, twelveMonthsBtn), 0, 4, 4, 1);
+    grid.add(rentalLengthButtons, 0, 4, 4, 1);
     grid.add(new Label("Alternate Business Names:"), 0, 5, 4, 1);
     grid.add(businessNamesEditor, 0, 6, 4, 1);
 

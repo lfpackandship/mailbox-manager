@@ -44,7 +44,7 @@ public class BusinessNamesEditor extends VBox {
       }
     });
 
-    namesList.setPrefHeight(70);
+    namesList.setStyle("-fx-pref-height: 5.5em;");
 
     getChildren().addAll(new HBox(5, nameField, addBtn), namesList, removeBtn);
   }

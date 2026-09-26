@@ -90,14 +90,22 @@ The main menu has four screens:
 ### Settings
 
 Open **File → Settings** (⌘, on a Mac, Ctrl+, on Windows and Linux). Settings
-opens in its own window, so whatever you were doing stays as it was.
+opens in its own window, so whatever you were doing stays as it was. Changes
+take effect when you click **Save**.
 
+- **Text size** – Normal, Large, or Extra large, for the whole app. Larger
+  text applies right away; restart the app to also enlarge its window to match.
+- **Rental lengths (months)** – the quick-set buttons on Add New Box and Edit
+  Box, such as `1, 3, 6, 12`. Up to six lengths, each from 1 to 120 months.
+- **Week starts on** – Sunday or Monday, for the Calendar.
 - **Show boxes due within (days)** – how far ahead the Renewals screen looks.
   Default 30.
-- **Daily backups to keep** – how many days of backups to keep before the
-  oldest are deleted. Default 30.
+- **Daily backups to keep** – how many daily backups to keep before the oldest
+  are deleted. Default 30.
+- **Also copy backups to** – see [A second copy of your backups](#a-second-copy-of-your-backups).
 
-The settings window also shows where your data is stored.
+The Backups section also has **Back Up Now…**, **Restore…**, and an **Open**
+button that shows the data folder in Explorer or Finder.
 
 ## Your data and backups
 
@@ -115,21 +123,34 @@ the `backups` folder inside that folder, named by date
 disk is full, the app still opens, shows a warning, and tries again the next
 time it starts.
 
-The backups are on the same computer as the data, so they won't help if the
-computer itself fails. Copy the data folder to a USB drive or cloud storage
-from time to time.
+### A second copy of your backups
+
+The daily backups are on the same computer as the data, so they won't help if
+the computer itself fails. To keep copies somewhere else:
+
+- **Automatically:** in Settings, next to **Also copy backups to**, click
+  **Choose…** and pick a folder on a USB drive, a network drive, or a synced
+  folder such as OneDrive or Dropbox, then click **Save**. Each daily backup is
+  copied there too, and old copies are deleted the same way. If the folder
+  isn't available when the app starts (for example, the USB drive is
+  unplugged), the app shows a warning and tries again next time.
+- **Whenever you like:** click **Back Up Now…** and pick a folder. It saves a
+  backup named with the date and time, such as
+  `mailboxes-backup-2026-09-26-143005.db`. These are never deleted
+  automatically.
 
 ### Restoring a backup
 
-1. Quit Mailbox Manager.
-2. In the data folder, rename `mailboxes.db` to something like
-   `mailboxes-before-restore.db`, so you can go back if needed.
-3. Copy the backup you want from `backups` into the data folder and rename the
-   copy to `mailboxes.db`.
-4. Start the app.
+1. Open **File → Settings** and click **Restore…**.
+2. Pick a backup from the list, or click **Choose File…** to use one saved
+   somewhere else, such as a USB drive.
+3. Confirm. The app saves your current data as a backup first (listed as
+   "Data saved before a restore"), so you can undo the restore by restoring
+   that.
 
-Settings are stored in the same file, so restoring a backup also restores the
-settings from that day.
+Settings are stored in the same file as the data, so restoring a backup also
+brings back the settings from that day. Backups from older versions of the app
+are upgraded automatically when restored.
 
 ## Development
 
@@ -170,8 +191,9 @@ src/main/java/org/lfps/mailboxes/
   App.java          start-up: data folder, database schema, daily backup, main window
   data/             database access: Database, MailboxRepository, SettingsRepository, Setting
   model/            Mailbox
-  view/             one class per screen, plus AppWindow (menu bar) and SettingsView
-  util/             input validation and runtime info
+  view/             one class per screen, plus AppWindow (menu bar, text size), SettingsView,
+                    and RestoreView
+  util/             input validation, rental lengths, error messages, and runtime info
   Launcher.java     the entry point of the jar and installers, which hands off to App
 packaging/
   package.sh        builds the installer for the current system with jpackage

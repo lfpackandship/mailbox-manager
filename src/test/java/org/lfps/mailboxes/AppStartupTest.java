@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.lfps.mailboxes.data.Database;
+import org.lfps.mailboxes.data.Setting;
+import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 import org.lfps.mailboxes.view.FxTestSupport;
 
@@ -40,7 +43,12 @@ class AppStartupTest {
         window.hide();
       }
     });
-    // Undo the failure set up below, if any.
+    // Undo the failures set up below, if any.
+    try {
+      new SettingsRepository().put(Setting.SECOND_BACKUP_FOLDER, "");
+    } catch (SQLException e) {
+      // The database may not exist yet.
+    }
     if (Files.isRegularFile(BACKUP_DIR)) {
       Files.delete(BACKUP_DIR);
     }
@@ -65,6 +73,26 @@ class AppStartupTest {
 
     assertTrue(FxTestSupport.call(mainWindow::isShowing));
     assertTrue(windowTitles().contains("Backup Failed"), windowTitles().toString());
+  }
+
+  @Test
+  void stillOpensAndWarnsWhenTheSecondBackupFolderIsMissing() throws SQLException {
+    Database.prepareDataDir();
+    Database.initSchema();
+    var unplugged = Database.dataDir().resolve("usb-drive-not-plugged-in");
+    new SettingsRepository().put(Setting.SECOND_BACKUP_FOLDER, unplugged.toString());
+
+    var mainWindow = startApp();
+
+    assertTrue(FxTestSupport.call(mainWindow::isShowing));
+    assertTrue(windowTitles().contains("Backup Failed"), windowTitles().toString());
+    var warning = FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w instanceof Stage && "Backup Failed".equals(((Stage) w).getTitle()))
+        .map(w -> ((javafx.scene.control.DialogPane) w.getScene().getRoot()).getContentText())
+        .findFirst()
+        .orElseThrow());
+    assertTrue(warning.contains("could not be copied to your second backup folder: The second backup folder "
+        + unplugged + " can't be found."), warning);
   }
 
   private static Stage startApp() {

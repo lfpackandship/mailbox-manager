@@ -3,6 +3,23 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/wgoodzey/mailbox-manager/releases).
 
+## Unreleased
+
+### Added
+
+- Settings for text size (Normal, Large, Extra large), the rental lengths
+  offered as quick-set buttons, and whether the Calendar's weeks start on
+  Sunday or Monday.
+- Backup tools in Settings: **Back Up Now…** saves a backup to a folder you
+  choose, **Restore…** restores a backup (saving your current data first), a
+  second folder can receive a copy of every daily backup, and **Open** shows
+  the data folder.
+
+### Changed
+
+- Screens scroll when they don't fit the window, and the window starts larger
+  when the text size is larger.
+
 ## 1.2.0 – 2026-09-26
 
 ### Added

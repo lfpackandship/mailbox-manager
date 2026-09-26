@@ -78,10 +78,10 @@ public class RenewalsView {
     });
 
     var pastDueHeader = new Label("Past Due");
-    pastDueHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+    pastDueHeader.setStyle("-fx-font-size: 1.1em; -fx-font-weight: bold;");
 
     var upcomingHeader = new Label("Upcoming (next " + windowDays + " days)");
-    upcomingHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+    upcomingHeader.setStyle("-fx-font-size: 1.1em; -fx-font-weight: bold;");
 
     var backBtn = new Button("Back");
     backBtn.setOnAction(e -> MainMenuView.show(stage));
@@ -127,7 +127,7 @@ public class RenewalsView {
   private static TableView<Mailbox> buildTable(LocalDate today) {
     var table = new TableView<Mailbox>();
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
-    table.setPrefHeight(180);
+    table.setStyle("-fx-pref-height: 14em;");
 
     var nameCol = new TableColumn<Mailbox, String>("Name");
     nameCol.setCellValueFactory(cellData -> new SimpleStringProperty(
