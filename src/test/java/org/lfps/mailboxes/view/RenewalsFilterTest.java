@@ -49,7 +49,7 @@ class RenewalsFilterTest {
 
   private static Mailbox box(String boxNumber, LocalDate endDate) {
     return new Mailbox(0, "First", "Last", null, boxNumber, null, "(555) 000-0000", null,
-        null, endDate);
+        null, endDate, null);
   }
 
   private static List<String> boxNumbers(List<Mailbox> mailboxes) {

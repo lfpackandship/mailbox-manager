@@ -21,6 +21,7 @@ public final class Mailbox {
   private final String email;
   private final List<String> alternateBusinessNames;
   private final LocalDate endDate;
+  private final List<ForwardingAddress> forwardingAddresses;
 
   /**
    * Creates a mailbox record.
@@ -36,10 +37,12 @@ public final class Mailbox {
    * @param alternateBusinessNames additional business names (DBAs) that also
    *     receive mail at this box; {@code null} is treated as empty
    * @param endDate the date the box rental ends, or {@code null} if not set
+   * @param forwardingAddresses addresses the holder's mail can be forwarded
+   *     to; {@code null} is treated as empty
    */
   public Mailbox(int id, String firstName, String lastName, String businessTitle,
       String boxNumber, String boxName, String phone, String email,
-      List<String> alternateBusinessNames, LocalDate endDate) {
+      List<String> alternateBusinessNames, LocalDate endDate, List<ForwardingAddress> forwardingAddresses) {
     this.id = id;
     this.firstName = firstName;
     this.lastName = lastName;
@@ -52,6 +55,9 @@ public final class Mailbox {
         ? Collections.emptyList()
         : Collections.unmodifiableList(new ArrayList<>(alternateBusinessNames));
     this.endDate = endDate;
+    this.forwardingAddresses = forwardingAddresses == null
+        ? Collections.emptyList()
+        : Collections.unmodifiableList(new ArrayList<>(forwardingAddresses));
   }
 
   /**
@@ -143,6 +149,15 @@ public final class Mailbox {
    */
   public LocalDate getEndDate() {
     return endDate;
+  }
+
+  /**
+   * Returns the addresses the holder's mail can be forwarded to.
+   *
+   * @return the forwarding addresses; never {@code null}
+   */
+  public List<ForwardingAddress> getForwardingAddresses() {
+    return forwardingAddresses;
   }
 
 }

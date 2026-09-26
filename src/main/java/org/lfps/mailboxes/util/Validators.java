@@ -3,12 +3,16 @@ package org.lfps.mailboxes.util;
 import java.util.regex.Pattern;
 
 /**
- * Format validators for user-entered contact fields.
+ * Format validators for user-entered contact and address fields.
  */
 public class Validators {
 
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}$");
+
+    private static final Pattern ZIP_PATTERN = Pattern.compile("^\\d{5}(-\\d{4})?$");
+
+    private static final Pattern STATE_PATTERN = Pattern.compile("^[A-Za-z]{2}$");
 
     /**
      * Checks whether a string looks like a valid email address.
@@ -33,6 +37,26 @@ public class Validators {
         }
         var digits = phone.replaceAll("[^0-9]", "");
         return digits.length() == 10 || (digits.length() == 11 && digits.startsWith("1"));
+    }
+
+    /**
+     * Checks whether a string is a US ZIP code, either five digits or ZIP+4.
+     *
+     * @param zip the ZIP code to check
+     * @return {@code true} for "12345" or "12345-6789", ignoring surrounding spaces
+     */
+    public static boolean isValidZip(String zip) {
+        return zip != null && ZIP_PATTERN.matcher(zip.trim()).matches();
+    }
+
+    /**
+     * Checks whether a string looks like a two-letter US state code.
+     *
+     * @param state the state code to check
+     * @return {@code true} for two letters, such as "FL" or "ny", ignoring surrounding spaces
+     */
+    public static boolean isValidState(String state) {
+        return state != null && STATE_PATTERN.matcher(state.trim()).matches();
     }
 
 }

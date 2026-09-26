@@ -15,10 +15,19 @@ the [releases page](https://github.com/wgoodzey/mailbox-manager/releases).
   second folder can receive a copy of every daily backup, and **Open** shows
   the data folder.
 
+- Forwarding addresses: each box can have any number of addresses to forward
+  mail to, each with an optional note, entered on Add New Box and Edit Box.
+  Manage Boxes search also matches them.
+
 ### Changed
 
 - Screens scroll when they don't fit the window, and the window starts larger
   when the text size is larger.
+
+### Fixed
+
+- Saving Edit Box failed for a box with no email or business title stored,
+  as can happen with data from older versions or restored backups.
 
 ## 1.2.0 – 2026-09-26
 

@@ -9,11 +9,13 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 
 /**
- * Provides CRUD access to mailboxes and their alternate business names,
- * stored across the {@code mailboxes} and {@code business_names} tables.
+ * Provides CRUD access to mailboxes with their alternate business names and
+ * forwarding addresses, stored across the {@code mailboxes},
+ * {@code business_names}, and {@code forwarding_addresses} tables.
  */
 public class MailboxRepository {
 
@@ -43,8 +45,18 @@ public class MailboxRepository {
   private static final String DELETE_BUSINESS_NAMES_SQL =
       "DELETE FROM business_names WHERE mailbox_id = ?";
 
+  private static final String INSERT_FORWARDING_ADDRESS_SQL = "INSERT INTO forwarding_addresses "
+      + "(mailbox_id, street, unit, city, state, zip, note) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+  private static final String SELECT_FORWARDING_ADDRESSES_SQL = "SELECT street, unit, city, state, zip, note "
+      + "FROM forwarding_addresses WHERE mailbox_id = ? ORDER BY id";
+
+  private static final String DELETE_FORWARDING_ADDRESSES_SQL =
+      "DELETE FROM forwarding_addresses WHERE mailbox_id = ?";
+
   /**
-   * Inserts a new mailbox along with its alternate business names.
+   * Inserts a new mailbox along with its alternate business names and
+   * forwarding addresses.
    *
    * @param mailbox the mailbox to persist; its id is ignored
    * @throws SQLException if the insert fails
@@ -63,6 +75,7 @@ public class MailboxRepository {
           }
         }
         insertBusinessNames(conn, mailboxId, mailbox.getAlternateBusinessNames());
+        insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses());
         conn.commit();
       } catch (SQLException e) {
         conn.rollback();
@@ -73,7 +86,7 @@ public class MailboxRepository {
 
   /**
    * Returns every mailbox, ordered by box number, with its alternate
-   * business names loaded.
+   * business names and forwarding addresses loaded.
    *
    * @return all mailboxes in the database
    * @throws SQLException if the query fails
@@ -96,7 +109,8 @@ public class MailboxRepository {
             rs.getString("phone"),
             rs.getString("email"),
             findBusinessNames(conn, id),
-            rs.getString("end_date") == null ? null : LocalDate.parse(rs.getString("end_date"))));
+            rs.getString("end_date") == null ? null : LocalDate.parse(rs.getString("end_date")),
+            findForwardingAddresses(conn, id)));
       }
     }
 
@@ -104,7 +118,8 @@ public class MailboxRepository {
   }
 
   /**
-   * Updates an existing mailbox and replaces its alternate business names.
+   * Updates an existing mailbox and replaces its alternate business names
+   * and forwarding addresses.
    *
    * @param mailbox the mailbox to save, identified by {@link Mailbox#getId()}
    * @throws SQLException if the update fails
@@ -120,6 +135,8 @@ public class MailboxRepository {
         }
         deleteBusinessNames(conn, mailbox.getId());
         insertBusinessNames(conn, mailbox.getId(), mailbox.getAlternateBusinessNames());
+        deleteForwardingAddresses(conn, mailbox.getId());
+        insertForwardingAddresses(conn, mailbox.getId(), mailbox.getForwardingAddresses());
         conn.commit();
       } catch (SQLException e) {
         conn.rollback();
@@ -149,7 +166,8 @@ public class MailboxRepository {
   }
 
   /**
-   * Deletes a mailbox and its alternate business names.
+   * Deletes a mailbox with its alternate business names and forwarding
+   * addresses.
    *
    * @param id the id of the mailbox to delete
    * @throws SQLException if the delete fails
@@ -159,6 +177,7 @@ public class MailboxRepository {
       conn.setAutoCommit(false);
       try {
         deleteBusinessNames(conn, id);
+        deleteForwardingAddresses(conn, id);
         try (PreparedStatement stmt = conn.prepareStatement(DELETE_SQL)) {
           stmt.setInt(1, id);
           stmt.executeUpdate();
@@ -201,6 +220,46 @@ public class MailboxRepository {
       stmt.setInt(1, mailboxId);
       stmt.executeUpdate();
     }
+  }
+
+  private void insertForwardingAddresses(Connection conn, int mailboxId, List<ForwardingAddress> addresses)
+      throws SQLException {
+    try (PreparedStatement stmt = conn.prepareStatement(INSERT_FORWARDING_ADDRESS_SQL)) {
+      for (var address : addresses) {
+        stmt.setInt(1, mailboxId);
+        stmt.setString(2, address.getStreet());
+        stmt.setString(3, address.getUnit());
+        stmt.setString(4, address.getCity());
+        stmt.setString(5, address.getState());
+        stmt.setString(6, address.getZip());
+        stmt.setString(7, address.getNote());
+        stmt.addBatch();
+      }
+      stmt.executeBatch();
+    }
+  }
+
+  private void deleteForwardingAddresses(Connection conn, int mailboxId) throws SQLException {
+    try (PreparedStatement stmt = conn.prepareStatement(DELETE_FORWARDING_ADDRESSES_SQL)) {
+      stmt.setInt(1, mailboxId);
+      stmt.executeUpdate();
+    }
+  }
+
+  private List<ForwardingAddress> findForwardingAddresses(Connection conn, int mailboxId) throws SQLException {
+    var addresses = new ArrayList<ForwardingAddress>();
+
+    try (PreparedStatement stmt = conn.prepareStatement(SELECT_FORWARDING_ADDRESSES_SQL)) {
+      stmt.setInt(1, mailboxId);
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          addresses.add(new ForwardingAddress(rs.getString("street"), rs.getString("unit"),
+              rs.getString("city"), rs.getString("state"), rs.getString("zip"), rs.getString("note")));
+        }
+      }
+    }
+
+    return addresses;
   }
 
   private List<String> findBusinessNames(Connection conn, int mailboxId) throws SQLException {

@@ -44,6 +44,8 @@ public class AddBoxView {
 
     var businessNamesEditor = new BusinessNamesEditor();
 
+    var forwardingEditor = new ForwardingAddressesEditor();
+
     var phoneField = new TextField();
     phoneField.setPromptText("(555) 123-4567");
     phoneField.setTextFormatter(PhoneNumberFormatter.create());
@@ -107,7 +109,7 @@ public class AddBoxView {
 
       var mailbox = new Mailbox(0, firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumber.getText(), boxNameField.getText(), phone, email,
-          businessNamesEditor.getNames(), endDateField.getValue());
+          businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses());
 
       try {
         repository.insert(mailbox);
@@ -133,6 +135,8 @@ public class AddBoxView {
     grid.add(rentalLengthButtons, 0, 4, 4, 1);
     grid.add(new Label("Alternate Business Names:"), 0, 5, 4, 1);
     grid.add(businessNamesEditor, 0, 6, 4, 1);
+    grid.add(new Label("Forwarding Addresses:"), 0, 7, 4, 1);
+    grid.add(forwardingEditor, 0, 8, 4, 1);
 
     var layout = new VBox(8, backBtn, grid, submitBtn, resultLabel);
     layout.setPadding(new Insets(15));

@@ -74,18 +74,28 @@ The main menu has four screens:
 - **Add New Box** – record a new box holder. First name, last name, box number,
   and phone number are required. Each box number can only belong to one holder.
   You can also add a business title, a nickname for the box, an email address,
-  any alternate business names (DBAs) that receive mail there, and the date
-  the rental ends. The 1/3/6/12 Month buttons set the end date that far from
+  any alternate business names (DBAs) that receive mail there, the date the
+  rental ends, and any forwarding addresses. The rental length buttons (1, 3,
+  6, and 12 months unless changed in Settings) set the end date that far from
   today.
 - **Manage Boxes** – every box in one table, with a search field. Search
   matches any part of a name, business name, box number, box name, phone
-  number, or email, and phone numbers match with or without formatting. Select
-  a row to edit or delete it. When editing, the 1/3/6/12 Month buttons extend
-  the current end date, which makes renewals quick.
+  number, email, or forwarding address (including its note), and phone
+  numbers match with or without formatting. Select a row to edit or delete it.
+  When editing, the rental length buttons extend the current end date, which
+  makes renewals quick.
 - **Calendar** – a month view with each box shown on the day its rental ends.
   Hover over an entry for the holder's name.
 - **Renewals** – boxes that are past due, and boxes due within the next 30 days
   (adjustable in Settings), most urgent first.
+
+### Forwarding addresses
+
+If a box holder wants mail forwarded, add one or more forwarding addresses on
+Add New Box or Edit Box: fill in the street, city, two-letter state, and ZIP
+code (5 digits or ZIP+4), plus an optional apartment or suite and a note such
+as "summer" or "office", then click **Add Address**. A box can have several
+addresses; the notes help staff pick the right one.
 
 ### Settings
 

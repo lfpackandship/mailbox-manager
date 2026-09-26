@@ -1,0 +1,131 @@
+package org.lfps.mailboxes.view;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.sql.SQLException;
+import java.util.List;
+import java.util.function.Consumer;
+
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Stage;
+import javafx.stage.Window;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import org.lfps.mailboxes.data.Database;
+import org.lfps.mailboxes.data.Setting;
+import org.lfps.mailboxes.data.SettingsRepository;
+import org.lfps.mailboxes.data.TestSandbox;
+
+/**
+ * Checks that every screen picks up the text size setting and can scroll, so
+ * nothing is cut off when larger text makes a screen bigger than the window.
+ */
+class ScreenLayoutTest {
+
+  private static final List<Consumer<Stage>> SCREENS = List.of(
+      MainMenuView::show, AddBoxView::show, ManageBoxesView::show, CalendarView::show, RenewalsView::show);
+
+  private Stage mainWindow;
+
+  @BeforeAll
+  static void startJavaFx() {
+    FxTestSupport.start();
+  }
+
+  @BeforeEach
+  void useExtraLargeText() throws SQLException {
+    TestSandbox.require();
+    Database.prepareDataDir();
+    Database.initSchema();
+    new SettingsRepository().put(Setting.TEXT_SIZE, TextSize.EXTRA_LARGE.name());
+    mainWindow = FxTestSupport.call(() -> {
+      var stage = new Stage();
+      stage.setWidth(700);
+      stage.setHeight(600);
+      return stage;
+    });
+  }
+
+  @AfterEach
+  void closeAllWindows() throws SQLException {
+    new SettingsRepository().put(Setting.TEXT_SIZE, TextSize.NORMAL.name());
+    FxTestSupport.run(() -> {
+      for (var window : List.copyOf(Window.getWindows())) {
+        window.hide();
+      }
+    });
+  }
+
+  @Test
+  void everyScreenUsesTheTextSizeAndScrollsWhenTooBig() {
+    for (var screen : SCREENS) {
+      FxTestSupport.run(() -> screen.accept(mainWindow));
+
+      var root = FxTestSupport.call(() -> (BorderPane) mainWindow.getScene().getRoot());
+      assertEquals(TextSize.EXTRA_LARGE.style(), FxTestSupport.call(root::getStyle));
+      var scroll = FxTestSupport.call(() -> root.getCenter());
+      assertTrue(scroll instanceof ScrollPane, "Not scrollable: " + scroll);
+      assertTrue(FxTestSupport.call(() -> ((ScrollPane) scroll).isFitToWidth()));
+    }
+  }
+
+  @Test
+  void extraLargeContentThatDoesntFitCanBeScrolledTo() {
+    FxTestSupport.run(() -> CalendarView.show(mainWindow));
+
+    // At extra large text the calendar is taller than a 700x600 window, so the
+    // scroll pane's content must extend past the visible area instead of being
+    // squeezed into it.
+    var sizes = FxTestSupport.call(() -> {
+      var scroll = (ScrollPane) ((BorderPane) mainWindow.getScene().getRoot()).getCenter();
+      scroll.layout();
+      return new double[] { scroll.getContent().getLayoutBounds().getHeight(),
+          scroll.getViewportBounds().getHeight() };
+    });
+    assertTrue(sizes[0] > sizes[1], "content " + sizes[0] + " should exceed viewport " + sizes[1]);
+  }
+
+  @Test
+  void extraLargeCalendarScrollsSidewaysInsteadOfSqueezingTheDays() {
+    FxTestSupport.run(() -> CalendarView.show(mainWindow));
+
+    var widths = contentAndViewportWidths();
+    assertTrue(widths[0] > widths[1], "content " + widths[0] + " should exceed viewport " + widths[1]);
+  }
+
+  @Test
+  void manageBoxesAtNormalSizeFitsTheWindowWidth() throws SQLException {
+    new SettingsRepository().put(Setting.TEXT_SIZE, TextSize.NORMAL.name());
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+
+    var widths = contentAndViewportWidths();
+    assertEquals(widths[1], widths[0], 0.5);
+  }
+
+  private double[] contentAndViewportWidths() {
+    return FxTestSupport.call(() -> {
+      var scroll = (ScrollPane) ((BorderPane) mainWindow.getScene().getRoot()).getCenter();
+      scroll.layout();
+      return new double[] { scroll.getContent().getLayoutBounds().getWidth(),
+          scroll.getViewportBounds().getWidth() };
+    });
+  }
+
+  @Test
+  void addBoxFormIncludesTheForwardingAddressFields() {
+    FxTestSupport.run(() -> AddBoxView.show(mainWindow));
+
+    for (var id : List.of("streetField", "unitField", "cityField", "stateField", "zipField", "noteField",
+        "addForwardingButton", "forwardingList")) {
+      assertNotNull(FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookup("#" + id)), id);
+    }
+  }
+
+}

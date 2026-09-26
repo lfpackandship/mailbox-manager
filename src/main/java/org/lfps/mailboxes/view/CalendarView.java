@@ -128,7 +128,7 @@ public class CalendarView {
   private static VBox buildDayCell(int day, List<Mailbox> mailboxes) {
     var cell = new VBox(2);
     cell.setPadding(new Insets(4));
-    cell.setStyle("-fx-pref-width: 7em; -fx-pref-height: 5.4em;"
+    cell.setStyle("-fx-pref-width: 7em; -fx-pref-height: 5.4em; -fx-min-width: 7em; -fx-min-height: 5.4em;"
         + " -fx-border-color: lightgray; -fx-border-width: 0.5;"
         + (mailboxes.isEmpty() ? "" : " -fx-background-color: #ffe0b2;"));
 

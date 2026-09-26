@@ -95,7 +95,7 @@ public class ManageBoxesView {
     table.setItems(mailboxes);
 
     var searchField = new TextField();
-    searchField.setPromptText("Search by name, business, box, phone, or email");
+    searchField.setPromptText("Search by name, business, box, phone, email, or forwarding address");
     searchField.textProperty().addListener((obs, oldQuery, query) ->
         mailboxes.setPredicate(m -> matches(m, query)));
     searchField.setText(initialQuery);
@@ -150,9 +150,9 @@ public class ManageBoxesView {
 
   /**
    * Checks whether a mailbox matches every word of a search query. Each word
-   * may appear, case-insensitively, in any text field or alternate business
-   * name; a word made of digits also matches the phone number ignoring its
-   * formatting.
+   * may appear, case-insensitively, in any text field, alternate business
+   * name, or forwarding address (including its note); a word made of digits
+   * also matches the phone number ignoring its formatting.
    */
   static boolean matches(Mailbox mailbox, String query) {
     if (query == null || query.isBlank()) {
@@ -168,6 +168,7 @@ public class ManageBoxesView {
       }
     }
     mailbox.getAlternateBusinessNames().forEach(name -> haystack.append(name).append('\n'));
+    mailbox.getForwardingAddresses().forEach(address -> haystack.append(address).append('\n'));
     var text = haystack.toString().toLowerCase();
     var phoneDigits = mailbox.getPhone() == null ? "" : mailbox.getPhone().replaceAll("[^0-9]", "");
 

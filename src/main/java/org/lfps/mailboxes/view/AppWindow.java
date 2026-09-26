@@ -15,6 +15,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -49,6 +50,11 @@ public final class AppWindow {
    * @param content the screen to display
    */
   public static void show(Stage stage, Parent content) {
+    // Fill the window when there's room, but never squeeze a screen shorter
+    // than it wants to be; scroll instead.
+    if (content instanceof Region) {
+      ((Region) content).setMinHeight(Region.USE_PREF_SIZE);
+    }
     var scrollPane = new ScrollPane(content);
     scrollPane.setFitToWidth(true);
     scrollPane.setFitToHeight(true);

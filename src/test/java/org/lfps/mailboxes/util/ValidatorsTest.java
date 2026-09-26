@@ -43,4 +43,34 @@ class ValidatorsTest {
     assertFalse(Validators.isValidPhone(null));
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = { "62701", "62701-1234", " 02134 " })
+  void acceptsValidZips(String zip) {
+    assertTrue(Validators.isValidZip(zip));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = { "", "6270", "627011", "62701-123", "62701 1234", "ABCDE" })
+  void rejectsInvalidZips(String zip) {
+    assertFalse(Validators.isValidZip(zip));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = { "FL", "ny", " Il " })
+  void acceptsTwoLetterStates(String state) {
+    assertTrue(Validators.isValidState(state));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = { "", "F", "Florida", "F1" })
+  void rejectsOtherStates(String state) {
+    assertFalse(Validators.isValidState(state));
+  }
+
+  @Test
+  void rejectsNullZipAndState() {
+    assertFalse(Validators.isValidZip(null));
+    assertFalse(Validators.isValidState(null));
+  }
+
 }

@@ -31,15 +31,18 @@ public class EditBoxView {
   public static void show(Stage stage, Mailbox mailbox, Runnable onDone) {
     var firstNameField = new TextField(mailbox.getFirstName());
     var lastNameField = new TextField(mailbox.getLastName());
-    var businessTitleField = new TextField(mailbox.getBusinessTitle());
+    var businessTitleField = new TextField(orEmpty(mailbox.getBusinessTitle()));
     var boxNumberField = new TextField(mailbox.getBoxNumber());
-    var boxNameField = new TextField(mailbox.getBoxName() == null ? "" : mailbox.getBoxName());
+    var boxNameField = new TextField(orEmpty(mailbox.getBoxName()));
     var phoneField = new TextField(PhoneNumberFormatter.format(mailbox.getPhone()));
     phoneField.setTextFormatter(PhoneNumberFormatter.create());
-    var emailField = new TextField(mailbox.getEmail());
+    var emailField = new TextField(orEmpty(mailbox.getEmail()));
 
     var businessNamesEditor = new BusinessNamesEditor();
     businessNamesEditor.setNames(mailbox.getAlternateBusinessNames());
+
+    var forwardingEditor = new ForwardingAddressesEditor();
+    forwardingEditor.setAddresses(mailbox.getForwardingAddresses());
 
     var endDateField = new DatePicker(mailbox.getEndDate());
     endDateField.setStyle("-fx-pref-width: 12em;");
@@ -96,7 +99,7 @@ public class EditBoxView {
 
       var updated = new Mailbox(mailbox.getId(), firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumberField.getText(), boxNameField.getText(), phone, email,
-          businessNamesEditor.getNames(), endDateField.getValue());
+          businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses());
 
       try {
         repository.update(updated);
@@ -121,11 +124,19 @@ public class EditBoxView {
     grid.add(rentalLengthButtons, 0, 4, 4, 1);
     grid.add(new Label("Alternate Business Names:"), 0, 5, 4, 1);
     grid.add(businessNamesEditor, 0, 6, 4, 1);
+    grid.add(new Label("Forwarding Addresses:"), 0, 7, 4, 1);
+    grid.add(forwardingEditor, 0, 8, 4, 1);
 
     var layout = new VBox(8, cancelBtn, grid, saveBtn, resultLabel);
     layout.setPadding(new Insets(15));
 
     AppWindow.show(stage, layout);
+  }
+
+  // Optional fields can be missing (null) in data from older versions; an
+  // empty field keeps the form's checks from failing on them.
+  private static String orEmpty(String value) {
+    return value == null ? "" : value;
   }
 
   private static void extendEndDate(DatePicker endDateField, int months) {

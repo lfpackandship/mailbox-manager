@@ -13,6 +13,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 
 class MailboxRepositoryTest {
@@ -26,6 +27,7 @@ class MailboxRepositoryTest {
     Database.initSchema();
     try (var conn = Database.connect(); var stmt = conn.createStatement()) {
       stmt.execute("DELETE FROM business_names");
+      stmt.execute("DELETE FROM forwarding_addresses");
       stmt.execute("DELETE FROM mailboxes");
     }
   }
@@ -67,7 +69,7 @@ class MailboxRepositoryTest {
     var id = repository.findAll().get(0).getId();
 
     repository.update(new Mailbox(id, "Grace", "Hopper", null, "211", null,
-        "(555) 999-0000", null, List.of("New A", "New B"), LocalDate.of(2026, 12, 1)));
+        "(555) 999-0000", null, List.of("New A", "New B"), LocalDate.of(2026, 12, 1), null));
 
     var all = repository.findAll();
     assertEquals(1, all.size());
@@ -98,6 +100,51 @@ class MailboxRepositoryTest {
   }
 
   @Test
+  void forwardingAddressesRoundTripInOrder() throws SQLException {
+    var summer = new ForwardingAddress("1 Lake Rd", null, "Duluth", "MN", "55802", "summer");
+    var winter = new ForwardingAddress("88 Palm Way", "Unit 3B", "Naples", "FL", "34102-1234", null);
+    repository.insert(withForwarding("210", List.of(summer, winter)));
+
+    assertEquals(List.of(summer, winter), repository.findAll().get(0).getForwardingAddresses());
+  }
+
+  @Test
+  void updateReplacesForwardingAddresses() throws SQLException {
+    repository.insert(withForwarding("210",
+        List.of(new ForwardingAddress("1 Old St", null, "Oldtown", "OH", "44101", null))));
+    var saved = repository.findAll().get(0);
+    var replacement = new ForwardingAddress("2 New Ave", "Apt 7", "Newport", "RI", "02840", "work");
+
+    repository.update(new Mailbox(saved.getId(), saved.getFirstName(), saved.getLastName(), null,
+        saved.getBoxNumber(), null, saved.getPhone(), null, List.of(), null, List.of(replacement)));
+
+    assertEquals(List.of(replacement), repository.findAll().get(0).getForwardingAddresses());
+  }
+
+  @Test
+  void deleteRemovesForwardingAddresses() throws SQLException {
+    repository.insert(withForwarding("210",
+        List.of(new ForwardingAddress("1 Gone St", null, "Anytown", "TX", "75001", null))));
+    repository.insert(withForwarding("211",
+        List.of(new ForwardingAddress("2 Kept St", null, "Anytown", "TX", "75001", null))));
+
+    repository.delete(repository.findAll().get(0).getId());
+
+    try (var conn = Database.connect(); var stmt = conn.createStatement();
+        var rs = stmt.executeQuery("SELECT street FROM forwarding_addresses")) {
+      assertTrue(rs.next());
+      assertEquals("2 Kept St", rs.getString(1));
+      assertFalse(rs.next());
+    }
+  }
+
+  @Test
+  void mailboxWithoutForwardingHasAnEmptyList() throws SQLException {
+    repository.insert(mailbox("210", List.of(), null));
+    assertEquals(List.of(), repository.findAll().get(0).getForwardingAddresses());
+  }
+
+  @Test
   void boxNumberTakenIgnoresWhitespaceAndCase() throws SQLException {
     repository.insert(mailbox("12A", List.of(), null));
     assertTrue(repository.isBoxNumberTaken("12A", 0));
@@ -115,9 +162,14 @@ class MailboxRepositoryTest {
     assertTrue(repository.isBoxNumberTaken("211", first.getId()));
   }
 
+  private static Mailbox withForwarding(String boxNumber, List<ForwardingAddress> addresses) {
+    return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null,
+        List.of(), null, addresses);
+  }
+
   private static Mailbox mailbox(String boxNumber, List<String> alternateNames, LocalDate endDate) {
     return new Mailbox(0, "Ada", "Lovelace", "Engines Ltd", boxNumber, "Box",
-        "(555) 123-4567", "ada@example.com", alternateNames, endDate);
+        "(555) 123-4567", "ada@example.com", alternateNames, endDate, null);
   }
 
 }

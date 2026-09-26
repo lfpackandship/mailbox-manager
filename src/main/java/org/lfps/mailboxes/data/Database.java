@@ -226,9 +226,10 @@ public class Database {
   }
 
   /**
-   * Creates the {@code mailboxes}, {@code business_names}, and
-   * {@code settings} tables if they don't already exist, and migrates older
-   * databases that predate the {@code box_name} and {@code end_date} columns.
+   * Creates the {@code mailboxes}, {@code business_names},
+   * {@code forwarding_addresses}, and {@code settings} tables if they don't
+   * already exist, and migrates older databases that predate the
+   * {@code box_name} and {@code end_date} columns.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -250,6 +251,17 @@ public class Database {
         + "name TEXT NOT NULL, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
+    var createForwardingAddresses = "CREATE TABLE IF NOT EXISTS forwarding_addresses ("
+        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        + "mailbox_id INTEGER NOT NULL, "
+        + "street TEXT NOT NULL, "
+        + "unit TEXT, "
+        + "city TEXT NOT NULL, "
+        + "state TEXT NOT NULL, "
+        + "zip TEXT NOT NULL, "
+        + "note TEXT, "
+        + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
+
     var createSettings = "CREATE TABLE IF NOT EXISTS settings ("
         + "key TEXT PRIMARY KEY, "
         + "value TEXT NOT NULL)";
@@ -257,6 +269,7 @@ public class Database {
     try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
       stmt.execute(createMailboxes);
       stmt.execute(createBusinessNames);
+      stmt.execute(createForwardingAddresses);
       stmt.execute(createSettings);
 
       try {

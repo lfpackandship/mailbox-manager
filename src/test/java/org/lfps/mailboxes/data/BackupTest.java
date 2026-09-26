@@ -172,7 +172,7 @@ class BackupTest {
   }
 
   private static Mailbox box(String boxNumber) {
-    return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null, null, null);
+    return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null, null, null, null);
   }
 
   private static List<String> boxNumbers(List<Mailbox> list) {
