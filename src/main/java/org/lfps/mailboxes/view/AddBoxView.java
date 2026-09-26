@@ -7,6 +7,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -26,7 +27,7 @@ public class AddBoxView {
    */
   public static void show(Stage stage) {
     var businessTitleField = new TextField();
-    businessTitleField.setPromptText("Enter your business title (optional)");
+    businessTitleField.setPromptText("Acme Inc (optional)");
 
     var firstNameField = new TextField();
     firstNameField.setPromptText("John");
@@ -38,7 +39,7 @@ public class AddBoxView {
     boxNumber.setPromptText("310");
 
     var boxNameField = new TextField();
-    boxNameField.setPromptText("Enter a box nickname (optional)");
+    boxNameField.setPromptText("optional");
 
     var businessNamesEditor = new BusinessNamesEditor();
 
@@ -46,7 +47,12 @@ public class AddBoxView {
     phoneField.setPromptText("(555) 123-4567");
 
     var emailField = new TextField();
-    emailField.setPromptText("Enter your email (optional)");
+    emailField.setPromptText("optional");
+
+    for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
+        boxNumber, boxNameField, phoneField, emailField }) {
+      field.setPrefWidth(160);
+    }
 
     var submitBtn = new Button("Submit");
     var resultLabel = new Label();
@@ -100,19 +106,19 @@ public class AddBoxView {
     var backBtn = new Button("Back");
     backBtn.setOnAction(e -> MainMenuView.show(stage));
 
-    var layout = new VBox(10,
-        backBtn,
-        new Label("First Name:"), firstNameField,
-        new Label("Last Name:"), lastNameField,
-        new Label("Business Title:"), businessTitleField,
-        new Label("Alternate Business Names:"), businessNamesEditor,
-        new Label("Box Number:"), boxNumber,
-        new Label("Box Name:"), boxNameField,
-        new Label("Phone Number:"), phoneField,
-        new Label("Email:"), emailField,
-        submitBtn,
-        resultLabel);
-    layout.setPadding(new Insets(20));
+    var grid = new GridPane();
+    grid.setHgap(10);
+    grid.setVgap(8);
+
+    grid.addRow(0, new Label("First Name:"), firstNameField, new Label("Last Name:"), lastNameField);
+    grid.addRow(1, new Label("Business Title:"), businessTitleField, new Label("Box Number:"), boxNumber);
+    grid.addRow(2, new Label("Box Name:"), boxNameField, new Label("Phone Number:"), phoneField);
+    grid.addRow(3, new Label("Email:"), emailField);
+    grid.add(new Label("Alternate Business Names:"), 0, 4, 4, 1);
+    grid.add(businessNamesEditor, 0, 5, 4, 1);
+
+    var layout = new VBox(8, backBtn, grid, submitBtn, resultLabel);
+    layout.setPadding(new Insets(15));
 
     stage.setScene(new Scene(layout, 640, 480));
     stage.show();

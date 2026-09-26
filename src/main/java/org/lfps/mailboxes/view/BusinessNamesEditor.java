@@ -25,7 +25,7 @@ public class BusinessNamesEditor extends VBox {
     super(5);
 
     var nameField = new TextField();
-    nameField.setPromptText("Alternate business name");
+    nameField.setPromptText("Acme Inc (optional)");
 
     var addBtn = new Button("Add");
     addBtn.setOnAction(e -> {
@@ -44,7 +44,7 @@ public class BusinessNamesEditor extends VBox {
       }
     });
 
-    namesList.setPrefHeight(100);
+    namesList.setPrefHeight(70);
 
     getChildren().addAll(new HBox(5, nameField, addBtn), namesList, removeBtn);
   }

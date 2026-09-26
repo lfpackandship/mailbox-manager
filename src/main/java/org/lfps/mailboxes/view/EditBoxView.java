@@ -7,6 +7,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -36,6 +37,11 @@ public class EditBoxView {
 
     var businessNamesEditor = new BusinessNamesEditor();
     businessNamesEditor.setNames(mailbox.getAlternateBusinessNames());
+
+    for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
+        boxNumberField, boxNameField, phoneField, emailField }) {
+      field.setPrefWidth(160);
+    }
 
     var saveBtn = new Button("Save");
     var resultLabel = new Label();
@@ -88,19 +94,19 @@ public class EditBoxView {
     var cancelBtn = new Button("Cancel");
     cancelBtn.setOnAction(e -> ManageBoxesView.show(stage));
 
-    var layout = new VBox(10,
-        cancelBtn,
-        new Label("First Name:"), firstNameField,
-        new Label("Last Name:"), lastNameField,
-        new Label("Business Title:"), businessTitleField,
-        new Label("Alternate Business Names:"), businessNamesEditor,
-        new Label("Box Number:"), boxNumberField,
-        new Label("Box Name:"), boxNameField,
-        new Label("Phone Number:"), phoneField,
-        new Label("Email:"), emailField,
-        saveBtn,
-        resultLabel);
-    layout.setPadding(new Insets(20));
+    var grid = new GridPane();
+    grid.setHgap(10);
+    grid.setVgap(8);
+
+    grid.addRow(0, new Label("First Name:"), firstNameField, new Label("Last Name:"), lastNameField);
+    grid.addRow(1, new Label("Business Title:"), businessTitleField, new Label("Box Number:"), boxNumberField);
+    grid.addRow(2, new Label("Box Name:"), boxNameField, new Label("Phone Number:"), phoneField);
+    grid.addRow(3, new Label("Email:"), emailField);
+    grid.add(new Label("Alternate Business Names:"), 0, 4, 4, 1);
+    grid.add(businessNamesEditor, 0, 5, 4, 1);
+
+    var layout = new VBox(8, cancelBtn, grid, saveBtn, resultLabel);
+    layout.setPadding(new Insets(15));
 
     stage.setScene(new Scene(layout, 640, 480));
     stage.show();
