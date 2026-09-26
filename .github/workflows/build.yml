@@ -176,7 +176,7 @@ jobs:
           fi
           pkill -f 'bin/mailbox-manager'
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: mailbox-manager-${{ matrix.platform }}
           path: dist/*
@@ -188,7 +188,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
