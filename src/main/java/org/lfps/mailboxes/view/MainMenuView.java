@@ -1,4 +1,4 @@
-package org.lfps.mailboxes;
+package org.lfps.mailboxes.view;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;

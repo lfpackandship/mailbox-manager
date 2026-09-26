@@ -1,4 +1,4 @@
-package org.lfps.mailboxes;
+package org.lfps.mailboxes.util;
 
 import java.util.regex.Pattern;
 

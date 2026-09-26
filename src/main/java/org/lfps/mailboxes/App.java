@@ -3,6 +3,9 @@ package org.lfps.mailboxes;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
+import org.lfps.mailboxes.data.Database;
+import org.lfps.mailboxes.view.MainMenuView;
+
 /**
  * JavaFX App
  */

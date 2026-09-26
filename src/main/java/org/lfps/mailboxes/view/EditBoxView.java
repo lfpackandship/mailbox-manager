@@ -1,4 +1,4 @@
-package org.lfps.mailboxes;
+package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
 
@@ -10,32 +10,29 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-public class AddBoxView {
+import org.lfps.mailboxes.data.MailboxRepository;
+import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.util.Validators;
 
-  public static void show(Stage stage) {
-    var businessTitleField = new TextField();
-    businessTitleField.setPromptText("Enter your business title (optional)");
+public class EditBoxView {
 
-    var firstNameField = new TextField();
-    firstNameField.setPromptText("John");
+  public static void show(Stage stage, Mailbox mailbox) {
+    var firstNameField = new TextField(mailbox.getFirstName());
+    var lastNameField = new TextField(mailbox.getLastName());
+    var businessTitleField = new TextField(mailbox.getBusinessTitle());
+    var boxNumberField = new TextField(mailbox.getBoxNumber());
+    var boxNameField = new TextField(mailbox.getBoxName() == null ? "" : mailbox.getBoxName());
+    var phoneField = new TextField(mailbox.getPhone());
+    var emailField = new TextField(mailbox.getEmail());
 
-    var lastNameField = new TextField();
-    lastNameField.setPromptText("Doe");
+    var businessNamesEditor = new BusinessNamesEditor();
+    businessNamesEditor.setNames(mailbox.getAlternateBusinessNames());
 
-    var boxNumber = new TextField();
-    boxNumber.setPromptText("310");
-
-    var phoneField = new TextField();
-    phoneField.setPromptText("(555) 123-4567");
-
-    var emailField = new TextField();
-    emailField.setPromptText("Enter your email (optional)");
-
-    var submitBtn = new Button("Submit");
+    var saveBtn = new Button("Save");
     var resultLabel = new Label();
     var repository = new MailboxRepository();
 
-    submitBtn.setOnAction(e -> {
+    saveBtn.setOnAction(e -> {
       var errors = new StringBuilder();
 
       if (firstNameField.getText().isBlank()) {
@@ -44,7 +41,7 @@ public class AddBoxView {
       if (lastNameField.getText().isBlank()) {
         errors.append("Last name is required.\n");
       }
-      if (boxNumber.getText().isBlank()) {
+      if (boxNumberField.getText().isBlank()) {
         errors.append("Box number is required.\n");
       }
 
@@ -66,31 +63,33 @@ public class AddBoxView {
         return;
       }
 
-      var mailbox = new Mailbox(0, firstNameField.getText(), lastNameField.getText(),
-          businessTitleField.getText(), boxNumber.getText(), phone, email);
+      var updated = new Mailbox(mailbox.getId(), firstNameField.getText(), lastNameField.getText(),
+          businessTitleField.getText(), boxNumberField.getText(), boxNameField.getText(), phone, email,
+          businessNamesEditor.getNames());
 
       try {
-        repository.insert(mailbox);
-        resultLabel.setStyle("-fx-text-fill: green;");
-        resultLabel.setText("Saved");
+        repository.update(updated);
+        ManageBoxesView.show(stage);
       } catch (SQLException ex) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText("Failed to save: " + ex.getMessage());
       }
     });
 
-    var backBtn = new Button("Back");
-    backBtn.setOnAction(e -> MainMenuView.show(stage));
+    var cancelBtn = new Button("Cancel");
+    cancelBtn.setOnAction(e -> ManageBoxesView.show(stage));
 
     var layout = new VBox(10,
-        backBtn,
+        cancelBtn,
         new Label("First Name:"), firstNameField,
         new Label("Last Name:"), lastNameField,
         new Label("Business Title:"), businessTitleField,
-        new Label("Box Number:"), boxNumber,
+        new Label("Alternate Business Names:"), businessNamesEditor,
+        new Label("Box Number:"), boxNumberField,
+        new Label("Box Name:"), boxNameField,
         new Label("Phone Number:"), phoneField,
         new Label("Email:"), emailField,
-        submitBtn,
+        saveBtn,
         resultLabel);
     layout.setPadding(new Insets(20));
 
@@ -98,7 +97,7 @@ public class AddBoxView {
     stage.show();
   }
 
-  private AddBoxView() {
+  private EditBoxView() {
   }
 
 }

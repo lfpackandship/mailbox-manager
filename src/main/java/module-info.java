@@ -4,4 +4,5 @@ module org.lfps.mailboxes {
     requires java.sql;
     requires org.xerial.sqlitejdbc;
     exports org.lfps.mailboxes;
+    exports org.lfps.mailboxes.model;
 }

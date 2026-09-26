@@ -1,4 +1,4 @@
-package org.lfps.mailboxes;
+package org.lfps.mailboxes.util;
 
 public class SystemInfo {
 

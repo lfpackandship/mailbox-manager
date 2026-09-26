@@ -1,4 +1,4 @@
-package org.lfps.mailboxes;
+package org.lfps.mailboxes.view;
 
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -7,20 +7,20 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-public class ManageBoxesView {
+public class CalendarView {
 
   public static void show(Stage stage) {
     var backBtn = new Button("Back");
     backBtn.setOnAction(e -> MainMenuView.show(stage));
 
-    var layout = new VBox(10, backBtn, new Label("Manage Boxes - coming soon"));
+    var layout = new VBox(10, backBtn, new Label("Calendar - coming soon"));
     layout.setPadding(new Insets(20));
 
     stage.setScene(new Scene(layout, 640, 480));
     stage.show();
   }
 
-  private ManageBoxesView() {
+  private CalendarView() {
   }
 
 }
