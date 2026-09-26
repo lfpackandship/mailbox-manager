@@ -90,7 +90,8 @@ The main menu has four screens:
 - **Calendar** – a month view with each box shown on the day its rental ends.
   Hover over an entry for the holder's name.
 - **Renewals** – boxes that are past due, and boxes due within the next 30 days
-  (adjustable in Settings), most urgent first.
+  (adjustable in Settings), most urgent first. Double-click a box, or select it
+  and click **View** or press Enter, to see its full details.
 
 ### Forwarding addresses
 

@@ -10,7 +10,9 @@ the [releases page](https://github.com/wgoodzey/mailbox-manager/releases).
 - Manage Boxes shows only the box number, name, business title, and phone, so
   the table is easier to scan. Double-click a box, or select it and click
   **View** or press Enter, to see its full details in a separate window, with
-  an **Edit** button.
+  an **Edit** button. The same works on the Renewals screen.
+- The lists on Manage Boxes and Renewals fit the window instead of making the
+  screen scroll, and grow when the window is larger.
 
 ## 1.3.0 – 2026-09-26
 

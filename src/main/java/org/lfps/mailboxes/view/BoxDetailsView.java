@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javafx.geometry.Insets;
@@ -11,6 +12,10 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -99,6 +104,31 @@ final class BoxDetailsView {
     });
     window = stage;
     stage.show();
+  }
+
+  /**
+   * Makes a table of boxes open a box's details when its row is
+   * double-clicked, or when Enter is pressed on the selected row.
+   *
+   * @param table the table of boxes
+   * @param view shows the details of the chosen box
+   */
+  static void openOnDoubleClickOrEnter(TableView<Mailbox> table, Consumer<Mailbox> view) {
+    table.setRowFactory(tableView -> {
+      var row = new TableRow<Mailbox>();
+      row.setOnMouseClicked(e -> {
+        if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2 && !row.isEmpty()) {
+          view.accept(row.getItem());
+        }
+      });
+      return row;
+    });
+    table.setOnKeyPressed(e -> {
+      var selected = table.getSelectionModel().getSelectedItem();
+      if (e.getCode() == KeyCode.ENTER && selected != null) {
+        view.accept(selected);
+      }
+    });
   }
 
   /**

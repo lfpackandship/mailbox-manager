@@ -16,13 +16,11 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -48,6 +46,9 @@ public class ManageBoxesView {
 
     var table = new TableView<Mailbox>();
     table.setId("boxTable");
+    // Start small enough to fit the default window, then grow to fill it.
+    table.setStyle("-fx-pref-height: 12em;");
+    VBox.setVgrow(table, Priority.ALWAYS);
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
 
     // Only the details needed to pick out a box; View shows the rest.
@@ -89,22 +90,7 @@ public class ManageBoxesView {
         EditBoxView.show(stage, mailbox, () -> show(stage, searchField.getText()));
     Consumer<Mailbox> view = mailbox -> BoxDetailsView.show(stage, mailbox, () -> edit.accept(mailbox));
 
-    // Double-click a row, or press Enter on it, to see the full entry.
-    table.setRowFactory(tableView -> {
-      var row = new TableRow<Mailbox>();
-      row.setOnMouseClicked(e -> {
-        if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2 && !row.isEmpty()) {
-          view.accept(row.getItem());
-        }
-      });
-      return row;
-    });
-    table.setOnKeyPressed(e -> {
-      var selected = table.getSelectionModel().getSelectedItem();
-      if (e.getCode() == KeyCode.ENTER && selected != null) {
-        view.accept(selected);
-      }
-    });
+    BoxDetailsView.openOnDoubleClickOrEnter(table, view);
 
     var viewBtn = new Button("View");
     viewBtn.setId("viewButton");

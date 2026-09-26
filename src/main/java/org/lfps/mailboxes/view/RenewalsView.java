@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
@@ -16,6 +17,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -54,28 +56,17 @@ public class RenewalsView {
     }
 
     var pastDueTable = buildTable(today);
+    pastDueTable.setId("pastDueTable");
     pastDueTable.setItems(FXCollections.observableArrayList(pastDue));
 
     var upcomingTable = buildTable(today);
+    upcomingTable.setId("upcomingTable");
     upcomingTable.setItems(FXCollections.observableArrayList(upcoming));
 
-    var pastDueEditBtn = new Button("Edit");
-    pastDueEditBtn.disableProperty().bind(pastDueTable.getSelectionModel().selectedItemProperty().isNull());
-    pastDueEditBtn.setOnAction(e -> {
-      var selected = pastDueTable.getSelectionModel().getSelectedItem();
-      if (selected != null) {
-        EditBoxView.show(stage, selected, () -> show(stage));
-      }
-    });
-
-    var upcomingEditBtn = new Button("Edit");
-    upcomingEditBtn.disableProperty().bind(upcomingTable.getSelectionModel().selectedItemProperty().isNull());
-    upcomingEditBtn.setOnAction(e -> {
-      var selected = upcomingTable.getSelectionModel().getSelectedItem();
-      if (selected != null) {
-        EditBoxView.show(stage, selected, () -> show(stage));
-      }
-    });
+    Consumer<Mailbox> edit = mailbox -> EditBoxView.show(stage, mailbox, () -> show(stage));
+    Consumer<Mailbox> view = mailbox -> BoxDetailsView.show(stage, mailbox, () -> edit.accept(mailbox));
+    BoxDetailsView.openOnDoubleClickOrEnter(pastDueTable, view);
+    BoxDetailsView.openOnDoubleClickOrEnter(upcomingTable, view);
 
     var pastDueHeader = new Label("Past Due");
     pastDueHeader.setStyle("-fx-font-size: 1.1em; -fx-font-weight: bold;");
@@ -90,10 +81,10 @@ public class RenewalsView {
         backBtn,
         pastDueHeader,
         pastDueTable,
-        new HBox(10, pastDueEditBtn),
+        tableButtons(pastDueTable, "pastDue", view, edit),
         upcomingHeader,
         upcomingTable,
-        new HBox(10, upcomingEditBtn),
+        tableButtons(upcomingTable, "upcoming", view, edit),
         statusLabel);
     layout.setPadding(new Insets(20));
 
@@ -138,10 +129,28 @@ public class RenewalsView {
     return "In " + days + " day" + (days == 1 ? "" : "s");
   }
 
+  private static HBox tableButtons(TableView<Mailbox> table, String idPrefix, Consumer<Mailbox> view,
+      Consumer<Mailbox> edit) {
+    var viewBtn = new Button("View");
+    viewBtn.setId(idPrefix + "ViewButton");
+    viewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+    viewBtn.setOnAction(e -> view.accept(table.getSelectionModel().getSelectedItem()));
+
+    var editBtn = new Button("Edit");
+    editBtn.setId(idPrefix + "EditButton");
+    editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+    editBtn.setOnAction(e -> edit.accept(table.getSelectionModel().getSelectedItem()));
+
+    return new HBox(10, viewBtn, editBtn);
+  }
+
   private static TableView<Mailbox> buildTable(LocalDate today) {
     var table = new TableView<Mailbox>();
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
-    table.setStyle("-fx-pref-height: 14em;");
+    // Start small enough for both tables to fit the default window, then
+    // share any extra height between them.
+    table.setStyle("-fx-pref-height: 8em;");
+    VBox.setVgrow(table, Priority.ALWAYS);
 
     var nameCol = new TableColumn<Mailbox, String>("Name");
     nameCol.setCellValueFactory(cellData -> new SimpleStringProperty(

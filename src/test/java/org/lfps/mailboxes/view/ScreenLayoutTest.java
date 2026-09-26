@@ -108,6 +108,21 @@ class ScreenLayoutTest {
     assertEquals(widths[1], widths[0], 0.5);
   }
 
+  @Test
+  void manageBoxesAndRenewalsFitTheDefaultWindowWithoutScrolling() throws SQLException {
+    new SettingsRepository().put(Setting.TEXT_SIZE, TextSize.NORMAL.name());
+    for (Consumer<Stage> screen : List.<Consumer<Stage>>of(ManageBoxesView::show, RenewalsView::show)) {
+      FxTestSupport.run(() -> screen.accept(mainWindow));
+
+      var heights = FxTestSupport.call(() -> {
+        var scroll = scrollPaneSizedLikeTheDefaultWindow();
+        return new double[] { scroll.getContent().getLayoutBounds().getHeight(),
+            scroll.getViewportBounds().getHeight() };
+      });
+      assertEquals(heights[1], heights[0], 0.5, "the screen should exactly fill the window's height");
+    }
+  }
+
   private double[] contentAndViewportWidths() {
     return FxTestSupport.call(() -> {
       var scroll = scrollPaneSizedLikeTheDefaultWindow();
