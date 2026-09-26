@@ -91,7 +91,7 @@ public class ManageBoxesView {
     editBtn.setOnAction(e -> {
       var selected = table.getSelectionModel().getSelectedItem();
       if (selected != null) {
-        EditBoxView.show(stage, selected);
+        EditBoxView.show(stage, selected, () -> show(stage));
       }
     });
 

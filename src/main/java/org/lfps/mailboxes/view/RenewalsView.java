@@ -74,7 +74,7 @@ public class RenewalsView {
     pastDueEditBtn.setOnAction(e -> {
       var selected = pastDueTable.getSelectionModel().getSelectedItem();
       if (selected != null) {
-        EditBoxView.show(stage, selected);
+        EditBoxView.show(stage, selected, () -> show(stage));
       }
     });
 
@@ -83,7 +83,7 @@ public class RenewalsView {
     upcomingEditBtn.setOnAction(e -> {
       var selected = upcomingTable.getSelectionModel().getSelectedItem();
       if (selected != null) {
-        EditBoxView.show(stage, selected);
+        EditBoxView.show(stage, selected, () -> show(stage));
       }
     });
 

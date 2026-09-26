@@ -28,8 +28,9 @@ public class EditBoxView {
    *
    * @param stage the window to render the form into
    * @param mailbox the mailbox to edit
+   * @param onDone navigates back to the calling screen after saving or cancelling
    */
-  public static void show(Stage stage, Mailbox mailbox) {
+  public static void show(Stage stage, Mailbox mailbox, Runnable onDone) {
     var firstNameField = new TextField(mailbox.getFirstName());
     var lastNameField = new TextField(mailbox.getLastName());
     var businessTitleField = new TextField(mailbox.getBusinessTitle());
@@ -103,7 +104,7 @@ public class EditBoxView {
 
       try {
         repository.update(updated);
-        ManageBoxesView.show(stage);
+        onDone.run();
       } catch (SQLException ex) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText("Failed to save: " + ex.getMessage());
@@ -111,7 +112,7 @@ public class EditBoxView {
     });
 
     var cancelBtn = new Button("Cancel");
-    cancelBtn.setOnAction(e -> ManageBoxesView.show(stage));
+    cancelBtn.setOnAction(e -> onDone.run());
 
     var grid = new GridPane();
     grid.setHgap(10);
