@@ -5,33 +5,65 @@ to reach them, which business names receive mail there, and when each rental
 ends. It runs on macOS, Windows, and Linux, and keeps all data on your own
 computer.
 
-## Download and run
+## Installing
 
-1. Install Java 17 or newer, for example from [Adoptium](https://adoptium.net/).
-2. Download the jar for your computer from the
-   [latest release](https://github.com/wgoodzey/mailbox-manager/releases/latest):
+Download the installer for your computer from the
+[latest release](https://github.com/wgoodzey/mailbox-manager/releases/latest).
+Java is built in, so there's nothing else to install.
 
-   | Computer                              | File                                        |
-   | ------------------------------------- | ------------------------------------------- |
-   | Windows                               | `mailbox-manager-<version>-windows-x64.jar` |
-   | Mac with Apple silicon (M1 and later) | `mailbox-manager-<version>-mac-arm64.jar`   |
-   | Mac with Intel                        | `mailbox-manager-<version>-mac-x64.jar`     |
-   | Linux                                 | `mailbox-manager-<version>-linux-x64.jar`   |
+| Computer                              | File                                            |
+| ------------------------------------- | ----------------------------------------------- |
+| Windows                               | `mailbox-manager-<version>-windows-x64.msi`     |
+| Mac with Apple silicon (M1 and later) | `mailbox-manager-<version>-mac-arm64.dmg`       |
+| Mac with Intel                        | `mailbox-manager-<version>-mac-x64.dmg`         |
+| Linux                                 | `mailbox-manager-<version>-linux-x64.AppImage`  |
 
-   Each jar only works on the system it was built for.
-3. Double-click the jar, or run it from a terminal:
+### Windows
 
-   ```sh
-   java -jar mailbox-manager-<version>-<platform>.jar
-   ```
+Open the `.msi`. It installs for your user account only, so it doesn't need
+an administrator password, and adds Mailbox Manager to the Start menu and the
+desktop.
 
-If double-clicking shows "A Java Exception has occurred" or nothing happens,
-run the jar from a terminal as above to see the actual error, and check that
-`java -version` reports 17 or newer. Double-clicking uses whichever Java your
-computer has set up for jar files, which may be an older one.
+The first time, Windows may show "Windows protected your PC", because the
+installer isn't signed. Click **More info**, then **Run anyway**.
 
-To upgrade, download the new jar and run it instead of the old one. Your data
-is stored separately (see below) and carries over automatically.
+### Mac
+
+Open the `.dmg` and drag **Mailbox Manager** into the **Applications** folder.
+
+The first time you open it, macOS may say it can't check the app for malicious
+software, because the app isn't signed with an Apple developer account. Click
+**Done**, then go to **System Settings → Privacy & Security**, scroll down to
+the message about Mailbox Manager, and click **Open Anyway**. After that it
+opens normally. You may need to do this again after installing a new version.
+
+### Linux
+
+Make the AppImage executable and run it:
+
+```sh
+chmod +x mailbox-manager-<version>-linux-x64.AppImage
+./mailbox-manager-<version>-linux-x64.AppImage
+```
+
+If it complains about FUSE, install your distribution's `libfuse2` package, or
+run it with `--appimage-extract-and-run`.
+
+### Upgrading
+
+Install the new version the same way. On Windows it replaces the old one; on
+a Mac, replace the app in Applications. Your data is stored separately (see
+below) and carries over automatically.
+
+### Running the jar instead
+
+Each release also includes a jar for each system (`…-<platform>.jar`), which
+needs Java 17 or newer installed; Java 25 from
+[Oracle](https://www.oracle.com/java/technologies/downloads/) or
+[Adoptium](https://adoptium.net/) is recommended. The Java on java.com is
+version 8, which is too old. Run it with `java -jar <file>.jar`, or
+double-click it. If double-clicking shows "A Java Exception has occurred",
+check that `java -version` reports 17 or newer.
 
 ## Using the app
 
@@ -107,6 +139,7 @@ You need a JDK, version 17 or newer. Maven is included through the wrapper
 | Run the app | `./mvnw javafx:run` (or the Run button in your IDE on `App`) |
 | Run the tests | `./mvnw test` |
 | Build a runnable jar | `./mvnw clean package`, which produces `target/mailbox-manager-<version>-shaded.jar` |
+| Build the installer for this computer | `packaging/package.sh <platform>` (e.g. `mac-arm64`), which writes it to `dist/` |
 
 Running the app from source uses your real data folder, so anything you add or
 delete while testing changes your real records.
@@ -130,6 +163,10 @@ src/main/java/org/lfps/mailboxes/
   model/            Mailbox
   view/             one class per screen, plus AppWindow (menu bar) and SettingsView
   util/             input validation and runtime info
+  Launcher.java     the entry point of the jar and installers, which hands off to App
+packaging/
+  package.sh        builds the installer for the current system with jpackage
+  icons/            app icon: icon.svg is the source; the .png, .ico and .icns are made from it
 ```
 
 To add a setting, declare it in `data/Setting.java`, add a field for it in
@@ -147,6 +184,15 @@ used. To add a menu item, edit `buildMenuBar` in `view/AppWindow.java`.
    git push origin vx.y.z
    ```
 
-GitHub Actions then builds a jar on Windows, Linux, and both kinds of Mac, and
-attaches them to a GitHub release for the tag. To rebuild the jars for an
-existing tag, run the **Build** workflow manually from the Actions tab.
+GitHub Actions then builds the installers and jars on Windows, Linux, and both
+kinds of Mac, installs and starts each app to check that it launches, and
+attaches them all to a GitHub release for the tag.
+
+From the Actions tab you can also run the **Build** workflow by hand. With the
+tag left empty it builds the installers without releasing them, so you can
+download them from the run and try them out first. With an existing tag
+entered, it rebuilds that tag's release files.
+
+The installers aren't code-signed, which is why users see a one-time warning
+on Windows and macOS. Signing needs an Apple Developer account for macOS and a
+code-signing certificate for Windows.

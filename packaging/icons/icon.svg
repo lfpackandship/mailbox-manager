@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Placeholder app icon: a mailbox with its flag up. -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#2f6fb3"/>
+  <!-- post -->
+  <rect x="472" y="600" width="80" height="260" rx="12" fill="#6b4a2f"/>
+  <!-- mailbox body: rounded top, flat bottom -->
+  <path d="M232 620 V440 A200 200 0 0 1 632 440 V620 Z" fill="#f4f1ea"/>
+  <path d="M432 240 H592 A200 200 0 0 1 792 440 V620 H632 V440 A200 200 0 0 0 432 240 Z" fill="#d9d3c7"/>
+  <!-- door -->
+  <path d="M272 610 V445 A160 160 0 0 1 592 445 V610 Z" fill="#e6e1d6" stroke="#b9b1a2" stroke-width="10"/>
+  <!-- flag -->
+  <rect x="700" y="300" width="28" height="220" rx="8" fill="#c0392b"/>
+  <rect x="700" y="300" width="130" height="80" rx="10" fill="#e74c3c"/>
+  <!-- letter peeking out -->
+  <rect x="332" y="560" width="200" height="40" rx="6" fill="#ffffff" stroke="#b9b1a2" stroke-width="6"/>
+</svg>
