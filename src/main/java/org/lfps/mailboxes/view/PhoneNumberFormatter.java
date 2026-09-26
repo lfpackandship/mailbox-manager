@@ -39,6 +39,12 @@ public final class PhoneNumberFormatter {
     return new TextFormatter<>(filter);
   }
 
+  /**
+   * Counts the digit characters in a string.
+   *
+   * @param text the text to scan
+   * @return the number of digit characters found
+   */
   private static int countDigits(String text) {
     var count = 0;
     for (var i = 0; i < text.length(); i++) {
@@ -49,6 +55,16 @@ public final class PhoneNumberFormatter {
     return count;
   }
 
+  /**
+   * Finds the index in a formatted string that comes right after its
+   * {@code digitCount}th digit, so the caret can be restored to the same
+   * digit it was next to before reformatting.
+   *
+   * @param formatted the formatted text to search
+   * @param digitCount how many digits should precede the returned index
+   * @return the index after the {@code digitCount}th digit, or the string's
+   *     length if it has fewer digits than that
+   */
   private static int caretIndexAfterDigits(String formatted, int digitCount) {
     if (digitCount <= 0) {
       return 0;
