@@ -9,7 +9,7 @@ import javafx.stage.Stage;
 
 /**
  * The application's main menu: a 2x2 grid linking to Add New Box, Manage
- * Boxes, and Calendar, with a placeholder fourth tile.
+ * Boxes, Calendar, and Renewals.
  */
 public class MainMenuView {
 
@@ -22,16 +22,16 @@ public class MainMenuView {
     var addBoxBtn = new Button("Add New Box");
     var manageBoxesBtn = new Button("Manage Boxes");
     var calendarBtn = new Button("Calendar");
-    var comingSoonBtn = new Button("Coming Soon");
-    comingSoonBtn.setDisable(true);
+    var renewalsBtn = new Button("Renewals");
 
-    for (var btn : new Button[] { addBoxBtn, manageBoxesBtn, calendarBtn, comingSoonBtn }) {
+    for (var btn : new Button[] { addBoxBtn, manageBoxesBtn, calendarBtn, renewalsBtn }) {
       btn.setPrefSize(250, 150);
     }
 
     addBoxBtn.setOnAction(e -> AddBoxView.show(stage));
     manageBoxesBtn.setOnAction(e -> ManageBoxesView.show(stage));
     calendarBtn.setOnAction(e -> CalendarView.show(stage));
+    renewalsBtn.setOnAction(e -> RenewalsView.show(stage));
 
     var grid = new GridPane();
     grid.setHgap(10);
@@ -41,7 +41,7 @@ public class MainMenuView {
     grid.add(addBoxBtn, 0, 0);
     grid.add(manageBoxesBtn, 1, 0);
     grid.add(calendarBtn, 0, 1);
-    grid.add(comingSoonBtn, 1, 1);
+    grid.add(renewalsBtn, 1, 1);
 
     stage.setScene(new Scene(grid));
     stage.show();
