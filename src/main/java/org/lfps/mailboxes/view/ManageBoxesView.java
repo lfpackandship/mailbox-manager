@@ -37,7 +37,7 @@ public class ManageBoxesView {
     var statusLabel = new Label();
 
     var table = new TableView<Mailbox>();
-    table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+    table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
 
     var firstNameCol = new TableColumn<Mailbox, String>("First Name");
     firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
@@ -64,8 +64,15 @@ public class ManageBoxesView {
     var emailCol = new TableColumn<Mailbox, String>("Email");
     emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
-    table.getColumns().addAll(firstNameCol, lastNameCol, businessTitleCol, alternateBusinessNamesCol,
-        boxNumberCol, boxNameCol, phoneCol, emailCol);
+    var columns = table.getColumns();
+    columns.add(firstNameCol);
+    columns.add(lastNameCol);
+    columns.add(businessTitleCol);
+    columns.add(alternateBusinessNamesCol);
+    columns.add(boxNumberCol);
+    columns.add(boxNameCol);
+    columns.add(phoneCol);
+    columns.add(emailCol);
 
     try {
       table.setItems(FXCollections.observableArrayList(repository.findAll()));
