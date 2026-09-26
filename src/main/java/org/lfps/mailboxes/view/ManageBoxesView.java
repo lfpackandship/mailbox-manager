@@ -156,7 +156,7 @@ public class ManageBoxesView {
    * name; a word made of digits also matches the phone number ignoring its
    * formatting.
    */
-  private static boolean matches(Mailbox mailbox, String query) {
+  static boolean matches(Mailbox mailbox, String query) {
     if (query == null || query.isBlank()) {
       return true;
     }
