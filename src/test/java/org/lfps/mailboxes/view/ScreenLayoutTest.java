@@ -80,12 +80,11 @@ class ScreenLayoutTest {
   void extraLargeContentThatDoesntFitCanBeScrolledTo() {
     FxTestSupport.run(() -> CalendarView.show(mainWindow));
 
-    // At extra large text the calendar is taller than a 700x600 window, so the
+    // At extra large text the calendar is taller than the default window, so the
     // scroll pane's content must extend past the visible area instead of being
     // squeezed into it.
     var sizes = FxTestSupport.call(() -> {
-      var scroll = (ScrollPane) ((BorderPane) mainWindow.getScene().getRoot()).getCenter();
-      scroll.layout();
+      var scroll = scrollPaneSizedLikeTheDefaultWindow();
       return new double[] { scroll.getContent().getLayoutBounds().getHeight(),
           scroll.getViewportBounds().getHeight() };
     });
@@ -111,11 +110,22 @@ class ScreenLayoutTest {
 
   private double[] contentAndViewportWidths() {
     return FxTestSupport.call(() -> {
-      var scroll = (ScrollPane) ((BorderPane) mainWindow.getScene().getRoot()).getCenter();
-      scroll.layout();
+      var scroll = scrollPaneSizedLikeTheDefaultWindow();
       return new double[] { scroll.getContent().getLayoutBounds().getWidth(),
           scroll.getViewportBounds().getWidth() };
     });
+  }
+
+  /**
+   * Lays out the screen's scroll pane at the size it has in the default
+   * 700x600 window. Sized directly rather than through the window, because
+   * without a window manager (as in CI) a window grows to fit its contents.
+   */
+  private ScrollPane scrollPaneSizedLikeTheDefaultWindow() {
+    var scroll = (ScrollPane) ((BorderPane) mainWindow.getScene().getRoot()).getCenter();
+    scroll.resize(700, 540);
+    scroll.layout();
+    return scroll;
   }
 
   @Test
