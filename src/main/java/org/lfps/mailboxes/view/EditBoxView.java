@@ -14,8 +14,17 @@ import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.Validators;
 
+/**
+ * Form for editing an existing mailbox's details and saving changes.
+ */
 public class EditBoxView {
 
+  /**
+   * Builds and displays a pre-filled edit form for the given mailbox.
+   *
+   * @param stage the window to render the form into
+   * @param mailbox the mailbox to edit
+   */
   public static void show(Stage stage, Mailbox mailbox) {
     var firstNameField = new TextField(mailbox.getFirstName());
     var lastNameField = new TextField(mailbox.getLastName());

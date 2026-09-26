@@ -14,8 +14,16 @@ import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.Validators;
 
+/**
+ * Form for entering a new mailbox holder and saving it to the database.
+ */
 public class AddBoxView {
 
+  /**
+   * Builds and displays the Add New Box form on the given stage.
+   *
+   * @param stage the window to render the form into
+   */
   public static void show(Stage stage) {
     var businessTitleField = new TextField();
     businessTitleField.setPromptText("Enter your business title (optional)");

@@ -21,8 +21,17 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+/**
+ * Lists all mailboxes in a table with actions to edit or delete a selected
+ * entry.
+ */
 public class ManageBoxesView {
 
+  /**
+   * Builds and displays the mailbox list on the given stage.
+   *
+   * @param stage the window to render the list into
+   */
   public static void show(Stage stage) {
     var repository = new MailboxRepository();
     var statusLabel = new Label();

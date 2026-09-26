@@ -5,14 +5,30 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * Manages the SQLite connection and schema for the mailbox database.
+ */
 public class Database {
 
   private static final String URL = "jdbc:sqlite:mailboxes.db";
 
+  /**
+   * Opens a new connection to the local SQLite database file.
+   *
+   * @return an open connection; callers are responsible for closing it
+   * @throws SQLException if the connection cannot be established
+   */
   public static Connection connect() throws SQLException {
     return DriverManager.getConnection(URL);
   }
 
+  /**
+   * Creates the {@code mailboxes} and {@code business_names} tables if they
+   * don't already exist, and migrates older databases that predate the
+   * {@code box_name} column.
+   *
+   * @throws RuntimeException if the schema cannot be initialized
+   */
   public static void initSchema() {
     var createMailboxes = "CREATE TABLE IF NOT EXISTS mailboxes ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "

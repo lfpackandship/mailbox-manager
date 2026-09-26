@@ -7,8 +7,17 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
+/**
+ * The application's main menu: a 2x2 grid linking to Add New Box, Manage
+ * Boxes, and Calendar, with a placeholder fourth tile.
+ */
 public class MainMenuView {
 
+  /**
+   * Builds and displays the main menu on the given stage.
+   *
+   * @param stage the window to render the menu into
+   */
   public static void show(Stage stage) {
     var addBoxBtn = new Button("Add New Box");
     var manageBoxesBtn = new Button("Manage Boxes");

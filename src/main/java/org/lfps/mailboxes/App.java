@@ -7,10 +7,15 @@ import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.view.MainMenuView;
 
 /**
- * JavaFX App
+ * Entry point for the Mailbox Manager JavaFX application.
  */
 public class App extends Application {
 
+  /**
+   * Initializes the database schema and shows the main menu.
+   *
+   * @param stage the primary window supplied by the JavaFX runtime
+   */
   @Override
   public void start(Stage stage) {
     Database.initSchema();
@@ -18,6 +23,11 @@ public class App extends Application {
     MainMenuView.show(stage);
   }
 
+  /**
+   * Launches the JavaFX application.
+   *
+   * @param args command-line arguments (unused)
+   */
   public static void main(String[] args) {
     launch();
   }

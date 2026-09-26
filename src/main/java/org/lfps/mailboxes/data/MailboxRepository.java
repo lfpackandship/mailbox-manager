@@ -10,6 +10,10 @@ import java.util.List;
 
 import org.lfps.mailboxes.model.Mailbox;
 
+/**
+ * Provides CRUD access to mailboxes and their alternate business names,
+ * stored across the {@code mailboxes} and {@code business_names} tables.
+ */
 public class MailboxRepository {
 
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
@@ -33,6 +37,12 @@ public class MailboxRepository {
   private static final String DELETE_BUSINESS_NAMES_SQL =
       "DELETE FROM business_names WHERE mailbox_id = ?";
 
+  /**
+   * Inserts a new mailbox along with its alternate business names.
+   *
+   * @param mailbox the mailbox to persist; its id is ignored
+   * @throws SQLException if the insert fails
+   */
   public void insert(Mailbox mailbox) throws SQLException {
     try (Connection conn = Database.connect()) {
       conn.setAutoCommit(false);
@@ -55,6 +65,13 @@ public class MailboxRepository {
     }
   }
 
+  /**
+   * Returns every mailbox, ordered by box number, with its alternate
+   * business names loaded.
+   *
+   * @return all mailboxes in the database
+   * @throws SQLException if the query fails
+   */
   public List<Mailbox> findAll() throws SQLException {
     var mailboxes = new ArrayList<Mailbox>();
 
@@ -79,6 +96,12 @@ public class MailboxRepository {
     return mailboxes;
   }
 
+  /**
+   * Updates an existing mailbox and replaces its alternate business names.
+   *
+   * @param mailbox the mailbox to save, identified by {@link Mailbox#getId()}
+   * @throws SQLException if the update fails
+   */
   public void update(Mailbox mailbox) throws SQLException {
     try (Connection conn = Database.connect()) {
       conn.setAutoCommit(false);
@@ -98,6 +121,12 @@ public class MailboxRepository {
     }
   }
 
+  /**
+   * Deletes a mailbox and its alternate business names.
+   *
+   * @param id the id of the mailbox to delete
+   * @throws SQLException if the delete fails
+   */
   public void delete(int id) throws SQLException {
     try (Connection conn = Database.connect()) {
       conn.setAutoCommit(false);
