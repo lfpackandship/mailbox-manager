@@ -4,12 +4,13 @@
 # runtime bundled so users don't need Java installed:
 #
 #   macOS    dist/mailbox-manager-<version>-<platform>.dmg
-#   Windows  dist/mailbox-manager-<version>-<platform>.msi   (needs WiX Toolset 3)
+#   Windows  dist/mailbox-manager-<version>-<platform>.msi   (needs the WiX Toolset)
 #   Linux    dist/mailbox-manager-<version>-<platform>.AppImage
 #
 # The runnable jar is copied to dist/ as well. The version comes from pom.xml.
 # Uses the jpackage from the JDK on the PATH (or JAVA_HOME), which is also the
-# Java that gets bundled.
+# Java that gets bundled. Windows builds also need the WiX Toolset on the PATH;
+# see .github/workflows/build.yml for how CI installs WiX 5.
 #
 # Usage: packaging/package.sh <platform>   e.g. mac-arm64, windows-x64, linux-x64
 

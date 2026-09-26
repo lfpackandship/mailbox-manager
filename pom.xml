@@ -39,7 +39,7 @@
             </plugin>
             <plugin>
                 <!-- Tests run against a throwaway home and working directory under target/ -->
-                <!-- so they never touch the real database. Usage: mvn test -->
+                <!-- so they never touch the real database. Usage: ./mvnw test -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
@@ -58,7 +58,7 @@
                 <executions>
                     <execution>
                         <!-- Default configuration for running -->
-                        <!-- Usage: mvn clean javafx:run -->
+                        <!-- Usage: ./mvnw clean javafx:run -->
                         <id>default-cli</id>
                         <configuration>
                             <mainClass>org.lfps.mailboxes.App</mainClass>
@@ -68,7 +68,7 @@
             </plugin>
             <plugin>
                 <!-- Bundles all dependencies into a single runnable jar for releases. -->
-                <!-- Usage: mvn clean package -->
+                <!-- Usage: ./mvnw clean package -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.5.1</version>

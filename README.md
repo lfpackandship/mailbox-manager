@@ -5,6 +5,8 @@ to reach them, which business names receive mail there, and when each rental
 ends. It runs on macOS, Windows, and Linux, and keeps all data on your own
 computer.
 
+See [CHANGELOG.md](CHANGELOG.md) for what's new in each release.
+
 ## Installing
 
 Download the installer for your computer from the
@@ -46,8 +48,8 @@ chmod +x mailbox-manager-<version>-linux-x64.AppImage
 ./mailbox-manager-<version>-linux-x64.AppImage
 ```
 
-If it complains about FUSE, install your distribution's `libfuse2` package, or
-run it with `--appimage-extract-and-run`.
+If it won't start because FUSE isn't available (common in containers and some
+minimal systems), run it with `--appimage-extract-and-run` added to the end.
 
 ### Upgrading
 
@@ -132,7 +134,14 @@ settings from that day.
 ## Development
 
 You need a JDK, version 17 or newer. Maven is included through the wrapper
-(`./mvnw`, or `mvnw.cmd` on Windows), so there's nothing else to install.
+(`./mvnw`, or `mvnw.cmd` on Windows), so there's nothing else to install for
+running, testing, or building the jar.
+
+Building an installer uses the `jpackage` tool from that JDK, and bundles that
+JDK's Java into the installer (release builds use Java 25). On Windows it also
+needs the [WiX Toolset](https://wixtoolset.org/) and a bash shell such as Git
+Bash. Each installer can only be built on its own system, so releases are
+built by GitHub Actions rather than locally.
 
 | Task | Command |
 | ---- | ------- |
@@ -175,18 +184,24 @@ used. To add a menu item, edit `buildMenuBar` in `view/AppWindow.java`.
 
 ### Releasing
 
-1. Update the version in `pom.xml` and commit it (`Release x.y.z`).
-2. Push to `main` and wait for the tests to pass in GitHub Actions.
-3. Tag the commit and push the tag:
+1. Update the version in `pom.xml` and commit it (`Release x.y.z`). Versions
+   must be three numbers, x.y.z, because the macOS installer accepts nothing
+   else.
+2. Add the release to [CHANGELOG.md](CHANGELOG.md).
+3. Push to `main` and wait for the tests to pass in GitHub Actions.
+4. Tag the commit and push the tag. The tag must match the version in
+   `pom.xml`, or the build stops before releasing anything.
 
    ```sh
-   git tag vx.y.z
+   git tag -a vx.y.z -m "Mailbox Manager x.y.z"
    git push origin vx.y.z
    ```
 
 GitHub Actions then builds the installers and jars on Windows, Linux, and both
 kinds of Mac, installs and starts each app to check that it launches, and
-attaches them all to a GitHub release for the tag.
+attaches them all to a GitHub release for the tag. The release notes are
+generated from commit titles; edit the release on GitHub to add a friendlier
+summary from the changelog.
 
 From the Actions tab you can also run the **Build** workflow by hand. With the
 tag left empty it builds the installers without releasing them, so you can
