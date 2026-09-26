@@ -48,6 +48,7 @@ public class AddBoxView {
 
     var phoneField = new TextField();
     phoneField.setPromptText("(555) 123-4567");
+    phoneField.setTextFormatter(PhoneNumberFormatter.create());
 
     var emailField = new TextField();
     emailField.setPromptText("optional");
@@ -139,7 +140,7 @@ public class AddBoxView {
     var layout = new VBox(8, backBtn, grid, submitBtn, resultLabel);
     layout.setPadding(new Insets(15));
 
-    stage.setScene(new Scene(layout, 640, 480));
+    stage.setScene(new Scene(layout));
     stage.show();
   }
 

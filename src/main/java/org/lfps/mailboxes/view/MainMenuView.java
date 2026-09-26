@@ -43,7 +43,7 @@ public class MainMenuView {
     grid.add(calendarBtn, 0, 1);
     grid.add(comingSoonBtn, 1, 1);
 
-    stage.setScene(new Scene(grid, 640, 480));
+    stage.setScene(new Scene(grid));
     stage.show();
   }
 

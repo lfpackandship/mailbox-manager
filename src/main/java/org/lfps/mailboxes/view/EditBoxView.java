@@ -35,7 +35,8 @@ public class EditBoxView {
     var businessTitleField = new TextField(mailbox.getBusinessTitle());
     var boxNumberField = new TextField(mailbox.getBoxNumber());
     var boxNameField = new TextField(mailbox.getBoxName() == null ? "" : mailbox.getBoxName());
-    var phoneField = new TextField(mailbox.getPhone());
+    var phoneField = new TextField(PhoneNumberFormatter.format(mailbox.getPhone()));
+    phoneField.setTextFormatter(PhoneNumberFormatter.create());
     var emailField = new TextField(mailbox.getEmail());
 
     var businessNamesEditor = new BusinessNamesEditor();
@@ -127,7 +128,7 @@ public class EditBoxView {
     var layout = new VBox(8, cancelBtn, grid, saveBtn, resultLabel);
     layout.setPadding(new Insets(15));
 
-    stage.setScene(new Scene(layout, 640, 480));
+    stage.setScene(new Scene(layout));
     stage.show();
   }
 

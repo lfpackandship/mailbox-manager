@@ -20,6 +20,8 @@ public class App extends Application {
   public void start(Stage stage) {
     Database.initSchema();
     stage.setTitle("Mailbox Manager");
+    stage.setWidth(700);
+    stage.setHeight(600);
     MainMenuView.show(stage);
   }
 

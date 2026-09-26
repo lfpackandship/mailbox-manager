@@ -130,7 +130,7 @@ public class ManageBoxesView {
         statusLabel);
     layout.setPadding(new Insets(20));
 
-    stage.setScene(new Scene(layout, 640, 480));
+    stage.setScene(new Scene(layout));
     stage.show();
   }
 
