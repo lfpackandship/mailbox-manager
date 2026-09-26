@@ -6,14 +6,14 @@ import javafx.scene.control.TextFormatter;
 import javafx.scene.control.TextFormatter.Change;
 
 /**
- * Formats phone number input as the user types, rendering typed digits as
- * {@code (XXX) XXX-XXXX} so only digits need to be entered.
+ * Formats phone number input as the user types, rendering typed digits in
+ * standard US phone format so only digits need to be entered.
  */
 public final class PhoneNumberFormatter {
 
   /**
    * Creates a {@link TextFormatter} that reformats a text field's content
-   * as {@code (XXX) XXX-XXXX} on every edit, ignoring non-digit input.
+   * as a US phone number on every edit, ignoring non-digit input.
    *
    * @return a new text formatter for a phone number field
    */
@@ -82,8 +82,8 @@ public final class PhoneNumberFormatter {
   }
 
   /**
-   * Formats a string of digits (ignoring any other characters) as
-   * {@code (XXX) XXX-XXXX}, truncating to at most 10 digits.
+   * Formats a string of digits (ignoring any other characters) as a US
+   * phone number, truncating to at most 10 digits.
    *
    * @param input the raw input to format
    * @return the formatted phone number, or a partial prefix if fewer than
