@@ -3,7 +3,7 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/wgoodzey/mailbox-manager/releases).
 
-## 1.5.0 – Unreleased
+## 1.5.0 – 2026-09-26
 
 ### Added
 
