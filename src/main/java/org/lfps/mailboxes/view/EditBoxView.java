@@ -7,6 +7,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
@@ -14,6 +15,7 @@ import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.util.BoxNumbers;
 import org.lfps.mailboxes.util.Validators;
 
 /**
@@ -33,6 +35,7 @@ public class EditBoxView {
     var lastNameField = new TextField(mailbox.getLastName());
     var businessTitleField = new TextField(orEmpty(mailbox.getBusinessTitle()));
     var boxNumberField = new TextField(mailbox.getBoxNumber());
+    boxNumberField.setId("boxNumberField");
     var boxNameField = new TextField(orEmpty(mailbox.getBoxName()));
     var phoneField = new TextField(PhoneNumberFormatter.format(mailbox.getPhone()));
     phoneField.setTextFormatter(PhoneNumberFormatter.create());
@@ -49,6 +52,9 @@ public class EditBoxView {
 
     var rentalLengthButtons = RentalLengthButtons.create(months -> extendEndDate(endDateField, months));
 
+    var notesField = notesField();
+    notesField.setText(orEmpty(mailbox.getNotes()));
+
     for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
         boxNumberField, boxNameField, phoneField, emailField }) {
       field.setStyle("-fx-pref-width: 12em;");
@@ -56,6 +62,7 @@ public class EditBoxView {
 
     var saveBtn = new Button("Save");
     var resultLabel = new Label();
+    resultLabel.setId("resultLabel");
     var repository = new MailboxRepository();
 
     saveBtn.setOnAction(e -> {
@@ -69,14 +76,11 @@ public class EditBoxView {
       }
       if (boxNumberField.getText().isBlank()) {
         errors.append("Box number is required.\n");
-      } else {
-        try {
-          if (repository.isBoxNumberTaken(boxNumberField.getText(), mailbox.getId())) {
-            errors.append("Box " + boxNumberField.getText().trim() + " is already assigned to someone else.\n");
-          }
-        } catch (SQLException ex) {
-          errors.append("Could not check box number: " + ex.getMessage() + "\n");
-        }
+      } else if (!mailbox.isClosed()
+          && !BoxNumbers.key(boxNumberField.getText()).equals(BoxNumbers.key(mailbox.getBoxNumber()))) {
+        // A closed box doesn't hold its number, so only check a changed
+        // number on an open box.
+        errors.append(BoxNumberChecks.problem(boxNumberField.getText(), mailbox.getId()));
       }
 
       var phone = phoneField.getText();
@@ -99,7 +103,8 @@ public class EditBoxView {
 
       var updated = new Mailbox(mailbox.getId(), firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumberField.getText(), boxNameField.getText(), phone, email,
-          businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses());
+          businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses(),
+          notesField.getText(), mailbox.getClosedDate());
 
       try {
         repository.update(updated);
@@ -126,11 +131,25 @@ public class EditBoxView {
     grid.add(businessNamesEditor, 0, 6, 4, 1);
     grid.add(new Label("Forwarding Addresses:"), 0, 7, 4, 1);
     grid.add(forwardingEditor, 0, 8, 4, 1);
+    grid.add(new Label("Notes:"), 0, 9, 4, 1);
+    grid.add(notesField, 0, 10, 4, 1);
 
     var layout = new VBox(8, cancelBtn, grid, saveBtn, resultLabel);
     layout.setPadding(new Insets(15));
 
     AppWindow.show(stage, layout);
+  }
+
+  /**
+   * Builds the notes field shared by the Add and Edit Box forms.
+   */
+  static TextArea notesField() {
+    var notesField = new TextArea();
+    notesField.setId("notesField");
+    notesField.setPromptText("e.g. paid in cash, ID on file, picks up for spouse (optional)");
+    notesField.setPrefRowCount(3);
+    notesField.setWrapText(true);
+    return notesField;
   }
 
   // Optional fields can be missing (null) in data from older versions; an

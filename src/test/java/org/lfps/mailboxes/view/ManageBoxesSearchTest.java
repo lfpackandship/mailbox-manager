@@ -43,6 +43,14 @@ class ManageBoxesSearchTest {
   }
 
   @Test
+  void matchesNotes() {
+    var box = new Mailbox(0, "Ada", "Lovelace", null, "1", null, "5551234567", null, null, null, null,
+        "Picks up for her sister", null);
+    assertTrue(ManageBoxesView.matches(box, "sister"));
+    assertFalse(ManageBoxesView.matches(box, "brother"));
+  }
+
+  @Test
   void toleratesMissingOptionalFields() {
     assertTrue(ManageBoxesView.matches(SPARSE, "brennan"));
     assertTrue(ManageBoxesView.matches(SPARSE, "2000008"));

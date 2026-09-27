@@ -2,7 +2,6 @@ package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import javafx.application.Platform;
 import javafx.scene.control.TextField;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -15,11 +14,7 @@ class PhoneNumberFormatterTest {
   @BeforeAll
   static void startJavaFx() {
     // Controls can't be created until the JavaFX runtime is running.
-    try {
-      Platform.startup(() -> { });
-    } catch (IllegalStateException alreadyStarted) {
-      // Another test class already started it.
-    }
+    FxTestSupport.start();
   }
 
   @ParameterizedTest

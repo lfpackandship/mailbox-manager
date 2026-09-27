@@ -2,6 +2,7 @@ package org.lfps.mailboxes.data;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -17,6 +18,8 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import org.lfps.mailboxes.model.RentalPeriod;
 
 class DatabaseTest {
 
@@ -170,6 +173,33 @@ class DatabaseTest {
     settings.put(Setting.RENEWAL_WINDOW_DAYS, "45");
 
     assertEquals(45, settings.getInt(Setting.RENEWAL_WINDOW_DAYS));
+  }
+
+  @Test
+  void upgradesDatabaseCreatedBeforeNotesClosingAndRentalHistory() throws SQLException {
+    Database.prepareDataDir();
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("CREATE TABLE mailboxes (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+          + "first_name TEXT NOT NULL, last_name TEXT NOT NULL, business_title TEXT, "
+          + "box_number TEXT NOT NULL, box_name TEXT, phone TEXT NOT NULL, email TEXT, "
+          + "end_date TEXT)");
+      stmt.execute("INSERT INTO mailboxes (first_name, last_name, box_number, phone, end_date) "
+          + "VALUES ('Ada', 'Lovelace', '7', '(555) 123-4567', '2026-12-01')");
+    }
+
+    Database.initSchema();
+
+    var mailboxes = new MailboxRepository();
+    var old = mailboxes.findAll().get(0);
+    assertNull(old.getNotes());
+    assertFalse(old.isClosed());
+    mailboxes.setClosedDate(old.getId(), LocalDate.of(2026, 9, 1));
+    new RentalHistoryRepository().renew(old.getId(), new RentalPeriod(0, 0,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 12, 1), LocalDate.of(2027, 12, 1), 12000L, "Cash", null));
+    new BoxInventoryRepository().add(java.util.List.of("7"), null);
+
+    assertTrue(mailboxes.findAll().get(0).isClosed());
+    assertEquals(LocalDate.of(2027, 12, 1), mailboxes.findAll().get(0).getEndDate());
   }
 
   private static java.util.List<String> listBackups() throws IOException {

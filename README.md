@@ -69,29 +69,109 @@ check that `java -version` reports 17 or newer.
 
 ## Using the app
 
-The main menu has four screens:
+The main menu has six screens:
 
 - **Add New Box** – record a new box holder. First name, last name, box number,
-  and phone number are required. Each box number can only belong to one holder.
-  You can also add a business title, a nickname for the box, an email address,
-  any alternate business names (DBAs) that receive mail there, the date the
-  rental ends, and any forwarding addresses. The rental length buttons (1, 3,
-  6, and 12 months unless changed in Settings) set the end date that far from
-  today.
-- **Manage Boxes** – every box in one table showing its box number, holder's
-  name, business title, and phone, with a search field. Search matches any
-  part of a name, business name, box number, box name, phone number, email,
-  or forwarding address (including its note), and phone numbers match with or
-  without formatting. To see everything recorded for a box, double-click it,
-  or select it and click **View** or press Enter; the details open in their
-  own window with an **Edit** button. Select a row to edit or delete it. When
-  editing, the rental length buttons extend the current end date, which makes
-  renewals quick.
-- **Calendar** – a month view with each box shown on the day its rental ends.
-  Hover over an entry for the holder's name.
-- **Renewals** – boxes that are past due, and boxes due within the next 30 days
-  (adjustable in Settings), most urgent first. Double-click a box, or select it
-  and click **View** or press Enter, to see its full details.
+  and phone number are required. Each box number can only belong to one holder
+  at a time. You can also add a business title, a nickname for the box, an
+  email address, any alternate business names (DBAs) that receive mail there,
+  the date the rental ends, the amount paid and how, any forwarding addresses,
+  and notes. The rental length buttons (1, 3, 6, and 12 months unless changed
+  in Settings) set the end date that far from today. If the
+  [box inventory](#box-inventory) is set up, **Choose…** next to the box number
+  lists the empty boxes to pick from.
+- **Manage Boxes** – the open boxes in one table showing each box number,
+  holder's name, business title, and phone, with a search field. Search
+  matches any part of a name, business name, box number, box name, phone
+  number, email, forwarding address (including its note), or the notes, and
+  phone numbers match with or without formatting. To see everything recorded
+  for a box, including its rental history, double-click it, or select it and
+  click **View** or press Enter; the details open in their own window with
+  **Edit** and **Renew…** buttons. Select a row to edit, renew, close, or
+  delete it. The menu next to the search field shows closed boxes instead, or
+  all boxes.
+- **Renewals** – open boxes that are past due, and those due within the next
+  30 days (adjustable in Settings), most urgent first. Select a box and click
+  **Renew…** to renew it, or double-click it, or select it and click **View**
+  or press Enter, to see its full details.
+- **Calendar** – a month view with each open box shown on the day its rental
+  ends. Today is outlined in blue. A day with more than two boxes shows the
+  first and how many more, such as "+3 more". Hover over an entry for the holder's name. Click a highlighted day to
+  list all the boxes ending that day, with each holder's name, business, and phone, and buttons to view or
+  renew them.
+- **Payments** – every rental and renewal recorded between two dates, with the
+  total paid. It starts on this month; **Last Month** and **This Year** are a
+  click away, or choose any dates and click **Show**.
+- **Box Inventory** – every box you have, and whether it's rented or empty.
+  See [Box inventory](#box-inventory).
+
+### Renewing a box
+
+Select a box on Renewals or Manage Boxes, or open its details, and click
+**Renew…**. The renewal starts from the day the rental ends, so no days are
+lost or given away; change **Renew from** if you'd rather start from today,
+for example for a box that lapsed long ago. Click a rental length button, or
+choose the new end date, then enter the amount paid, how it was paid, and a
+note such as a check number (all optional), and click **Renew**. The box's end
+date moves, and the renewal is added to its rental history, which shows in its
+details and on Payments.
+
+Renting a box on Add New Box with an end date also starts its rental history,
+with the amount paid if entered.
+
+If a renewal was recorded by mistake, select it on Payments and click
+**Delete Entry**. That leaves the box's end date as it is; edit the box to
+change it. Editing a box's end date directly doesn't add anything to its
+history.
+
+### Closing a box
+
+When a holder gives up their box, select it on Manage Boxes and click
+**Close Box**. It disappears from Manage Boxes, Renewals, and the Calendar,
+and its number can be given to someone else, but everything recorded for it
+is kept: choose **Closed boxes** from the menu next to the search field to
+find it. To bring it back, select it there and click **Reopen**. That only
+works if its number hasn't been given to someone else since; if it has, edit
+the closed box's number first.
+
+**Delete** erases a box and its history for good. Use it for boxes entered by
+mistake.
+
+### Box inventory
+
+The Box Inventory screen lists every physical box, whether it's rented and to
+whom, and its size if you record one. To set it up, type the box numbers under
+**Add boxes**, as single numbers and ranges separated by commas (such as
+`1-200, 301-310, 12A`), with an optional size such as Small or Large for all of
+them, and click **Add Boxes**. Add each size separately to record sizes, or
+select boxes and click **Set Size…** later. If some boxes are already rented
+but not in the inventory, the screen offers to add them.
+
+Once the inventory has any boxes in it:
+
+- Add New Box and Edit Box only accept box numbers in the inventory, which
+  catches typos.
+- **Choose…** on Add New Box lists the empty boxes, with their sizes.
+
+Removing a box from the inventory doesn't affect anyone renting it.
+
+When boxes have sizes, the screen also shows how many of each size are empty,
+such as `Large: 2 of 5 empty · Small: 30 of 35 empty`.
+
+### Prices
+
+Click **Prices…** on the Box Inventory screen, or next to **Prices for each
+size** in Settings, to set what a box costs. There's a row for each size in
+the inventory and a column for each rental length, plus a **Default** row for
+boxes with no size, or whose size has no price for that length. Leave a price
+blank if there isn't one, and click **Save**.
+
+When you click a rental length button on Add New Box or when renewing, the
+price for that box's size and length is filled in as the amount paid. You can
+still change it; an amount you type in isn't replaced if you then pick another
+length. On Add New Box the price is filled in once both the box number and the
+length are chosen. Prices apply only when you use the rental length buttons,
+not when you pick an end date yourself.
 
 ### Forwarding addresses
 
@@ -109,8 +189,10 @@ take effect when you click **Save**.
 
 - **Text size** – Normal, Large, or Extra large, for the whole app. Larger
   text applies right away; restart the app to also enlarge its window to match.
-- **Rental lengths (months)** – the quick-set buttons on Add New Box and Edit
-  Box, such as `1, 3, 6, 12`. Up to six lengths, each from 1 to 120 months.
+- **Rental lengths (months)** – the quick-set buttons on Add New Box, Edit
+  Box, and Renew, such as `1, 3, 6, 12`. Up to six lengths, each from 1 to 120
+  months.
+- **Prices for each size** – opens the [price table](#prices).
 - **Week starts on** – Sunday or Monday, for the Calendar.
 - **Show boxes due within (days)** – how far ahead the Renewals screen looks.
   Default 30.
@@ -181,6 +263,7 @@ built by GitHub Actions rather than locally.
 | Task | Command |
 | ---- | ------- |
 | Run the app | `./mvnw javafx:run` (or the Run button in your IDE on `App`) |
+| Run the app for debugging | `./mvnw javafx:run@debug`, which waits for a debugger to attach on port 5005 |
 | Run the tests | `./mvnw test` |
 | Build a runnable jar | `./mvnw clean package`, which produces `target/mailbox-manager-<version>-shaded.jar` |
 | Build the installer for this computer | `packaging/package.sh <platform>` (e.g. `mac-arm64`), which writes it to `dist/` |
@@ -203,11 +286,13 @@ they run under a virtual display.
 ```
 src/main/java/org/lfps/mailboxes/
   App.java          start-up: data folder, database schema, daily backup, main window
-  data/             database access: Database, MailboxRepository, SettingsRepository, Setting
-  model/            Mailbox
+  data/             database access: Database, MailboxRepository, RentalHistoryRepository,
+                    BoxInventoryRepository, PriceRepository, SettingsRepository, Setting
+  model/            Mailbox, ForwardingAddress, RentalPeriod, and InventoryBox
   view/             one class per screen, plus AppWindow (menu bar, text size), SettingsView,
                     and RestoreView
-  util/             input validation, rental lengths, error messages, and runtime info
+  util/             input validation, box number sorting, money, rental lengths, error
+                    messages, and runtime info
   Launcher.java     the entry point of the jar and installers, which hands off to App
 packaging/
   package.sh        builds the installer for the current system with jpackage

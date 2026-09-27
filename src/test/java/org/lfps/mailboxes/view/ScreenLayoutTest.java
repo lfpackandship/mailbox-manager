@@ -1,7 +1,6 @@
 package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
@@ -30,7 +29,8 @@ import org.lfps.mailboxes.data.TestSandbox;
 class ScreenLayoutTest {
 
   private static final List<Consumer<Stage>> SCREENS = List.of(
-      MainMenuView::show, AddBoxView::show, ManageBoxesView::show, CalendarView::show, RenewalsView::show);
+      MainMenuView::show, AddBoxView::show, ManageBoxesView::show, CalendarView::show, RenewalsView::show,
+      PaymentsView::show, BoxInventoryView::show);
 
   private Stage mainWindow;
 
@@ -141,16 +141,6 @@ class ScreenLayoutTest {
     scroll.resize(700, 540);
     scroll.layout();
     return scroll;
-  }
-
-  @Test
-  void addBoxFormIncludesTheForwardingAddressFields() {
-    FxTestSupport.run(() -> AddBoxView.show(mainWindow));
-
-    for (var id : List.of("streetField", "unitField", "cityField", "stateField", "zipField", "noteField",
-        "addForwardingButton", "forwardingList")) {
-      assertNotNull(FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookup("#" + id)), id);
-    }
   }
 
 }

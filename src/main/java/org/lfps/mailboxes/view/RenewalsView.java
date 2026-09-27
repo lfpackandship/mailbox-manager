@@ -25,11 +25,13 @@ import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.util.BoxNumbers;
 
 /**
- * Lists mailboxes whose box rental has already expired and those expiring
- * within the number of days set by {@link Setting#RENEWAL_WINDOW_DAYS}, each
- * sorted with the most urgent entry first.
+ * Lists open mailboxes whose box rental has already expired and those
+ * expiring within the number of days set by
+ * {@link Setting#RENEWAL_WINDOW_DAYS}, each sorted with the most urgent entry
+ * first, with buttons to view, edit, or renew them.
  */
 public class RenewalsView {
 
@@ -47,7 +49,7 @@ public class RenewalsView {
 
     try {
       windowDays = new SettingsRepository().getInt(Setting.RENEWAL_WINDOW_DAYS);
-      var mailboxes = new MailboxRepository().findAll();
+      var mailboxes = new MailboxRepository().findOpen();
       pastDue = pastDue(mailboxes, today);
       upcoming = upcoming(mailboxes, today, windowDays);
     } catch (SQLException e) {
@@ -63,8 +65,10 @@ public class RenewalsView {
     upcomingTable.setId("upcomingTable");
     upcomingTable.setItems(FXCollections.observableArrayList(upcoming));
 
-    Consumer<Mailbox> edit = mailbox -> EditBoxView.show(stage, mailbox, () -> show(stage));
-    Consumer<Mailbox> view = mailbox -> BoxDetailsView.show(stage, mailbox, () -> edit.accept(mailbox));
+    Runnable refresh = () -> show(stage);
+    Consumer<Mailbox> edit = mailbox -> EditBoxView.show(stage, mailbox, refresh);
+    Consumer<Mailbox> renew = mailbox -> RenewBoxView.show(stage, mailbox, refresh);
+    Consumer<Mailbox> view = mailbox -> BoxDetailsView.show(stage, mailbox, () -> edit.accept(mailbox), refresh);
     BoxDetailsView.openOnDoubleClickOrEnter(pastDueTable, view);
     BoxDetailsView.openOnDoubleClickOrEnter(upcomingTable, view);
 
@@ -81,10 +85,10 @@ public class RenewalsView {
         backBtn,
         pastDueHeader,
         pastDueTable,
-        tableButtons(pastDueTable, "pastDue", view, edit),
+        tableButtons(pastDueTable, "pastDue", view, edit, renew),
         upcomingHeader,
         upcomingTable,
-        tableButtons(upcomingTable, "upcoming", view, edit),
+        tableButtons(upcomingTable, "upcoming", view, edit, renew),
         statusLabel);
     layout.setPadding(new Insets(20));
 
@@ -130,7 +134,7 @@ public class RenewalsView {
   }
 
   private static HBox tableButtons(TableView<Mailbox> table, String idPrefix, Consumer<Mailbox> view,
-      Consumer<Mailbox> edit) {
+      Consumer<Mailbox> edit, Consumer<Mailbox> renew) {
     var viewBtn = new Button("View");
     viewBtn.setId(idPrefix + "ViewButton");
     viewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
@@ -141,7 +145,12 @@ public class RenewalsView {
     editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
     editBtn.setOnAction(e -> edit.accept(table.getSelectionModel().getSelectedItem()));
 
-    return new HBox(10, viewBtn, editBtn);
+    var renewBtn = new Button("Renew…");
+    renewBtn.setId(idPrefix + "RenewButton");
+    renewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+    renewBtn.setOnAction(e -> renew.accept(table.getSelectionModel().getSelectedItem()));
+
+    return new HBox(10, viewBtn, editBtn, renewBtn);
   }
 
   private static TableView<Mailbox> buildTable(LocalDate today) {
@@ -158,6 +167,7 @@ public class RenewalsView {
 
     var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
     boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
+    boxNumberCol.setComparator(BoxNumbers.ORDER);
 
     var phoneCol = new TableColumn<Mailbox, String>("Phone");
     phoneCol.setCellValueFactory(new PropertyValueFactory<>("phone"));

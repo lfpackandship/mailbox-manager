@@ -1,6 +1,7 @@
 package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -8,9 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javafx.event.Event;
 import javafx.scene.control.Button;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.input.KeyCode;
@@ -50,6 +53,8 @@ class RenewalsViewTest {
       stmt.execute("DELETE FROM settings");
       stmt.execute("DELETE FROM business_names");
       stmt.execute("DELETE FROM forwarding_addresses");
+      stmt.execute("DELETE FROM rental_periods");
+      stmt.execute("DELETE FROM box_inventory");
       stmt.execute("DELETE FROM mailboxes");
     }
     var mailboxes = new MailboxRepository();
@@ -124,6 +129,46 @@ class RenewalsViewTest {
         .fire());
 
     assertTrue(FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookup("#pastDueTable") != null));
+  }
+
+  @Test
+  void closedBoxesAreLeftOff() throws SQLException {
+    new MailboxRepository().insert(new Mailbox(0, "Ada", "Closed", null, "103", null, "(555) 123-4567", null,
+        null, LocalDate.now().minusDays(1), null, null, LocalDate.now().minusDays(1)));
+    FxTestSupport.run(() -> RenewalsView.show(mainWindow));
+
+    assertEquals(List.of("101"), FxTestSupport.call(() -> table("pastDueTable").getItems().stream()
+        .map(Mailbox::getBoxNumber).collect(Collectors.toList())));
+  }
+
+  @Test
+  void renewingFromTheDetailsRefreshesRenewals() {
+    FxTestSupport.run(() -> {
+      table("pastDueTable").getSelectionModel().select(0);
+      button("pastDueViewButton").fire();
+    });
+    var details = detailsWindow();
+    FxTestSupport.run(() -> ((Button) details.getScene().lookup("#detailsRenewButton")).fire());
+    assertNull(detailsWindow());
+
+    var renew = FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup("#renewSaveButton") != null)
+        .map(w -> (Stage) w)
+        .findFirst()
+        .orElseThrow());
+    FxTestSupport.run(() -> {
+      ((DatePicker) renew.getScene().lookup("#renewEndField")).setValue(LocalDate.now().plusYears(1));
+      ((Button) renew.getScene().lookup("#renewSaveButton")).fire();
+    });
+
+    assertEquals(List.of(), FxTestSupport.call(() -> List.copyOf(table("pastDueTable").getItems())));
+  }
+
+  @Test
+  void renewIsDisabledUntilABoxIsSelected() {
+    assertTrue(FxTestSupport.call(() -> button("upcomingRenewButton").isDisabled()));
+    FxTestSupport.run(() -> table("upcomingTable").getSelectionModel().select(0));
+    assertFalse(FxTestSupport.call(() -> button("upcomingRenewButton").isDisabled()));
   }
 
   private static Mailbox box(String boxNumber, String lastName, LocalDate endDate) {

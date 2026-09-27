@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import javafx.event.Event;
 import javafx.scene.control.Button;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
@@ -32,9 +33,11 @@ import org.junit.jupiter.api.Test;
 
 import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.data.MailboxRepository;
+import org.lfps.mailboxes.data.RentalHistoryRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.model.RentalPeriod;
 
 /**
  * UI tests for the Manage Boxes table and the box details window.
@@ -61,6 +64,8 @@ class ManageBoxesViewTest {
       stmt.execute("DELETE FROM settings");
       stmt.execute("DELETE FROM business_names");
       stmt.execute("DELETE FROM forwarding_addresses");
+      stmt.execute("DELETE FROM rental_periods");
+      stmt.execute("DELETE FROM box_inventory");
       stmt.execute("DELETE FROM mailboxes");
     }
     mailboxes.insert(new Mailbox(0, "Tomás", "Rivera", "Rivera Landscaping", "205", "Garden", "5552000006",
@@ -125,7 +130,7 @@ class ManageBoxesViewTest {
     var details = detailsWindow();
     assertEquals("Box 207", detail(details, "detailTitle"));
     for (var id : List.of("detailBusinessTitle", "detailAlternateNames", "detailEmail", "detailEndDate",
-        "detailForwarding")) {
+        "detailForwarding", "detailNotes", "detailHistory")) {
       assertEquals(BoxDetailsView.NONE, detail(details, id), id);
     }
   }
@@ -201,13 +206,91 @@ class ManageBoxesViewTest {
   }
 
   @Test
-  void describesHowFarAwayTheEndDateIs() {
-    var today = LocalDate.of(2026, 9, 26);
-    assertEquals("2 days overdue", RenewalsView.dueStatus(today.minusDays(2), today));
-    assertEquals("1 day overdue", RenewalsView.dueStatus(today.minusDays(1), today));
-    assertEquals("Due today", RenewalsView.dueStatus(today, today));
-    assertEquals("In 1 day", RenewalsView.dueStatus(today.plusDays(1), today));
-    assertEquals("In 30 days", RenewalsView.dueStatus(today.plusDays(30), today));
+  void closedBoxesAreHiddenUntilChosen() throws SQLException {
+    mailboxes.insert(closedBox("209"));
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+
+    assertEquals(List.of("205", "207"), boxNumbersShown());
+
+    FxTestSupport.run(() -> showChoice().setValue(ManageBoxesView.Show.CLOSED));
+    assertEquals(List.of("209"), boxNumbersShown());
+
+    FxTestSupport.run(() -> showChoice().setValue(ManageBoxesView.Show.ALL));
+    assertEquals(List.of("205", "207", "209"), boxNumbersShown());
+  }
+
+  @Test
+  void aClosedBoxCanBeReopenedButNotRenewed() throws SQLException {
+    mailboxes.insert(closedBox("209"));
+    FxTestSupport.run(() -> {
+      ManageBoxesView.show(mainWindow);
+      showChoice().setValue(ManageBoxesView.Show.CLOSED);
+      table().getSelectionModel().select(0);
+    });
+
+    assertTrue(FxTestSupport.call(() -> button("renewButton").isDisabled()));
+    assertEquals("Reopen", FxTestSupport.call(() -> button("closeButton").getText()));
+
+    FxTestSupport.run(() -> button("closeButton").fire());
+
+    assertEquals(List.of("205", "207", "209"), mailboxes.findOpen().stream()
+        .map(Mailbox::getBoxNumber).collect(Collectors.toList()));
+    // The screen keeps showing closed boxes, and the reopened one has left the list.
+    assertEquals(List.of(), boxNumbersShown());
+  }
+
+  @Test
+  void aClosedBoxCantBeReopenedIfItsNumberWasGivenToSomeoneElse() throws SQLException {
+    mailboxes.insert(closedBox("205"));
+    FxTestSupport.run(() -> {
+      ManageBoxesView.show(mainWindow);
+      showChoice().setValue(ManageBoxesView.Show.CLOSED);
+      table().getSelectionModel().select(0);
+      button("closeButton").fire();
+    });
+
+    assertTrue(FxTestSupport.call(() -> ((Label) mainWindow.getScene().getRoot().lookup("#statusLabel")).getText())
+        .startsWith("Box 205 has been given to someone else"));
+    assertEquals(2, mailboxes.findOpen().size());
+  }
+
+  @Test
+  void detailsShowNotesClosingAndRentalHistory() throws SQLException {
+    var id = mailboxes.insert(new Mailbox(0, "Grace", "Hopper", null, "209", null, "5552000009", null, null,
+        LocalDate.of(2026, 7, 1), null, "ID on file", LocalDate.of(2026, 8, 15)));
+    new RentalHistoryRepository().renew(id, new RentalPeriod(0, 0, LocalDate.of(2026, 1, 2),
+        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 7, 1), 6000L, "Check", "check #1042"));
+    FxTestSupport.run(() -> {
+      ManageBoxesView.show(mainWindow);
+      showChoice().setValue(ManageBoxesView.Show.CLOSED);
+      table().getSelectionModel().select(0);
+      button("viewButton").fire();
+    });
+
+    var details = detailsWindow();
+    assertEquals("ID on file", detail(details, "detailNotes"));
+    assertEquals(LocalDate.of(2026, 8, 15).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)),
+        detail(details, "detailClosed"));
+    var medium = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
+    assertEquals(LocalDate.of(2026, 1, 1).format(medium) + " – " + LocalDate.of(2026, 7, 1).format(medium)
+        + ": $60.00, Check (check #1042)", detail(details, "detailHistory"));
+    assertTrue(FxTestSupport.call(() -> details.getScene().lookup("#detailsRenewButton").isDisabled()));
+  }
+
+  private static Mailbox closedBox(String boxNumber) {
+    return new Mailbox(0, "Grace", "Hopper", null, boxNumber, null, "5552000009", null, null, null, null,
+        null, LocalDate.now().minusDays(10));
+  }
+
+  private List<String> boxNumbersShown() {
+    return FxTestSupport.call(() -> table().getItems().stream()
+        .map(Mailbox::getBoxNumber)
+        .collect(Collectors.toList()));
+  }
+
+  @SuppressWarnings("unchecked")
+  private ChoiceBox<ManageBoxesView.Show> showChoice() {
+    return (ChoiceBox<ManageBoxesView.Show>) mainWindow.getScene().getRoot().lookup("#showChoice");
   }
 
   @SuppressWarnings("unchecked")

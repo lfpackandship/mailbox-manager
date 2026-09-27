@@ -64,6 +64,18 @@
                             <mainClass>org.lfps.mailboxes.App</mainClass>
                         </configuration>
                     </execution>
+                    <execution>
+                        <!-- Runs the app waiting for a debugger on port 5005, -->
+                        <!-- which VS Code's "Debug (Maven)" attaches to. -->
+                        <!-- Usage: ./mvnw javafx:run@debug -->
+                        <id>debug</id>
+                        <configuration>
+                            <mainClass>org.lfps.mailboxes.App</mainClass>
+                            <options>
+                                <option>-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=localhost:5005</option>
+                            </options>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>

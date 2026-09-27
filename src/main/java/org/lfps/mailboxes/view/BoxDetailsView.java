@@ -1,8 +1,10 @@
 package org.lfps.mailboxes.view;
 
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -21,12 +23,16 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import org.lfps.mailboxes.data.RentalHistoryRepository;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.model.RentalPeriod;
+import org.lfps.mailboxes.util.Money;
 
 /**
- * A separate window showing everything recorded for one box, opened from
- * Manage Boxes, with a button to edit it. Only one is open at a time; viewing
- * another box replaces it.
+ * A separate window showing everything recorded for one box, including its
+ * rental history, opened from Manage Boxes, Renewals, or Payments, with
+ * buttons to edit or renew it. Only one is open at a time; viewing another box
+ * replaces it.
  */
 final class BoxDetailsView {
 
@@ -43,8 +49,10 @@ final class BoxDetailsView {
    * @param owner the main window
    * @param mailbox the box to show
    * @param onEdit called after the window closes when the user clicks Edit
+   * @param onRenewed called after the box is renewed from this window, to
+   *     refresh the screen behind it
    */
-  static void show(Stage owner, Mailbox mailbox, Runnable onEdit) {
+  static void show(Stage owner, Mailbox mailbox, Runnable onEdit, Runnable onRenewed) {
     close();
 
     var title = new Label("Box " + mailbox.getBoxNumber()
@@ -53,21 +61,35 @@ final class BoxDetailsView {
     title.setStyle("-fx-font-size: 1.25em; -fx-font-weight: bold;");
 
     var today = LocalDate.now();
+    var fullDate = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL);
     var endDate = mailbox.getEndDate() == null ? NONE
-        : mailbox.getEndDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
-            + " (" + RenewalsView.dueStatus(mailbox.getEndDate(), today).toLowerCase() + ")";
+        : mailbox.getEndDate().format(fullDate)
+            + (mailbox.isClosed() ? "" : " (" + RenewalsView.dueStatus(mailbox.getEndDate(), today).toLowerCase() + ")");
+
+    String history;
+    try {
+      history = describeHistory(new RentalHistoryRepository().findForMailbox(mailbox.getId()));
+    } catch (SQLException e) {
+      history = "Couldn't load the rental history: " + e.getMessage();
+    }
 
     var grid = new GridPane();
     grid.setHgap(15);
     grid.setVgap(8);
-    var rows = List.of(
+    var rows = new ArrayList<Label[]>();
+    if (mailbox.isClosed()) {
+      rows.add(row("Closed", "detailClosed", mailbox.getClosedDate().format(fullDate)));
+    }
+    rows.addAll(List.of(
         row("Holder", "detailHolder", mailbox.getFirstName() + " " + mailbox.getLastName()),
         row("Business title", "detailBusinessTitle", orNone(mailbox.getBusinessTitle())),
         row("Also receives mail as", "detailAlternateNames", lines(mailbox.getAlternateBusinessNames())),
         row("Phone", "detailPhone", PhoneNumberFormatter.format(mailbox.getPhone())),
         row("Email", "detailEmail", orNone(mailbox.getEmail())),
         row("Rental ends", "detailEndDate", endDate),
-        row("Forwarding addresses", "detailForwarding", lines(mailbox.getForwardingAddresses())));
+        row("Forwarding addresses", "detailForwarding", lines(mailbox.getForwardingAddresses())),
+        row("Notes", "detailNotes", orNone(mailbox.getNotes())),
+        row("Rental history", "detailHistory", history)));
     for (var i = 0; i < rows.size(); i++) {
       grid.addRow(i, rows.get(i));
     }
@@ -81,13 +103,21 @@ final class BoxDetailsView {
       onEdit.run();
     });
 
+    var renewBtn = new Button("Renew…");
+    renewBtn.setId("detailsRenewButton");
+    renewBtn.setDisable(mailbox.isClosed());
+    renewBtn.setOnAction(e -> {
+      stage.close();
+      RenewBoxView.show(owner, mailbox, onRenewed);
+    });
+
     var closeBtn = new Button("Close");
     closeBtn.setId("detailsCloseButton");
     closeBtn.setCancelButton(true);
     closeBtn.setDefaultButton(true);
     closeBtn.setOnAction(e -> stage.close());
 
-    var content = new VBox(15, title, grid, new HBox(10, editBtn, closeBtn));
+    var content = new VBox(15, title, grid, new HBox(10, editBtn, renewBtn, closeBtn));
     content.setPadding(new Insets(20));
 
     var scrollPane = new ScrollPane(content);
@@ -115,7 +145,14 @@ final class BoxDetailsView {
    */
   static void openOnDoubleClickOrEnter(TableView<Mailbox> table, Consumer<Mailbox> view) {
     table.setRowFactory(tableView -> {
-      var row = new TableRow<Mailbox>();
+      var row = new TableRow<Mailbox>() {
+        @Override
+        protected void updateItem(Mailbox item, boolean empty) {
+          super.updateItem(item, empty);
+          // Grey out closed boxes so they stand apart from rented ones.
+          setStyle(item != null && item.isClosed() ? "-fx-text-background-color: gray;" : "");
+        }
+      };
       row.setOnMouseClicked(e -> {
         if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2 && !row.isEmpty()) {
           view.accept(row.getItem());
@@ -148,6 +185,29 @@ final class BoxDetailsView {
     valueLabel.setId(id);
     valueLabel.setWrapText(true);
     return new Label[] { nameLabel, valueLabel };
+  }
+
+  /**
+   * Describes a box's rental history, one entry per line, such as
+   * "Sep 26, 2026 – Mar 26, 2027: $60.00, Check (check #1042)".
+   */
+  static String describeHistory(List<RentalPeriod> periods) {
+    if (periods.isEmpty()) {
+      return NONE;
+    }
+    var lines = new ArrayList<String>();
+    for (var period : periods) {
+      var paid = new ArrayList<String>();
+      if (period.getAmountCents() != null) {
+        paid.add(Money.format(period.getAmountCents()));
+      }
+      if (period.getPaymentMethod() != null) {
+        paid.add(period.getPaymentMethod());
+      }
+      var line = period.describePeriod() + (paid.isEmpty() ? "" : ": " + String.join(", ", paid));
+      lines.add(period.getNote() == null ? line : line + " (" + period.getNote() + ")");
+    }
+    return String.join("\n", lines);
   }
 
   private static String lines(List<?> items) {

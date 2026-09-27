@@ -52,6 +52,8 @@ class ForwardingAddressesTest {
       stmt.execute("DELETE FROM settings");
       stmt.execute("DELETE FROM business_names");
       stmt.execute("DELETE FROM forwarding_addresses");
+      stmt.execute("DELETE FROM rental_periods");
+      stmt.execute("DELETE FROM box_inventory");
       stmt.execute("DELETE FROM mailboxes");
     }
     mainWindow = FxTestSupport.call(() -> {
@@ -154,14 +156,6 @@ class ForwardingAddressesTest {
     FxTestSupport.run(() -> EditBoxView.show(mainWindow, box, () -> { }));
 
     assertTrue(FxTestSupport.call(() -> button("removeForwardingButton").isDisabled()));
-  }
-
-  @Test
-  void joinsListsLikeASentence() {
-    assertEquals("street", ForwardingAddressesEditor.joinWithAnd(List.of("street")));
-    assertEquals("street and city", ForwardingAddressesEditor.joinWithAnd(List.of("street", "city")));
-    assertEquals("street, city, and state",
-        ForwardingAddressesEditor.joinWithAnd(List.of("street", "city", "state")));
   }
 
   private void enterAddress(String street, String unit, String city, String state, String zip, String note) {

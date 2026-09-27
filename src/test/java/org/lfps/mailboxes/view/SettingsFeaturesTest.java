@@ -76,6 +76,8 @@ class SettingsFeaturesTest {
     try (var conn = Database.connect(); var stmt = conn.createStatement()) {
       stmt.execute("DELETE FROM settings");
       stmt.execute("DELETE FROM business_names");
+      stmt.execute("DELETE FROM rental_periods");
+      stmt.execute("DELETE FROM box_inventory");
       stmt.execute("DELETE FROM mailboxes");
     }
     deleteRecursively(Database.backupDir());

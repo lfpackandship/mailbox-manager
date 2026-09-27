@@ -3,6 +3,51 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/wgoodzey/mailbox-manager/releases).
 
+## 1.5.0 – Unreleased
+
+### Added
+
+- Renewals and payments: a **Renew…** button on Renewals, Manage Boxes, and a
+  box's details renews it from its current end date for a rental length or
+  to a chosen date, and records the amount paid, how it was paid, and a note.
+  Add New Box can record the first payment too.
+- Rental history: each box's details list every rental and renewal with what
+  was paid.
+- A **Payments** screen listing the rentals and renewals recorded between two
+  dates (this month, last month, this year, or any dates) with the total paid.
+- Closing boxes: **Close Box** on Manage Boxes keeps a box's record and
+  history when its holder leaves, frees its number for someone else, and takes
+  it off Renewals and the Calendar. Closed boxes can be shown on Manage Boxes
+  and reopened.
+- A **Box Inventory** screen listing every physical box as rented or empty,
+  with sizes. Boxes can be added in ranges such as `1-200`. Once it's set up,
+  Add New Box and Edit Box only accept box numbers in it, and **Choose…** on
+  Add New Box picks from the empty boxes.
+- Prices: a table of what each box size costs for each rental length, with a
+  default for boxes with no size, opened from **Prices…** on Box Inventory or
+  in Settings. Choosing a rental length on Add New Box or when renewing fills
+  in the price for that box's size.
+- The Box Inventory screen shows how many boxes of each size are empty.
+- On the Calendar, click a day to list the boxes ending that day with their
+  holder, business, and phone, and view or renew them from there.
+- The Calendar outlines today in blue.
+- A notes field on each box, shown in its details and matched by search.
+
+### Changed
+
+- **Delete** on Manage Boxes now warns that it erases the box's history, and
+  suggests closing the box instead.
+- The main menu has six buttons, with Renewals moved before Calendar.
+
+### Fixed
+
+- Boxes were sorted as text, so box 10 came before box 2. They're now sorted
+  by number, with letters after the number they follow (12, 12A, 13),
+  everywhere boxes are listed.
+- Clicking a column header on Manage Boxes didn't sort the list.
+- A Calendar day with three or more boxes spilled into the day below. It now
+  lists up to two, or the first and "+N more".
+
 ## 1.4.0 – 2026-09-26
 
 ### Changed

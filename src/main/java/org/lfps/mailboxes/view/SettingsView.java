@@ -170,8 +170,13 @@ public class SettingsView {
     var appearance = section("Appearance",
         row("Text size:", textSizeChoice));
 
+    var pricesBtn = new Button("Prices…");
+    pricesBtn.setId("pricesButton");
+    pricesBtn.setOnAction(e -> PricesView.show(owner));
+
     var boxes = section("Boxes",
-        row("Rental lengths (months):", rentalLengthsField));
+        row("Rental lengths (months):", rentalLengthsField),
+        row("Prices for each size:", pricesBtn));
 
     var calendar = section("Calendar",
         row("Week starts on:", weekStartChoice));
