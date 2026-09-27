@@ -227,9 +227,10 @@ public class Database {
 
   /**
    * Creates the {@code mailboxes}, {@code business_names},
-   * {@code forwarding_addresses}, and {@code settings} tables if they don't
-   * already exist, and migrates older databases that predate the
-   * {@code box_name} and {@code end_date} columns.
+   * {@code forwarding_addresses}, {@code rental_periods},
+   * {@code box_inventory}, {@code prices}, and {@code settings} tables if they don't already
+   * exist, and migrates older databases that predate the {@code box_name},
+   * {@code end_date}, {@code notes}, and {@code closed_date} columns.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -243,7 +244,9 @@ public class Database {
         + "box_name TEXT, "
         + "phone TEXT NOT NULL, "
         + "email TEXT, "
-        + "end_date TEXT)";
+        + "end_date TEXT, "
+        + "notes TEXT, "
+        + "closed_date TEXT)";
 
     var createBusinessNames = "CREATE TABLE IF NOT EXISTS business_names ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -262,6 +265,29 @@ public class Database {
         + "note TEXT, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
+    var createRentalPeriods = "CREATE TABLE IF NOT EXISTS rental_periods ("
+        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        + "mailbox_id INTEGER NOT NULL, "
+        + "recorded_on TEXT NOT NULL, "
+        + "start_date TEXT NOT NULL, "
+        + "end_date TEXT NOT NULL, "
+        + "amount_cents INTEGER, "
+        + "payment_method TEXT, "
+        + "note TEXT, "
+        + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
+
+    var createBoxInventory = "CREATE TABLE IF NOT EXISTS box_inventory ("
+        + "box_number TEXT PRIMARY KEY COLLATE NOCASE, "
+        + "size TEXT)";
+
+    // The price of renting a box of a size for a number of months. An empty
+    // size is the default price, for boxes with no size or no price of their own.
+    var createPrices = "CREATE TABLE IF NOT EXISTS prices ("
+        + "size TEXT NOT NULL COLLATE NOCASE, "
+        + "months INTEGER NOT NULL, "
+        + "amount_cents INTEGER NOT NULL, "
+        + "PRIMARY KEY (size, months))";
+
     var createSettings = "CREATE TABLE IF NOT EXISTS settings ("
         + "key TEXT PRIMARY KEY, "
         + "value TEXT NOT NULL)";
@@ -270,18 +296,17 @@ public class Database {
       stmt.execute(createMailboxes);
       stmt.execute(createBusinessNames);
       stmt.execute(createForwardingAddresses);
+      stmt.execute(createRentalPeriods);
+      stmt.execute(createBoxInventory);
+      stmt.execute(createPrices);
       stmt.execute(createSettings);
 
-      try {
-        stmt.execute("ALTER TABLE mailboxes ADD COLUMN box_name TEXT");
-      } catch (SQLException alreadyMigrated) {
-        // box_name column already exists on a pre-existing database.
-      }
-
-      try {
-        stmt.execute("ALTER TABLE mailboxes ADD COLUMN end_date TEXT");
-      } catch (SQLException alreadyMigrated) {
-        // end_date column already exists on a pre-existing database.
+      for (var column : List.of("box_name", "end_date", "notes", "closed_date")) {
+        try {
+          stmt.execute("ALTER TABLE mailboxes ADD COLUMN " + column + " TEXT");
+        } catch (SQLException alreadyMigrated) {
+          // The column already exists on a pre-existing database.
+        }
       }
     } catch (SQLException e) {
       throw new RuntimeException("Failed to initialize database schema", e);

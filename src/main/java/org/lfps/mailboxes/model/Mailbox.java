@@ -7,7 +7,8 @@ import java.util.List;
 
 /**
  * An immutable record of a rented mailbox: who holds it, how to reach them,
- * and the box it belongs to.
+ * and the box it belongs to. When a holder gives up their box, the record is
+ * closed rather than deleted, so its history is kept.
  */
 public final class Mailbox {
 
@@ -22,9 +23,11 @@ public final class Mailbox {
   private final List<String> alternateBusinessNames;
   private final LocalDate endDate;
   private final List<ForwardingAddress> forwardingAddresses;
+  private final String notes;
+  private final LocalDate closedDate;
 
   /**
-   * Creates a mailbox record.
+   * Creates an open mailbox record with no notes.
    *
    * @param id the database id, or {@code 0} for a not-yet-persisted mailbox
    * @param firstName the holder's first name
@@ -43,6 +46,33 @@ public final class Mailbox {
   public Mailbox(int id, String firstName, String lastName, String businessTitle,
       String boxNumber, String boxName, String phone, String email,
       List<String> alternateBusinessNames, LocalDate endDate, List<ForwardingAddress> forwardingAddresses) {
+    this(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email, alternateBusinessNames,
+        endDate, forwardingAddresses, null, null);
+  }
+
+  /**
+   * Creates a mailbox record.
+   *
+   * @param id the database id, or {@code 0} for a not-yet-persisted mailbox
+   * @param firstName the holder's first name
+   * @param lastName the holder's last name
+   * @param businessTitle the holder's primary business title, or blank/null if none
+   * @param boxNumber the physical box number
+   * @param boxName an optional nickname/label for the box itself
+   * @param phone the holder's phone number
+   * @param email the holder's email address, or blank/null if none
+   * @param alternateBusinessNames additional business names (DBAs) that also
+   *     receive mail at this box; {@code null} is treated as empty
+   * @param endDate the date the box rental ends, or {@code null} if not set
+   * @param forwardingAddresses addresses the holder's mail can be forwarded
+   *     to; {@code null} is treated as empty
+   * @param notes free-form notes about the box or holder, or blank/null if none
+   * @param closedDate the date the box was closed, or {@code null} if it's open
+   */
+  public Mailbox(int id, String firstName, String lastName, String businessTitle,
+      String boxNumber, String boxName, String phone, String email,
+      List<String> alternateBusinessNames, LocalDate endDate, List<ForwardingAddress> forwardingAddresses,
+      String notes, LocalDate closedDate) {
     this.id = id;
     this.firstName = firstName;
     this.lastName = lastName;
@@ -58,6 +88,8 @@ public final class Mailbox {
     this.forwardingAddresses = forwardingAddresses == null
         ? Collections.emptyList()
         : Collections.unmodifiableList(new ArrayList<>(forwardingAddresses));
+    this.notes = notes;
+    this.closedDate = closedDate;
   }
 
   /**
@@ -158,6 +190,66 @@ public final class Mailbox {
    */
   public List<ForwardingAddress> getForwardingAddresses() {
     return forwardingAddresses;
+  }
+
+  /**
+   * Returns the notes about the box or holder.
+   *
+   * @return the notes, or {@code null} if none were entered
+   */
+  public String getNotes() {
+    return notes;
+  }
+
+  /**
+   * Returns the date the box was closed. A closed box keeps its record but
+   * no longer counts as rented, so its number can be given to someone else.
+   *
+   * @return the closing date, or {@code null} if the box is open
+   */
+  public LocalDate getClosedDate() {
+    return closedDate;
+  }
+
+  /**
+   * Returns whether the box has been closed.
+   *
+   * @return {@code true} if the box is closed
+   */
+  public boolean isClosed() {
+    return closedDate != null;
+  }
+
+  /**
+   * Returns a copy of this mailbox with a different rental end date.
+   *
+   * @param newEndDate the new end date, or {@code null} for none
+   * @return the updated copy
+   */
+  public Mailbox withEndDate(LocalDate newEndDate) {
+    return new Mailbox(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email,
+        alternateBusinessNames, newEndDate, forwardingAddresses, notes, closedDate);
+  }
+
+  /**
+   * Returns a copy of this mailbox that is closed on the given date, or
+   * reopened.
+   *
+   * @param newClosedDate the closing date, or {@code null} to reopen
+   * @return the updated copy
+   */
+  public Mailbox withClosedDate(LocalDate newClosedDate) {
+    return new Mailbox(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email,
+        alternateBusinessNames, endDate, forwardingAddresses, notes, newClosedDate);
+  }
+
+  /**
+   * Returns the holder's first and last name.
+   *
+   * @return the full name, such as "Ada Lovelace"
+   */
+  public String getFullName() {
+    return firstName + " " + lastName;
   }
 
 }

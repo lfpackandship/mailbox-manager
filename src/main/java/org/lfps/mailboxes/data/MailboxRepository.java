@@ -8,33 +8,41 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.model.RentalPeriod;
+import org.lfps.mailboxes.util.BoxNumbers;
 
 /**
  * Provides CRUD access to mailboxes with their alternate business names and
  * forwarding addresses, stored across the {@code mailboxes},
- * {@code business_names}, and {@code forwarding_addresses} tables.
+ * {@code business_names}, and {@code forwarding_addresses} tables. Closed
+ * boxes stay in the database; only open ones count as holding a box number.
  */
 public class MailboxRepository {
 
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
-      + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date) "
-      + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+      + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date, notes, "
+      + "closed_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   private static final String SELECT_ALL_SQL = "SELECT id, first_name, last_name, "
-      + "business_title, box_number, box_name, phone, email, end_date "
-      + "FROM mailboxes ORDER BY box_number";
+      + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date "
+      + "FROM mailboxes";
 
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
-      + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ? "
-      + "WHERE id = ?";
+      + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ?, notes = ?, "
+      + "closed_date = ? WHERE id = ?";
 
-  private static final String BOX_NUMBER_TAKEN_SQL =
-      "SELECT 1 FROM mailboxes WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? LIMIT 1";
+  private static final String BOX_NUMBER_TAKEN_SQL = "SELECT 1 FROM mailboxes "
+      + "WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? AND closed_date IS NULL LIMIT 1";
+
+  private static final String SET_CLOSED_DATE_SQL = "UPDATE mailboxes SET closed_date = ? WHERE id = ?";
 
   private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
+
+  private static final String DELETE_RENTAL_PERIODS_SQL = "DELETE FROM rental_periods WHERE mailbox_id = ?";
 
   private static final String INSERT_BUSINESS_NAME_SQL =
       "INSERT INTO business_names (mailbox_id, name) VALUES (?, ?)";
@@ -59,9 +67,24 @@ public class MailboxRepository {
    * forwarding addresses.
    *
    * @param mailbox the mailbox to persist; its id is ignored
+   * @return the new mailbox's id
    * @throws SQLException if the insert fails
    */
-  public void insert(Mailbox mailbox) throws SQLException {
+  public int insert(Mailbox mailbox) throws SQLException {
+    return insert(mailbox, null);
+  }
+
+  /**
+   * Inserts a new mailbox along with its alternate business names,
+   * forwarding addresses, and the first entry in its rental history.
+   *
+   * @param mailbox the mailbox to persist; its id is ignored
+   * @param firstPeriod the rental being paid for now, or {@code null} to
+   *     record none; its mailbox id is ignored
+   * @return the new mailbox's id
+   * @throws SQLException if the insert fails
+   */
+  public int insert(Mailbox mailbox, RentalPeriod firstPeriod) throws SQLException {
     try (Connection conn = Database.connect()) {
       conn.setAutoCommit(false);
       try {
@@ -76,7 +99,11 @@ public class MailboxRepository {
         }
         insertBusinessNames(conn, mailboxId, mailbox.getAlternateBusinessNames());
         insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses());
+        if (firstPeriod != null) {
+          RentalHistoryRepository.insert(conn, mailboxId, firstPeriod);
+        }
         conn.commit();
+        return mailboxId;
       } catch (SQLException e) {
         conn.rollback();
         throw e;
@@ -85,8 +112,19 @@ public class MailboxRepository {
   }
 
   /**
-   * Returns every mailbox, ordered by box number, with its alternate
-   * business names and forwarding addresses loaded.
+   * Returns the boxes that are open (not closed), ordered by box number.
+   *
+   * @return the open mailboxes
+   * @throws SQLException if the query fails
+   */
+  public List<Mailbox> findOpen() throws SQLException {
+    return findAll().stream().filter(m -> !m.isClosed()).collect(Collectors.toList());
+  }
+
+  /**
+   * Returns every mailbox, open and closed, ordered by box number (see
+   * {@link BoxNumbers#ORDER}), with its alternate business names and
+   * forwarding addresses loaded.
    *
    * @return all mailboxes in the database
    * @throws SQLException if the query fails
@@ -109,11 +147,14 @@ public class MailboxRepository {
             rs.getString("phone"),
             rs.getString("email"),
             findBusinessNames(conn, id),
-            rs.getString("end_date") == null ? null : LocalDate.parse(rs.getString("end_date")),
-            findForwardingAddresses(conn, id)));
+            date(rs.getString("end_date")),
+            findForwardingAddresses(conn, id),
+            rs.getString("notes"),
+            date(rs.getString("closed_date"))));
       }
     }
 
+    mailboxes.sort((a, b) -> BoxNumbers.ORDER.compare(a.getBoxNumber(), b.getBoxNumber()));
     return mailboxes;
   }
 
@@ -130,7 +171,7 @@ public class MailboxRepository {
       try {
         try (PreparedStatement stmt = conn.prepareStatement(UPDATE_SQL)) {
           bindMailboxFields(stmt, mailbox);
-          stmt.setInt(9, mailbox.getId());
+          stmt.setInt(11, mailbox.getId());
           stmt.executeUpdate();
         }
         deleteBusinessNames(conn, mailbox.getId());
@@ -146,12 +187,13 @@ public class MailboxRepository {
   }
 
   /**
-   * Checks whether another mailbox already uses the given box number,
-   * ignoring surrounding whitespace and letter case.
+   * Checks whether another open mailbox already uses the given box number,
+   * ignoring surrounding whitespace and letter case. Closed boxes don't
+   * count, so a number can be reused once its holder leaves.
    *
    * @param boxNumber the box number to look for
    * @param excludeId the id of the mailbox being edited, or {@code 0} when adding
-   * @return {@code true} if a different mailbox already has this box number
+   * @return {@code true} if a different open mailbox already has this box number
    * @throws SQLException if the query fails
    */
   public boolean isBoxNumberTaken(String boxNumber, int excludeId) throws SQLException {
@@ -166,8 +208,25 @@ public class MailboxRepository {
   }
 
   /**
-   * Deletes a mailbox with its alternate business names and forwarding
-   * addresses.
+   * Closes a box on the given day, or reopens it. Its record and history
+   * are kept.
+   *
+   * @param id the id of the mailbox
+   * @param closedDate the day it closed, or {@code null} to reopen it
+   * @throws SQLException if the update fails
+   */
+  public void setClosedDate(int id, LocalDate closedDate) throws SQLException {
+    try (Connection conn = Database.connect();
+        PreparedStatement stmt = conn.prepareStatement(SET_CLOSED_DATE_SQL)) {
+      stmt.setString(1, closedDate == null ? null : closedDate.toString());
+      stmt.setInt(2, id);
+      stmt.executeUpdate();
+    }
+  }
+
+  /**
+   * Permanently deletes a mailbox with its alternate business names,
+   * forwarding addresses, and rental history.
    *
    * @param id the id of the mailbox to delete
    * @throws SQLException if the delete fails
@@ -178,6 +237,10 @@ public class MailboxRepository {
       try {
         deleteBusinessNames(conn, id);
         deleteForwardingAddresses(conn, id);
+        try (PreparedStatement stmt = conn.prepareStatement(DELETE_RENTAL_PERIODS_SQL)) {
+          stmt.setInt(1, id);
+          stmt.executeUpdate();
+        }
         try (PreparedStatement stmt = conn.prepareStatement(DELETE_SQL)) {
           stmt.setInt(1, id);
           stmt.executeUpdate();
@@ -199,6 +262,12 @@ public class MailboxRepository {
     stmt.setString(6, mailbox.getPhone());
     stmt.setString(7, mailbox.getEmail());
     stmt.setString(8, mailbox.getEndDate() == null ? null : mailbox.getEndDate().toString());
+    stmt.setString(9, mailbox.getNotes() == null || mailbox.getNotes().isBlank() ? null : mailbox.getNotes().strip());
+    stmt.setString(10, mailbox.getClosedDate() == null ? null : mailbox.getClosedDate().toString());
+  }
+
+  private static LocalDate date(String value) {
+    return value == null ? null : LocalDate.parse(value);
   }
 
   private void insertBusinessNames(Connection conn, int mailboxId, List<String> names) throws SQLException {

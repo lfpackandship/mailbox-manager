@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,8 @@ class MailboxRepositoryTest {
     try (var conn = Database.connect(); var stmt = conn.createStatement()) {
       stmt.execute("DELETE FROM business_names");
       stmt.execute("DELETE FROM forwarding_addresses");
+      stmt.execute("DELETE FROM rental_periods");
+      stmt.execute("DELETE FROM box_inventory");
       stmt.execute("DELETE FROM mailboxes");
     }
   }
@@ -160,6 +163,90 @@ class MailboxRepositoryTest {
 
     assertFalse(repository.isBoxNumberTaken("210", first.getId()));
     assertTrue(repository.isBoxNumberTaken("211", first.getId()));
+  }
+
+  @Test
+  void notesAndClosedDateRoundTrip() throws SQLException {
+    repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "210", null, "(555) 123-4567", null,
+        List.of(), null, null, "  ID on file\nPaid cash  ", LocalDate.of(2026, 3, 1)));
+
+    var saved = repository.findAll().get(0);
+    assertEquals("ID on file\nPaid cash", saved.getNotes());
+    assertEquals(LocalDate.of(2026, 3, 1), saved.getClosedDate());
+    assertTrue(saved.isClosed());
+  }
+
+  @Test
+  void blankNotesAreStoredAsNone() throws SQLException {
+    repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "210", null, "(555) 123-4567", null,
+        List.of(), null, null, "   ", null));
+    assertNull(repository.findAll().get(0).getNotes());
+  }
+
+  @Test
+  void closingAndReopeningKeepsTheRecord() throws SQLException {
+    var id = repository.insert(mailbox("210", List.of("Kept"), null));
+
+    repository.setClosedDate(id, LocalDate.of(2026, 9, 1));
+    assertEquals(List.of(), repository.findOpen());
+    var closed = repository.findAll().get(0);
+    assertEquals(LocalDate.of(2026, 9, 1), closed.getClosedDate());
+    assertEquals(List.of("Kept"), closed.getAlternateBusinessNames());
+
+    repository.setClosedDate(id, null);
+    assertFalse(repository.findOpen().get(0).isClosed());
+  }
+
+  @Test
+  void aClosedBoxDoesNotHoldItsNumber() throws SQLException {
+    var id = repository.insert(mailbox("210", List.of(), null));
+    repository.setClosedDate(id, LocalDate.of(2026, 9, 1));
+
+    assertFalse(repository.isBoxNumberTaken("210", 0));
+  }
+
+  @Test
+  void updateSavesNotesAndClosedDate() throws SQLException {
+    var id = repository.insert(mailbox("210", List.of(), null));
+    var saved = repository.findAll().get(0);
+
+    repository.update(new Mailbox(id, saved.getFirstName(), saved.getLastName(), null, "210", null,
+        saved.getPhone(), null, List.of(), null, null, "New note", LocalDate.of(2026, 1, 5)));
+
+    var updated = repository.findAll().get(0);
+    assertEquals("New note", updated.getNotes());
+    assertEquals(LocalDate.of(2026, 1, 5), updated.getClosedDate());
+  }
+
+  @Test
+  void findOpenIsInBoxNumberOrderToo() throws SQLException {
+    for (var boxNumber : List.of("20", "3", "100")) {
+      repository.insert(mailbox(boxNumber, List.of(), null));
+    }
+    var closed = repository.insert(mailbox("4", List.of(), null));
+    repository.setClosedDate(closed, LocalDate.of(2026, 1, 1));
+
+    assertEquals(List.of("3", "20", "100"), repository.findOpen().stream()
+        .map(Mailbox::getBoxNumber).collect(Collectors.toList()));
+  }
+
+  @Test
+  void insertReturnsTheNewId() throws SQLException {
+    var first = repository.insert(mailbox("1", List.of(), null));
+    var second = repository.insert(mailbox("2", List.of(), null));
+
+    assertTrue(second > first);
+    assertEquals(first, repository.findAll().get(0).getId());
+  }
+
+  @Test
+  void findAllSortsBoxNumbersByValue() throws SQLException {
+    for (var boxNumber : List.of("100", "2", "12A", "10", "12", "1")) {
+      repository.insert(mailbox(boxNumber, List.of(), null));
+    }
+
+    assertEquals(List.of("1", "2", "10", "12", "12A", "100"), repository.findAll().stream()
+        .map(Mailbox::getBoxNumber).collect(Collectors.toList()));
   }
 
   private static Mailbox withForwarding(String boxNumber, List<ForwardingAddress> addresses) {

@@ -47,6 +47,15 @@ class RenewalsFilterTest {
         boxNumbers(RenewalsView.upcoming(MAILBOXES, TODAY, 1)));
   }
 
+  @Test
+  void describesHowFarAwayTheEndDateIs() {
+    assertEquals("2 days overdue", RenewalsView.dueStatus(TODAY.minusDays(2), TODAY));
+    assertEquals("1 day overdue", RenewalsView.dueStatus(TODAY.minusDays(1), TODAY));
+    assertEquals("Due today", RenewalsView.dueStatus(TODAY, TODAY));
+    assertEquals("In 1 day", RenewalsView.dueStatus(TODAY.plusDays(1), TODAY));
+    assertEquals("In 30 days", RenewalsView.dueStatus(TODAY.plusDays(30), TODAY));
+  }
+
   private static Mailbox box(String boxNumber, LocalDate endDate) {
     return new Mailbox(0, "First", "Last", null, boxNumber, null, "(555) 000-0000", null,
         null, endDate, null);

@@ -1,0 +1,193 @@
+package org.lfps.mailboxes.view;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+import org.lfps.mailboxes.data.BoxInventoryRepository;
+import org.lfps.mailboxes.data.PriceRepository;
+import org.lfps.mailboxes.data.Setting;
+import org.lfps.mailboxes.data.SettingsRepository;
+import org.lfps.mailboxes.util.Money;
+import org.lfps.mailboxes.util.RentalLengths;
+
+/**
+ * A window for setting the price of each box size for each rental length, as
+ * a grid with a row per size and a column per rental length. Choosing a
+ * rental length on Add New Box or when renewing fills in the price.
+ */
+final class PricesView {
+
+  /** The open prices window, or {@code null} if none is open. */
+  private static Stage window;
+
+  /**
+   * Opens the prices window, or brings it to the front if it's already open.
+   *
+   * @param owner the window it belongs to
+   */
+  static void show(Stage owner) {
+    if (window != null) {
+      window.toFront();
+      window.requestFocus();
+      return;
+    }
+
+    var prices = new PriceRepository();
+    var resultLabel = new Label();
+    resultLabel.setId("pricesResultLabel");
+    resultLabel.setWrapText(true);
+
+    List<String> sizes = List.of();
+    List<Integer> lengths = RentalLengths.parse(Setting.RENTAL_LENGTHS.defaultValue());
+    Map<String, Long> saved = Map.of();
+    try {
+      sizes = new BoxInventoryRepository().sizes();
+      try {
+        lengths = RentalLengths.parse(new SettingsRepository().get(Setting.RENTAL_LENGTHS));
+      } catch (IllegalArgumentException badSetting) {
+        // Use the default lengths.
+      }
+      saved = prices.findAll();
+    } catch (SQLException e) {
+      showError(resultLabel, "Failed to load prices: " + e.getMessage());
+    }
+
+    var rows = new ArrayList<String>(sizes);
+    rows.add(PriceRepository.DEFAULT_SIZE);
+
+    var grid = new GridPane();
+    grid.setHgap(10);
+    grid.setVgap(8);
+    for (var col = 0; col < lengths.size(); col++) {
+      var header = new Label(RentalLengths.label(lengths.get(col)));
+      header.setStyle("-fx-font-weight: bold;");
+      grid.add(header, col + 1, 0);
+    }
+
+    // Each price field, keyed like the prices in PriceRepository.
+    var fields = new LinkedHashMap<String, TextField>();
+    for (var row = 0; row < rows.size(); row++) {
+      var size = rows.get(row);
+      var label = new Label(size.isEmpty() ? "Default:" : size + ":");
+      if (size.isEmpty()) {
+        label.setStyle("-fx-font-style: italic;");
+      }
+      grid.add(label, 0, row + 1);
+      for (var col = 0; col < lengths.size(); col++) {
+        var key = PriceRepository.key(size, lengths.get(col));
+        var field = new TextField();
+        field.setId("price-" + (size.isEmpty() ? "default" : size.toLowerCase()) + "-" + lengths.get(col));
+        field.setStyle("-fx-pref-width: 7em;");
+        var price = saved.get(key);
+        field.setText(price == null ? "" : Money.format(price));
+        fields.put(key, field);
+        grid.add(field, col + 1, row + 1);
+      }
+    }
+
+    var explanation = new Label((sizes.isEmpty()
+        ? "No sizes are recorded in the box inventory, so there's only a default price for each rental length. "
+            + "Record sizes on the Box Inventory screen to price them separately. "
+        : "")
+        + "The default price is used for boxes with no size, or whose size has no price for that length. "
+        + "Leave a price blank if there isn't one. Choosing a rental length on Add New Box or when renewing "
+        + "fills in the price, which can still be changed.");
+    explanation.setWrapText(true);
+    explanation.setStyle("-fx-max-width: 36em;");
+
+    var stage = new Stage();
+
+    var saveBtn = new Button("Save");
+    saveBtn.setId("pricesSaveButton");
+    saveBtn.setDefaultButton(true);
+    saveBtn.setOnAction(e -> {
+      var toSave = new HashMap<String, Long>();
+      for (var entry : fields.entrySet()) {
+        try {
+          toSave.put(entry.getKey(), Money.parse(entry.getValue().getText()));
+        } catch (IllegalArgumentException ex) {
+          entry.getValue().requestFocus();
+          showError(resultLabel, "\"" + entry.getValue().getText().trim() + "\" isn't a price. Enter prices in "
+              + "dollars and cents, like 60 or 60.00.");
+          return;
+        }
+      }
+      try {
+        prices.save(toSave);
+      } catch (SQLException ex) {
+        showError(resultLabel, "Failed to save: " + ex.getMessage());
+        return;
+      }
+      for (var entry : fields.entrySet()) {
+        var price = toSave.get(entry.getKey());
+        entry.getValue().setText(price == null ? "" : Money.format(price));
+      }
+      resultLabel.setStyle("-fx-text-fill: green;");
+      resultLabel.setText("Saved");
+    });
+
+    var closeBtn = new Button("Close");
+    closeBtn.setId("pricesCloseButton");
+    closeBtn.setCancelButton(true);
+    closeBtn.setOnAction(e -> stage.close());
+
+    var title = new Label("Prices");
+    title.setStyle("-fx-font-size: 1.25em; -fx-font-weight: bold;");
+
+    var content = new VBox(12, title, explanation, grid, new HBox(10, saveBtn, closeBtn), resultLabel);
+    content.setPadding(new Insets(20));
+
+    var scrollPane = new ScrollPane(content);
+    scrollPane.setFitToWidth(true);
+    AppWindow.applyTextSize(scrollPane);
+
+    stage.initOwner(owner);
+    stage.setTitle("Prices");
+    stage.setScene(new Scene(scrollPane));
+    stage.setOnHidden(e -> window = null);
+    window = stage;
+    stage.show();
+  }
+
+  /**
+   * Returns the price of renting a box for a number of months, based on its
+   * size in the box inventory.
+   *
+   * @param boxNumber the box number
+   * @param months the rental length
+   * @return the price in cents, or {@code null} if there's no price for it
+   *     or the prices can't be read
+   */
+  static Long priceFor(String boxNumber, int months) {
+    try {
+      var size = boxNumber == null || boxNumber.isBlank() ? null : new BoxInventoryRepository().sizeOf(boxNumber);
+      return new PriceRepository().priceFor(size, months);
+    } catch (SQLException e) {
+      return null;
+    }
+  }
+
+  private static void showError(Label label, String message) {
+    label.setStyle("-fx-text-fill: red;");
+    label.setText(message);
+  }
+
+  private PricesView() {
+  }
+
+}
