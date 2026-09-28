@@ -163,6 +163,19 @@ class EditBoxViewTest {
     assertEquals("Still here", find("2").getNotes());
   }
 
+  @Test
+  void theNamesCanBeLeftBlank() throws SQLException {
+    edit("2");
+    FxTestSupport.run(() -> {
+      textField("#firstNameField").setText("");
+      textField("#lastNameField").setText("  ");
+      save();
+    });
+
+    assertTrue(done);
+    assertEquals("", find("2").getFullName());
+  }
+
   private void edit(String boxNumber) throws SQLException {
     var mailbox = find(boxNumber);
     FxTestSupport.run(() -> EditBoxView.show(mainWindow, mailbox, () -> done = true));
@@ -177,7 +190,11 @@ class EditBoxViewTest {
   }
 
   private TextField boxNumberField() {
-    return (TextField) mainWindow.getScene().getRoot().lookup("#boxNumberField");
+    return textField("#boxNumberField");
+  }
+
+  private TextField textField(String selector) {
+    return (TextField) mainWindow.getScene().getRoot().lookup(selector);
   }
 
   private void save() {

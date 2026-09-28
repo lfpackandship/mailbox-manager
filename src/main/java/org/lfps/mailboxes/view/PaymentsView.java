@@ -130,7 +130,7 @@ public class PaymentsView {
 
     var nameCol = new TableColumn<Entry, String>("Name");
     nameCol.setCellValueFactory(cell -> new SimpleStringProperty(
-        cell.getValue().mailbox == null ? "" : cell.getValue().mailbox.getFullName()));
+        cell.getValue().mailbox == null ? "" : cell.getValue().mailbox.getHolderName()));
 
     var periodCol = new TableColumn<Entry, String>("Period");
     periodCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().period.describePeriod()));

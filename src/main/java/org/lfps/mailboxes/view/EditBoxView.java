@@ -33,6 +33,8 @@ public class EditBoxView {
   public static void show(Stage stage, Mailbox mailbox, Runnable onDone) {
     var firstNameField = new TextField(mailbox.getFirstName());
     var lastNameField = new TextField(mailbox.getLastName());
+    firstNameField.setId("firstNameField");
+    lastNameField.setId("lastNameField");
     var businessTitleField = new TextField(orEmpty(mailbox.getBusinessTitle()));
     var boxNumberField = new TextField(mailbox.getBoxNumber());
     boxNumberField.setId("boxNumberField");
@@ -68,12 +70,6 @@ public class EditBoxView {
     saveBtn.setOnAction(e -> {
       var errors = new StringBuilder();
 
-      if (firstNameField.getText().isBlank()) {
-        errors.append("First name is required.\n");
-      }
-      if (lastNameField.getText().isBlank()) {
-        errors.append("Last name is required.\n");
-      }
       if (boxNumberField.getText().isBlank()) {
         errors.append("Box number is required.\n");
       } else if (!mailbox.isClosed()

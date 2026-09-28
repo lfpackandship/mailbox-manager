@@ -53,9 +53,27 @@ class MailboxTest {
   }
 
   @Test
+  void fullNameLeavesOutABlankName() {
+    assertEquals("Lovelace", named(" ", "Lovelace", null).getFullName());
+    assertEquals("Ada", named("Ada ", "", null).getFullName());
+    assertEquals("", named("", "", null).getFullName());
+  }
+
+  @Test
+  void holderNameFallsBackToTheBusinessTitle() {
+    assertEquals("Ada Lovelace", box.getHolderName());
+    assertEquals("Engines Ltd", named("", "", " Engines Ltd ").getHolderName());
+    assertEquals("", named("", "", null).getHolderName());
+  }
+
+  @Test
   void listsCantBeChanged() {
     assertThrows(UnsupportedOperationException.class,
         () -> box.getAlternateBusinessNames().add("More"));
+  }
+
+  private static Mailbox named(String firstName, String lastName, String businessTitle) {
+    return new Mailbox(1, firstName, lastName, businessTitle, "1", null, "5551234567", null, null, null, null);
   }
 
   private static void assertSameExceptEndAndClosed(Mailbox expected, Mailbox actual) {

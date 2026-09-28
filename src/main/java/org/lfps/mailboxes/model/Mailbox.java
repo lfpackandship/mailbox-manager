@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * An immutable record of a rented mailbox: who holds it, how to reach them,
@@ -244,12 +246,32 @@ public final class Mailbox {
   }
 
   /**
-   * Returns the holder's first and last name.
+   * Returns the holder's first and last name, leaving out either one if it's
+   * blank.
    *
-   * @return the full name, such as "Ada Lovelace"
+   * @return the full name, such as "Ada Lovelace", or an empty string if the
+   *     box has no name
    */
   public String getFullName() {
-    return firstName + " " + lastName;
+    return Stream.of(firstName, lastName)
+        .filter(name -> name != null && !name.isBlank())
+        .map(String::trim)
+        .collect(Collectors.joining(" "));
+  }
+
+  /**
+   * Returns the name to show for whoever holds the box: their full name, or
+   * the business title if the box has no name.
+   *
+   * @return the holder's name or business title, or an empty string if it
+   *     has neither
+   */
+  public String getHolderName() {
+    var fullName = getFullName();
+    if (!fullName.isEmpty() || businessTitle == null) {
+      return fullName;
+    }
+    return businessTitle.trim();
   }
 
 }

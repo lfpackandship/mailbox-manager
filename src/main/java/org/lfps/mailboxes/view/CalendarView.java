@@ -177,8 +177,7 @@ public class CalendarView {
     var shown = mailboxes.size() <= MAX_LINES ? mailboxes : mailboxes.subList(0, MAX_LINES - 1);
     for (var mailbox : shown) {
       var entryLabel = entryLabel("Box " + mailbox.getBoxNumber());
-      entryLabel.setTooltip(new Tooltip(mailbox.getFullName() + " - Box " + mailbox.getBoxNumber()
-          + " ends " + mailbox.getEndDate()));
+      entryLabel.setTooltip(new Tooltip(BoxLabels.boxAndHolder(mailbox) + " ends " + mailbox.getEndDate()));
       cell.getChildren().add(entryLabel);
     }
     if (shown.size() < mailboxes.size()) {
@@ -186,7 +185,7 @@ public class CalendarView {
       var moreLabel = entryLabel("+" + hidden.size() + " more");
       moreLabel.setStyle(moreLabel.getStyle() + " -fx-font-weight: bold;");
       moreLabel.setTooltip(new Tooltip(hidden.stream()
-          .map(m -> "Box " + m.getBoxNumber() + " – " + m.getFullName())
+          .map(BoxLabels::boxAndHolder)
           .collect(Collectors.joining("\n")) + "\nClick the day to see them all"));
       cell.getChildren().add(moreLabel);
     }

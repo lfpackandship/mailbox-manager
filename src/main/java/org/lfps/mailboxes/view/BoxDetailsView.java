@@ -81,7 +81,7 @@ final class BoxDetailsView {
       rows.add(row("Closed", "detailClosed", mailbox.getClosedDate().format(fullDate)));
     }
     rows.addAll(List.of(
-        row("Holder", "detailHolder", mailbox.getFirstName() + " " + mailbox.getLastName()),
+        row("Holder", "detailHolder", orNone(mailbox.getFullName())),
         row("Business title", "detailBusinessTitle", orNone(mailbox.getBusinessTitle())),
         row("Also receives mail as", "detailAlternateNames", lines(mailbox.getAlternateBusinessNames())),
         row("Phone", "detailPhone", PhoneNumberFormatter.format(mailbox.getPhone())),
@@ -125,7 +125,7 @@ final class BoxDetailsView {
     AppWindow.applyTextSize(scrollPane);
 
     stage.initOwner(owner);
-    stage.setTitle("Box " + mailbox.getBoxNumber() + " – " + mailbox.getFirstName() + " " + mailbox.getLastName());
+    stage.setTitle(BoxLabels.boxAndHolder(mailbox));
     stage.setScene(new Scene(scrollPane));
     stage.setOnHidden(e -> {
       if (window == stage) {

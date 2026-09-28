@@ -44,7 +44,7 @@ final class RenewBoxView {
     var today = LocalDate.now();
     var current = mailbox.getEndDate();
 
-    var title = new Label("Renew Box " + mailbox.getBoxNumber() + " – " + mailbox.getFullName());
+    var title = new Label("Renew " + BoxLabels.boxAndHolder(mailbox));
     title.setStyle("-fx-font-size: 1.25em; -fx-font-weight: bold;");
 
     var currentLabel = new Label(current == null

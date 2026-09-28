@@ -151,7 +151,7 @@ public class BoxInventoryView {
 
     var holderCol = new TableColumn<Row, String>("Rented By");
     holderCol.setCellValueFactory(cell -> new SimpleStringProperty(
-        cell.getValue().holder == null ? "" : cell.getValue().holder.getFullName()));
+        cell.getValue().holder == null ? "" : cell.getValue().holder.getHolderName()));
 
     var endsCol = new TableColumn<Row, LocalDate>("Rental Ends");
     endsCol.setCellValueFactory(cell -> new SimpleObjectProperty<>(

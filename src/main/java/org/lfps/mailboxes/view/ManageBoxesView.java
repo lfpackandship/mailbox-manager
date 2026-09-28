@@ -171,11 +171,11 @@ public class ManageBoxesView {
           if (repository.isBoxNumberTaken(selected.getBoxNumber(), selected.getId())) {
             statusLabel.setStyle("-fx-text-fill: red;");
             statusLabel.setText("Box " + selected.getBoxNumber().trim() + " has been given to someone else, so "
-                + selected.getFullName() + " can't be reopened in it. Edit the box number first.");
+                + BoxLabels.holderOr(selected, "its holder") + " can't be reopened in it. Edit the box number first.");
             return;
           }
           repository.setClosedDate(selected.getId(), null);
-        } else if (Dialogs.confirm.ask(stage, "Close box " + selected.getBoxNumber() + " for " + selected.getFullName() + "?",
+        } else if (Dialogs.confirm.ask(stage, "Close box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
             "The box becomes free to rent to someone else. Everything recorded for it is kept, and you can "
                 + "find it again by showing closed boxes.")) {
           repository.setClosedDate(selected.getId(), LocalDate.now());
@@ -198,7 +198,7 @@ public class ManageBoxesView {
       if (selected == null) {
         return;
       }
-      if (!Dialogs.confirm.ask(stage, "Permanently delete box " + selected.getBoxNumber() + " for " + selected.getFullName() + "?",
+      if (!Dialogs.confirm.ask(stage, "Permanently delete box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
           "Everything recorded for it, including its rental history, will be erased. This can't be undone. "
               + "If the holder has given up the box, close it instead to keep the record.")) {
         return;

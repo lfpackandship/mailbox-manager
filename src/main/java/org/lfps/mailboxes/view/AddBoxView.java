@@ -99,12 +99,6 @@ public class AddBoxView {
     submitBtn.setOnAction(e -> {
       var errors = new StringBuilder();
 
-      if (firstNameField.getText().isBlank()) {
-        errors.append("First name is required.\n");
-      }
-      if (lastNameField.getText().isBlank()) {
-        errors.append("Last name is required.\n");
-      }
       if (boxNumber.getText().isBlank()) {
         errors.append("Box number is required.\n");
       } else {

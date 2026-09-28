@@ -162,8 +162,7 @@ public class RenewalsView {
     VBox.setVgrow(table, Priority.ALWAYS);
 
     var nameCol = new TableColumn<Mailbox, String>("Name");
-    nameCol.setCellValueFactory(cellData -> new SimpleStringProperty(
-        cellData.getValue().getFirstName() + " " + cellData.getValue().getLastName()));
+    nameCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getHolderName()));
 
     var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
     boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
