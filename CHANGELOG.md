@@ -3,6 +3,13 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/wgoodzey/mailbox-manager/releases).
 
+## 1.5.1 – 2026-09-28
+
+### Changed
+
+- First and last name are optional on Add New Box and Edit Box. A box with no
+  name is shown by its business title, if it has one.
+
 ## 1.5.0 – 2026-09-26
 
 ### Added
