@@ -3,6 +3,13 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/wgoodzey/mailbox-manager/releases).
 
+## 1.5.2 – 2026-09-28
+
+### Changed
+
+- The phone number is optional on Add New Box and Edit Box. A number that's
+  entered still has to be a full 10-digit number.
+
 ## 1.5.1 – 2026-09-28
 
 ### Changed
