@@ -41,6 +41,7 @@ public class EditBoxView {
     var boxNameField = new TextField(orEmpty(mailbox.getBoxName()));
     var phoneField = new TextField(PhoneNumberFormatter.format(mailbox.getPhone()));
     phoneField.setTextFormatter(PhoneNumberFormatter.create());
+    phoneField.setId("phoneField");
     var emailField = new TextField(orEmpty(mailbox.getEmail()));
 
     var businessNamesEditor = new BusinessNamesEditor();
@@ -80,9 +81,7 @@ public class EditBoxView {
       }
 
       var phone = phoneField.getText();
-      if (phone.isBlank()) {
-        errors.append("Phone number is required.\n");
-      } else if (!Validators.isValidPhone(phone)) {
+      if (!phone.isBlank() && !Validators.isValidPhone(phone)) {
         errors.append("Phone number is not valid.\n");
       }
 

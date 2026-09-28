@@ -71,12 +71,12 @@ check that `java -version` reports 17 or newer.
 
 The main menu has six screens:
 
-- **Add New Box** – record a new box holder. Box number and phone number are
-  required. Each box number can only belong to one holder at a time. You can
-  also add the holder's first and last name, a business title, a nickname for
-  the box, an email address, any alternate business names (DBAs) that receive
-  mail there, the date the rental ends, the amount paid and how, any forwarding addresses,
-  and notes. The rental length buttons (1, 3, 6, and 12 months unless changed
+- **Add New Box** – record a new box holder. Only the box number is required,
+  and each box number can only belong to one holder at a time. You can also
+  add the holder's first and last name, a business title, a nickname for the
+  box, a phone number, an email address, any alternate business names (DBAs)
+  that receive mail there, the date the rental ends, the amount paid and how,
+  any forwarding addresses, and notes. The rental length buttons (1, 3, 6, and 12 months unless changed
   in Settings) set the end date that far from today. If the
   [box inventory](#box-inventory) is set up, **Choose…** next to the box number
   lists the empty boxes to pick from.

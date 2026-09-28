@@ -84,7 +84,7 @@ final class BoxDetailsView {
         row("Holder", "detailHolder", orNone(mailbox.getFullName())),
         row("Business title", "detailBusinessTitle", orNone(mailbox.getBusinessTitle())),
         row("Also receives mail as", "detailAlternateNames", lines(mailbox.getAlternateBusinessNames())),
-        row("Phone", "detailPhone", PhoneNumberFormatter.format(mailbox.getPhone())),
+        row("Phone", "detailPhone", orNone(PhoneNumberFormatter.format(mailbox.getPhone()))),
         row("Email", "detailEmail", orNone(mailbox.getEmail())),
         row("Rental ends", "detailEndDate", endDate),
         row("Forwarding addresses", "detailForwarding", lines(mailbox.getForwardingAddresses())),

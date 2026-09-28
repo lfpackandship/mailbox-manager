@@ -176,6 +176,30 @@ class EditBoxViewTest {
     assertEquals("", find("2").getFullName());
   }
 
+  @Test
+  void thePhoneNumberCanBeLeftBlank() throws SQLException {
+    edit("2");
+    FxTestSupport.run(() -> {
+      textField("#phoneField").setText("");
+      save();
+    });
+
+    assertTrue(done);
+    assertEquals("", find("2").getPhone());
+  }
+
+  @Test
+  void aPartPhoneNumberIsStillRejected() throws SQLException {
+    edit("2");
+    FxTestSupport.run(() -> {
+      textField("#phoneField").setText("555");
+      save();
+    });
+
+    assertEquals("Phone number is not valid.", result());
+    assertEquals("(555) 100-0001", find("2").getPhone());
+  }
+
   private void edit(String boxNumber) throws SQLException {
     var mailbox = find(boxNumber);
     FxTestSupport.run(() -> EditBoxView.show(mainWindow, mailbox, () -> done = true));

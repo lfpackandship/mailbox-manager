@@ -106,9 +106,7 @@ public class AddBoxView {
       }
 
       var phone = phoneField.getText();
-      if (phone.isBlank()) {
-        errors.append("Phone number is required.\n");
-      } else if (!Validators.isValidPhone(phone)) {
+      if (!phone.isBlank() && !Validators.isValidPhone(phone)) {
         errors.append("Phone number is not valid.\n");
       }
 
