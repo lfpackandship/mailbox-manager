@@ -18,6 +18,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
@@ -27,6 +28,7 @@ import javafx.util.StringConverter;
 import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
+import org.lfps.mailboxes.drive.DriveBackup;
 import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.RentalLengths;
 import org.lfps.mailboxes.util.SystemInfo;
@@ -48,6 +50,20 @@ public class SettingsView {
 
   /** The open settings window, or {@code null} if none is open. */
   private static Stage window;
+
+  /** The Google Drive part of the open settings window. */
+  private static GoogleDriveRow driveRow;
+
+  /**
+   * Opens the settings window and starts connecting Google Drive, for when
+   * the app has been signed out of it.
+   *
+   * @param owner the main window
+   */
+  public static void showAndConnectDrive(Stage owner) {
+    show(owner);
+    driveRow.connect();
+  }
 
   /**
    * Opens the settings window on top of the main window, or brings it to the
@@ -158,6 +174,8 @@ public class SettingsView {
     restoreBtn.setId("restoreButton");
     restoreBtn.setOnAction(e -> RestoreView.show(stage, owner));
 
+    var drive = new GoogleDriveRow(stage);
+
     var dataFolderField = new TextField(Database.dataDir().toString());
     dataFolderField.setEditable(false);
     dataFolderField.setStyle("-fx-pref-width: 24em;");
@@ -187,6 +205,7 @@ public class SettingsView {
     var backups = section("Backups",
         row("Daily backups to keep:", backupsToKeepField),
         row("Also copy backups to:", new HBox(8, secondFolderField, chooseSecondFolderBtn, clearSecondFolderBtn)),
+        row("Google Drive:", drive),
         row("", new HBox(8, backUpNowBtn, restoreBtn)),
         row("Data folder:", new HBox(8, dataFolderField, openDataFolderBtn)));
 
@@ -266,8 +285,13 @@ public class SettingsView {
     stage.initOwner(owner);
     stage.setTitle("Settings");
     stage.setScene(new Scene(scrollPane));
-    stage.setOnHidden(e -> window = null);
+    stage.setOnHidden(e -> {
+      window = null;
+      driveRow = null;
+      DriveBackup.cancelConnect();
+    });
     window = stage;
+    driveRow = drive;
     stage.show();
   }
 
@@ -325,7 +349,10 @@ public class SettingsView {
   }
 
   private static Node[] row(String label, Node control) {
-    return new Node[] { new Label(label), control };
+    var text = new Label(label);
+    // Never shorten a label to "…" to make room for a wide control.
+    text.setMinWidth(Region.USE_PREF_SIZE);
+    return new Node[] { text, control };
   }
 
   private static final class NumberField {

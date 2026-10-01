@@ -313,8 +313,24 @@ public class Database {
     }
   }
 
-  private static Path todaysBackup() {
+  /**
+   * Returns where today's daily backup is written. It may not exist yet.
+   *
+   * @return today's daily backup file in the {@code backups} folder
+   */
+  public static Path todaysBackup() {
     return BACKUP_DIR.resolve("mailboxes-" + LocalDate.now() + ".db");
+  }
+
+  /**
+   * Returns whether a file name is that of a daily backup, such as
+   * {@code mailboxes-2026-09-26.db}. Only these are deleted when old.
+   *
+   * @param fileName the file name to check
+   * @return {@code true} for a daily backup's name
+   */
+  public static boolean isDailyBackupName(String fileName) {
+    return fileName.matches(DAILY_BACKUP_NAME);
   }
 
   /**
@@ -348,7 +364,7 @@ public class Database {
     var backupsToKeep = Math.max(1, new SettingsRepository().getInt(Setting.BACKUPS_TO_KEEP));
     try (Stream<Path> backups = Files.list(folder)) {
       var old = backups
-          .filter(p -> p.getFileName().toString().matches(DAILY_BACKUP_NAME))
+          .filter(p -> isDailyBackupName(p.getFileName().toString()))
           .sorted(Comparator.reverseOrder())
           .skip(backupsToKeep)
           .collect(Collectors.toList());

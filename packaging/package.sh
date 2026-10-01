@@ -45,7 +45,7 @@ common=(
   --description "Keeps track of rented mailboxes, their holders, and renewals."
   # The Java modules the app uses (found with jdeps), so the bundled runtime
   # contains only those.
-  --add-modules java.base,java.desktop,java.sql,jdk.jfr,jdk.unsupported
+  --add-modules java.base,java.desktop,java.net.http,java.sql,jdk.httpserver,jdk.jfr,jdk.unsupported
   --dest target/jpackage
 )
 

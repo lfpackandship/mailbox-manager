@@ -10,7 +10,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what's new in each release.
 ## Installing
 
 Download the installer for your computer from the
-[latest release](https://github.com/wgoodzey/mailbox-manager/releases/latest).
+[latest release](https://github.com/lfpackandship/mailbox-manager/releases/latest).
 Java is built in, so there's nothing else to install.
 
 | Computer                              | File                                            |
@@ -199,6 +199,7 @@ take effect when you click **Save**.
 - **Daily backups to keep** – how many daily backups to keep before the oldest
   are deleted. Default 30.
 - **Also copy backups to** – see [A second copy of your backups](#a-second-copy-of-your-backups).
+- **Google Drive** – see [Backing up to Google Drive](#backing-up-to-google-drive).
 
 The Backups section also has **Back Up Now…**, **Restore…**, and an **Open**
 button that shows the data folder in Explorer or Finder.
@@ -235,6 +236,35 @@ the computer itself fails. To keep copies somewhere else:
   `mailboxes-backup-2026-09-26-143005.db`. These are never deleted
   automatically.
 
+### Backing up to Google Drive
+
+The app can also put a copy of each daily backup in your Google Drive, so your
+data is safe even if the computer is lost or broken. To turn it on:
+
+1. Open **File → Settings** and, next to **Google Drive**, click
+   **Connect Google Drive**.
+2. Your web browser opens Google's sign-in page. Sign in to the Google account
+   you want the backups in, and click **Allow**.
+3. Go back to the app. It shows "Backing up to Google Drive as" and your
+   email address, and uploads today's backup straight away.
+
+After that, each day's backup is uploaded when the app starts, to a folder in
+your Google Drive called **Mailbox Manager Backups**. The app deletes old
+backups there the same way it does on the computer, keeping as many as
+**Daily backups to keep** says. The app can only see the files it puts in your
+Google Drive, not anything else there.
+
+Settings shows when the last backup was uploaded. If an upload fails, for
+example because the internet is down, the app shows a warning and tries again
+the next time it starts; the backup is still saved on the computer. If Google
+ever signs the app out, the warning has a **Reconnect** button that takes you
+through signing in again.
+
+To stop, click **Disconnect** in Settings. Backups already in your Google
+Drive are kept. To use a backup from Google Drive, download it from the
+**Mailbox Manager Backups** folder, then restore it with **Choose File…** as
+described below.
+
 ### Restoring a backup
 
 1. Open **File → Settings** and click **Restore…**.
@@ -245,7 +275,9 @@ the computer itself fails. To keep copies somewhere else:
    that.
 
 Settings are stored in the same file as the data, so restoring a backup also
-brings back the settings from that day. Backups from older versions of the app
+brings back the settings from that day. The Google Drive sign-in is the
+exception: it's kept separately, in `google-drive.properties` in the data
+folder, so it isn't included in backups and restoring doesn't change it. Backups from older versions of the app
 are upgraded automatically when restored.
 
 ## Development
@@ -281,6 +313,36 @@ Some tests open real windows and press buttons and keys in code, so windows
 briefly appear on screen while the tests run. They don't move the mouse. In CI
 they run under a virtual display.
 
+The Google Drive tests run against a fake Google server on your computer
+(`FakeGoogle`), so they don't need a Google account or the internet.
+
+### Google Drive setup
+
+Connecting Google Drive needs the app's own Google client ID and secret, which
+are kept out of the repository. Without them the app works, but Settings says
+Google Drive isn't available. To set them up once:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a
+   project and enable the **Google Drive API** for it.
+2. Under **Google Auth Platform**, fill in the app's name and contact email.
+   Choose **Internal** if the account is part of a Google Workspace
+   organization; otherwise choose **External** and, when it's ready,
+   **Publish** the app. While an External app is still in testing, Google
+   signs it out every 7 days.
+3. Under **Data Access**, add the scope `.../auth/drive.file` (if it isn't
+   listed, enable the Google Drive API first). It's non-sensitive, so
+   publishing doesn't need Google's security review. The app asks for only
+   this one, so Google's sign-in page has no checkboxes to miss.
+4. Under **Clients**, create an OAuth client of type **Desktop app**.
+5. For local builds, copy `packaging/google-oauth.properties.example` to
+   `src/main/resources/org/lfps/mailboxes/drive/google-oauth.properties` and
+   fill in the client ID and secret. For release builds, add them as the
+   repository secrets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+
+Google treats a desktop app's client secret as not truly secret, since anyone
+can pull it out of the app; it's kept out of the repository only so that
+copies of the code don't use your Google project.
+
 ### Project layout
 
 ```
@@ -288,9 +350,11 @@ src/main/java/org/lfps/mailboxes/
   App.java          start-up: data folder, database schema, daily backup, main window
   data/             database access: Database, MailboxRepository, RentalHistoryRepository,
                     BoxInventoryRepository, PriceRepository, SettingsRepository, Setting
+  drive/            Google Drive backups: DriveBackup (connect, upload), GoogleDrive (talks
+                    to Google), DriveAccount (the saved sign-in)
   model/            Mailbox, ForwardingAddress, RentalPeriod, and InventoryBox
   view/             one class per screen, plus AppWindow (menu bar, text size), SettingsView,
-                    and RestoreView
+                    GoogleDriveRow, and RestoreView
   util/             input validation, box number sorting, money, rental lengths, error
                     messages, and runtime info
   Launcher.java     the entry point of the jar and installers, which hands off to App
