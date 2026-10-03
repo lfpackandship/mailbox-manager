@@ -87,6 +87,8 @@ final class BoxDetailsView {
         row("Phone", "detailPhone", orNone(PhoneNumberFormatter.format(mailbox.getPhone()))),
         row("Email", "detailEmail", orNone(mailbox.getEmail())),
         row("Rental ends", "detailEndDate", endDate),
+        row("Box", "detailForwardingOnly", mailbox.isForwardingOnly()
+            ? "Forwarding only: no box rented here, mail is forwarded" : "Rented here"),
         row("Keys", "detailKeys", orNone(KeyFields.describe(mailbox.getKeyCount(), mailbox.getKeyDepositCents()))),
         row("Forwarding addresses", "detailForwarding", lines(mailbox.getForwardingAddresses())),
         row("Notes", "detailNotes", orNone(mailbox.getNotes())),

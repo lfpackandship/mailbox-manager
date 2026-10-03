@@ -231,7 +231,8 @@ public class Database {
    * {@code box_inventory}, {@code prices}, {@code box_sizes}, and {@code settings} tables if
    * they don't already exist, and migrates older databases that predate the
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
-   * {@code key_count}, and {@code key_deposit_cents} columns.
+   * {@code key_count}, {@code key_deposit_cents}, and {@code forwarding_only}
+   * columns.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -249,7 +250,8 @@ public class Database {
         + "notes TEXT, "
         + "closed_date TEXT, "
         + "key_count INTEGER, "
-        + "key_deposit_cents INTEGER)";
+        + "key_deposit_cents INTEGER, "
+        + "forwarding_only INTEGER NOT NULL DEFAULT 0)";
 
     var createBusinessNames = "CREATE TABLE IF NOT EXISTS business_names ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -311,7 +313,7 @@ public class Database {
       stmt.execute(createSettings);
 
       for (var column : List.of("box_name TEXT", "end_date TEXT", "notes TEXT", "closed_date TEXT",
-          "key_count INTEGER", "key_deposit_cents INTEGER")) {
+          "key_count INTEGER", "key_deposit_cents INTEGER", "forwarding_only INTEGER NOT NULL DEFAULT 0")) {
         try {
           stmt.execute("ALTER TABLE mailboxes ADD COLUMN " + column);
         } catch (SQLException alreadyMigrated) {

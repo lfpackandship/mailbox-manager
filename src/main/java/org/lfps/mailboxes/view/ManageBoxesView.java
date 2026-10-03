@@ -34,13 +34,14 @@ import javafx.stage.Stage;
  * Lists mailboxes in a searchable table showing the key details of each, with
  * actions to view the full entry (also by double-clicking a row or pressing
  * Enter), edit, renew, close, reopen, or delete it. Open boxes are shown by
- * default; closed ones can be shown instead, or both.
+ * default; forwarding-only or closed ones can be shown instead, or all.
  */
 public class ManageBoxesView {
 
   /** Which boxes the table shows. */
   enum Show {
     OPEN("Open boxes"),
+    FORWARDING("Forwarding only"),
     CLOSED("Closed boxes"),
     ALL("All boxes");
 
@@ -54,6 +55,9 @@ public class ManageBoxesView {
      * Returns whether a box belongs in the table when this is chosen.
      */
     boolean includes(Mailbox mailbox) {
+      if (this == FORWARDING) {
+        return !mailbox.isClosed() && mailbox.isForwardingOnly();
+      }
       return this == ALL || mailbox.isClosed() == (this == CLOSED);
     }
 
@@ -89,6 +93,7 @@ public class ManageBoxesView {
     var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
     boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
     boxNumberCol.setComparator(BoxNumbers.ORDER);
+    BoxLabels.markForwarding(boxNumberCol);
 
     var firstNameCol = new TableColumn<Mailbox, String>("First Name");
     firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
@@ -174,7 +179,8 @@ public class ManageBoxesView {
       }
       try {
         if (selected.isClosed()) {
-          if (repository.isBoxNumberTaken(selected.getBoxNumber(), selected.getId())) {
+          if (!selected.isForwardingOnly()
+              && repository.isBoxNumberTaken(selected.getBoxNumber(), selected.getId())) {
             statusLabel.setStyle("-fx-text-fill: red;");
             statusLabel.setText("Box " + selected.getBoxNumber().trim() + " has been given to someone else, so "
                 + BoxLabels.holderOr(selected, "its holder") + " can't be reopened in it. Edit the box number first.");
@@ -283,8 +289,12 @@ public class ManageBoxesView {
     var closedCol = new TableColumn<Mailbox, LocalDate>("Closed");
     closedCol.setCellValueFactory(new PropertyValueFactory<>("closedDate"));
 
-    var columns = List.<TableColumn<Mailbox, ?>>of(boxNameCol, emailCol, endDateCol, alternateNamesCol,
-        forwardingCol, keysCol, depositCol, notesCol, closedCol);
+    var forwardingOnlyCol = new TableColumn<Mailbox, String>("Forwarding Only");
+    forwardingOnlyCol.setCellValueFactory(cell -> new SimpleStringProperty(
+        cell.getValue().isForwardingOnly() ? "Yes" : ""));
+
+    var columns = List.<TableColumn<Mailbox, ?>>of(boxNameCol, emailCol, endDateCol, forwardingOnlyCol,
+        alternateNamesCol, forwardingCol, keysCol, depositCol, notesCol, closedCol);
     columns.forEach(column -> column.setVisible(false));
     return columns;
   }
@@ -329,6 +339,9 @@ public class ManageBoxesView {
     }
     mailbox.getAlternateBusinessNames().forEach(name -> haystack.append(name).append('\n'));
     mailbox.getForwardingAddresses().forEach(address -> haystack.append(address).append('\n'));
+    if (mailbox.isForwardingOnly()) {
+      haystack.append("forwarding only\n");
+    }
     var text = haystack.toString().toLowerCase();
     var phoneDigits = mailbox.getPhone() == null ? "" : mailbox.getPhone().replaceAll("[^0-9]", "");
 

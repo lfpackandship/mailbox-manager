@@ -4,7 +4,11 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 
 import javafx.geometry.Insets;
+import java.util.List;
+
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
@@ -14,6 +18,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.MailboxRepository;
+import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
 import org.lfps.mailboxes.util.Validators;
@@ -56,6 +61,7 @@ public class EditBoxView {
     var rentalLengthButtons = RentalLengthButtons.create(months -> extendEndDate(endDateField, months));
 
     var keys = new KeyFields(mailbox.getKeyCount(), mailbox.getKeyDepositCents());
+    var forwardingOnlyBox = forwardingOnlyBox(mailbox.isForwardingOnly(), keys.countField, keys.depositField);
 
     var notesField = notesField();
     notesField.setText(orEmpty(mailbox.getNotes()));
@@ -73,14 +79,17 @@ public class EditBoxView {
     saveBtn.setOnAction(e -> {
       var errors = new StringBuilder();
 
+      var forwardingOnly = forwardingOnlyBox.isSelected();
       if (boxNumberField.getText().isBlank()) {
         errors.append("Box number is required.\n");
-      } else if (!mailbox.isClosed()
-          && !BoxNumbers.key(boxNumberField.getText()).equals(BoxNumbers.key(mailbox.getBoxNumber()))) {
-        // A closed box doesn't hold its number, so only check a changed
-        // number on an open box.
+      } else if (!mailbox.isClosed() && !forwardingOnly
+          && (mailbox.isForwardingOnly()
+              || !BoxNumbers.key(boxNumberField.getText()).equals(BoxNumbers.key(mailbox.getBoxNumber())))) {
+        // Closed and forwarding-only boxes don't hold their numbers, so only
+        // check an open box whose number changed or that now holds it.
         errors.append(BoxNumberChecks.problem(boxNumberField.getText(), mailbox.getId()));
       }
+      errors.append(forwardingProblem(forwardingOnly, forwardingEditor.getAddresses()));
 
       var phone = phoneField.getText();
       if (!phone.isBlank() && !Validators.isValidPhone(phone)) {
@@ -110,7 +119,7 @@ public class EditBoxView {
       var updated = new Mailbox(mailbox.getId(), firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumberField.getText(), boxNameField.getText(), phone, email,
           businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses(),
-          notesField.getText(), mailbox.getClosedDate(), keyCount, keyDeposit);
+          notesField.getText(), mailbox.getClosedDate(), keyCount, keyDeposit, forwardingOnly);
 
       try {
         repository.update(updated);
@@ -130,21 +139,59 @@ public class EditBoxView {
 
     grid.addRow(0, new Label("First Name:"), firstNameField, new Label("Last Name:"), lastNameField);
     grid.addRow(1, new Label("Business Title:"), businessTitleField, new Label("Box Number:"), boxNumberField);
-    grid.addRow(2, new Label("Box Name:"), boxNameField, new Label("Phone Number:"), phoneField);
-    grid.addRow(3, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
-    grid.add(rentalLengthButtons, 0, 4, 4, 1);
-    grid.addRow(5, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
-    grid.add(new Label("Alternate Business Names:"), 0, 6, 4, 1);
-    grid.add(businessNamesEditor, 0, 7, 4, 1);
-    grid.add(new Label("Forwarding Addresses:"), 0, 8, 4, 1);
-    grid.add(forwardingEditor, 0, 9, 4, 1);
-    grid.add(new Label("Notes:"), 0, 10, 4, 1);
-    grid.add(notesField, 0, 11, 4, 1);
+    grid.add(forwardingOnlyBox, 0, 2, 4, 1);
+    grid.addRow(3, new Label("Box Name:"), boxNameField, new Label("Phone Number:"), phoneField);
+    grid.addRow(4, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
+    grid.add(rentalLengthButtons, 0, 5, 4, 1);
+    grid.addRow(6, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
+    grid.add(new Label("Alternate Business Names:"), 0, 7, 4, 1);
+    grid.add(businessNamesEditor, 0, 8, 4, 1);
+    grid.add(new Label("Forwarding Addresses:"), 0, 9, 4, 1);
+    grid.add(forwardingEditor, 0, 10, 4, 1);
+    grid.add(new Label("Notes:"), 0, 11, 4, 1);
+    grid.add(notesField, 0, 12, 4, 1);
 
     var layout = new VBox(8, cancelBtn, grid, saveBtn, resultLabel);
     layout.setPadding(new Insets(15));
 
     AppWindow.show(stage, layout);
+  }
+
+  /**
+   * Builds the forwarding-only check box shared by the Add and Edit Box
+   * forms, which turns off the parts of the form that only apply to a box
+   * rented here.
+   *
+   * @param checked whether it starts ticked
+   * @param rentedOnly the controls that only apply to a box rented here
+   */
+  static CheckBox forwardingOnlyBox(boolean checked, Node... rentedOnly) {
+    var box = new CheckBox("Forwarding only: they don't rent a box here, we forward their mail. "
+        + "The box number can be one someone else rents now.");
+    box.setId("forwardingOnlyBox");
+    box.setWrapText(true);
+    box.selectedProperty().addListener((obs, was, now) -> {
+      for (var node : rentedOnly) {
+        node.setDisable(now);
+      }
+    });
+    box.setSelected(checked);
+    for (var node : rentedOnly) {
+      node.setDisable(checked);
+    }
+    return box;
+  }
+
+  /**
+   * Checks what a forwarding-only box needs: somewhere to forward the mail.
+   *
+   * @return a message describing the problem, ending in a newline, or an
+   *     empty string if there is none
+   */
+  static String forwardingProblem(boolean forwardingOnly, List<ForwardingAddress> addresses) {
+    return forwardingOnly && addresses.isEmpty()
+        ? "Add the address to forward their mail to under Forwarding Addresses.\n"
+        : "";
   }
 
   /**

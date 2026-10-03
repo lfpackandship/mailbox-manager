@@ -25,18 +25,20 @@ public class MailboxRepository {
 
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
       + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date, notes, "
-      + "closed_date, key_count, key_deposit_cents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      + "closed_date, key_count, key_deposit_cents, forwarding_only) "
+      + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   private static final String SELECT_ALL_SQL = "SELECT id, first_name, last_name, "
       + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date, key_count, "
-      + "key_deposit_cents FROM mailboxes";
+      + "key_deposit_cents, forwarding_only FROM mailboxes";
 
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
       + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ?, notes = ?, "
-      + "closed_date = ?, key_count = ?, key_deposit_cents = ? WHERE id = ?";
+      + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ? WHERE id = ?";
 
   private static final String BOX_NUMBER_TAKEN_SQL = "SELECT 1 FROM mailboxes "
-      + "WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? AND closed_date IS NULL LIMIT 1";
+      + "WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? AND closed_date IS NULL AND forwarding_only = 0 "
+      + "LIMIT 1";
 
   private static final String SET_CLOSED_DATE_SQL = "UPDATE mailboxes SET closed_date = ? WHERE id = ?";
 
@@ -152,7 +154,8 @@ public class MailboxRepository {
             rs.getString("notes"),
             date(rs.getString("closed_date")),
             rs.getObject("key_count") == null ? null : rs.getInt("key_count"),
-            rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents")));
+            rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents"),
+            rs.getInt("forwarding_only") != 0));
       }
     }
 
@@ -173,7 +176,7 @@ public class MailboxRepository {
       try {
         try (PreparedStatement stmt = conn.prepareStatement(UPDATE_SQL)) {
           bindMailboxFields(stmt, mailbox);
-          stmt.setInt(13, mailbox.getId());
+          stmt.setInt(14, mailbox.getId());
           stmt.executeUpdate();
         }
         deleteBusinessNames(conn, mailbox.getId());
@@ -190,8 +193,9 @@ public class MailboxRepository {
 
   /**
    * Checks whether another open mailbox already uses the given box number,
-   * ignoring surrounding whitespace and letter case. Closed boxes don't
-   * count, so a number can be reused once its holder leaves.
+   * ignoring surrounding whitespace and letter case. Closed and
+   * forwarding-only boxes don't count, so a number can be reused once its
+   * holder leaves or switches to having their mail forwarded.
    *
    * @param boxNumber the box number to look for
    * @param excludeId the id of the mailbox being edited, or {@code 0} when adding
@@ -268,6 +272,7 @@ public class MailboxRepository {
     stmt.setString(10, mailbox.getClosedDate() == null ? null : mailbox.getClosedDate().toString());
     stmt.setObject(11, mailbox.getKeyCount());
     stmt.setObject(12, mailbox.getKeyDepositCents());
+    stmt.setInt(13, mailbox.isForwardingOnly() ? 1 : 0);
   }
 
   private static LocalDate date(String value) {

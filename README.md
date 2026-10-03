@@ -174,6 +174,25 @@ prices, and the reminder's message are set in Settings under
 [Price Sheet and Reminders](#settings). What each size measures is entered on
 the Prices window.
 
+### Forwarding-only boxes
+
+Some customers don't rent a box here; the shop just forwards their mail,
+which still arrives addressed to a box number, often the box they used to
+rent. Tick **Forwarding only** on Add New Box or Edit Box for them, and add
+the address to forward to under **Forwarding Addresses**.
+
+A forwarding-only box doesn't hold its box number, so the box with that
+number can be rented to someone else, and the Box Inventory counts it as
+empty. Ticking **Forwarding only** for a holder who's giving up their box but
+wants their mail forwarded frees the box straight away. Lists show the number
+as, for example, "12 (forwarding)", and on Manage Boxes **Forwarding only** in
+the menu next to the search field shows just these.
+
+Forwarding-only boxes still have an end date, appear on Renewals and the
+Calendar, and are renewed the same way, but no box price is filled in when
+renewing, and the key fields are turned off. **Print Reminders…** leaves them
+unticked, since there's no box to put a reminder in.
+
 ### Keys and deposits
 
 Add New Box and Edit Box have a place for how many keys the holder was given

@@ -114,7 +114,8 @@ final class PriceSheetView {
       printBtn.setDisable(content == null || count == 0);
     };
     for (var box : boxes) {
-      var property = new SimpleBooleanProperty(true);
+      // A forwarding-only box has no box here to put a reminder in.
+      var property = new SimpleBooleanProperty(!box.isForwardingOnly());
       property.addListener((obs, was, now) -> updatePrintButton.run());
       ticked.put(box, property);
     }
@@ -141,7 +142,8 @@ final class PriceSheetView {
         @Override
         public String toString(Mailbox box) {
           return BoxLabels.boxAndHolder(box)
-              + (box.getEndDate() == null ? "" : " (ends " + box.getEndDate().format(dateFormat) + ")");
+              + (box.getEndDate() == null ? "" : " (ends " + box.getEndDate().format(dateFormat) + ")")
+              + (box.isForwardingOnly() ? " – forwarding only" : "");
         }
 
         @Override
@@ -161,7 +163,9 @@ final class PriceSheetView {
       noneBtn.setOnAction(e -> ticked.values().forEach(property -> property.set(false)));
 
       var explanation = new Label("Tick the boxes to print a reminder for. Each reminder prints on its own page. "
-          + "Click a box to preview its reminder.");
+          + "Click a box to preview its reminder."
+          + (boxes.stream().anyMatch(Mailbox::isForwardingOnly)
+              ? " Forwarding-only boxes start unticked, as there's no box to put a reminder in." : ""));
       explanation.setWrapText(true);
       left.getChildren().addAll(explanation, list, new HBox(8, allBtn, noneBtn));
       list.getSelectionModel().select(0);
@@ -240,7 +244,8 @@ final class PriceSheetView {
     }
     String size = null;
     try {
-      size = new BoxInventoryRepository().sizeOf(box.getBoxNumber());
+      // A forwarding-only box doesn't rent the box with its number, so has no size.
+      size = box.isForwardingOnly() ? null : new BoxInventoryRepository().sizeOf(box.getBoxNumber());
     } catch (SQLException e) {
       // Print it without circling a size.
     }
