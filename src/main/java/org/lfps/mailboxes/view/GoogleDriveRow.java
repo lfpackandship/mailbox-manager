@@ -17,7 +17,6 @@ import javafx.stage.Window;
 import org.lfps.mailboxes.drive.DriveAccount;
 import org.lfps.mailboxes.drive.DriveBackup;
 import org.lfps.mailboxes.drive.DriveException.Problem;
-import org.lfps.mailboxes.drive.GoogleDrive;
 
 /**
  * The Google Drive part of the Settings window: whether backups are copied to
@@ -71,9 +70,7 @@ final class GoogleDriveRow extends VBox {
     if (DriveBackup.isAvailable()) {
       showAccount(DriveBackup.account());
     } else {
-      status.setText("Not set up in this copy of the app. To turn it on, put the app's "
-          + "google-oauth.properties file in " + GoogleDrive.credentialsFile().getParent()
-          + " and restart the app.");
+      status.setText("Not available in this copy of the app.");
       showButtons(false, false, false);
       detail.setVisible(false);
       detail.setManaged(false);

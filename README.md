@@ -339,11 +339,6 @@ Google Drive isn't available. To set them up once:
    fill in the client ID and secret. For release builds, add them as the
    repository secrets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
-An installed copy made without them can be turned on too: put the filled-in
-`google-oauth.properties` in the app's data folder (next to `mailboxes.db`;
-on Windows, `%APPDATA%\MailboxManager`) and restart the app. A file there takes
-the place of any client ID built into the app.
-
 Google treats a desktop app's client secret as not truly secret, since anyone
 can pull it out of the app; it's kept out of the repository only so that
 copies of the code don't use your Google project.
@@ -371,6 +366,16 @@ packaging/
 To add a setting, declare it in `data/Setting.java`, add a field for it in
 `view/SettingsView.java`, and read it with `SettingsRepository` where it's
 used. To add a menu item, edit `buildMenuBar` in `view/AppWindow.java`.
+
+### Branches
+
+Work for each version goes on its own branch, named for that version, such
+as `1.7-features` or `1.6.1-features`, and is merged into `main` when it's
+ready to release. Nothing is committed to `main` directly. Once a version is
+released and its branch is fully merged, the branch is deleted.
+
+Instructions for AI coding agents, including these rules, are in
+[AGENTS.md](AGENTS.md). Claude Code reads them through `CLAUDE.md`.
 
 ### Releasing
 

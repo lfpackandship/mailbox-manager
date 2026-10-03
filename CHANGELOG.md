@@ -3,6 +3,14 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## Unreleased
+
+### Removed
+
+- The app no longer reads a Google client ID from `google-oauth.properties` in
+  the data folder. The installers have it built in, so the file isn't needed;
+  one left there is ignored.
+
 ## 1.6.0 – 2026-10-02
 
 ### Added
