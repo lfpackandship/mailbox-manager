@@ -27,7 +27,8 @@ import org.lfps.mailboxes.util.RentalLengths;
 
 /**
  * A window for setting the price of each box size for each rental length, as
- * a grid with a row per size and a column per rental length. Choosing a
+ * a grid with a row per size, cheapest first, and a column per rental
+ * length. Choosing a
  * rental length on Add New Box or when renewing fills in the price. What
  * each size measures is also entered here, for the printed price sheet.
  */
@@ -58,7 +59,6 @@ final class PricesView {
     Map<String, Long> saved = Map.of();
     Map<String, String> savedDescriptions = Map.of();
     try {
-      sizes = new BoxInventoryRepository().sizes();
       try {
         lengths = RentalLengths.parse(new SettingsRepository().get(Setting.RENTAL_LENGTHS));
       } catch (IllegalArgumentException badSetting) {
@@ -66,6 +66,7 @@ final class PricesView {
       }
       saved = prices.findAll();
       savedDescriptions = prices.findDescriptions();
+      sizes = PriceRepository.cheapestFirst(new BoxInventoryRepository().sizes(), saved);
     } catch (SQLException e) {
       showError(resultLabel, "Failed to load prices: " + e.getMessage());
     }

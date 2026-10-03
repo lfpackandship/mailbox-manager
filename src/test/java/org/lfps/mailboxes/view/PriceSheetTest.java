@@ -58,11 +58,11 @@ class PriceSheetTest {
     var content = PriceSheet.load();
 
     assertEquals("Lake Forest Pack and Ship", content.shopName);
-    // Huge has no prices, and nothing is priced for 1 or 6 months.
-    assertEquals(List.of("Large", "Small"), headings(content));
+    // Huge has no prices, and nothing is priced for 1 or 6 months. Cheapest first.
+    assertEquals(List.of("Small", "Large"), headings(content));
     assertEquals(List.of(3, 12), content.lengths);
-    assertEquals("3¾\" x 5\" x 14\"", content.columns.get(1).description);
-    assertEquals(Map.of(12, 40000L), content.columns.get(0).prices);
+    assertEquals("3¾\" x 5\" x 14\"", content.columns.get(0).description);
+    assertEquals(Map.of(12, 40000L), content.columns.get(1).prices);
   }
 
   @Test
