@@ -31,7 +31,7 @@ import org.lfps.mailboxes.util.Money;
 /**
  * A separate window showing everything recorded for one box, including its
  * rental history, opened from Manage Boxes, Renewals, or Payments, with
- * buttons to edit or renew it. Only one is open at a time; viewing another box
+ * buttons to edit or renew it, or print a renewal reminder for it. Only one is open at a time; viewing another box
  * replaces it.
  */
 final class BoxDetailsView {
@@ -87,6 +87,7 @@ final class BoxDetailsView {
         row("Phone", "detailPhone", orNone(PhoneNumberFormatter.format(mailbox.getPhone()))),
         row("Email", "detailEmail", orNone(mailbox.getEmail())),
         row("Rental ends", "detailEndDate", endDate),
+        row("Keys", "detailKeys", orNone(KeyFields.describe(mailbox.getKeyCount(), mailbox.getKeyDepositCents()))),
         row("Forwarding addresses", "detailForwarding", lines(mailbox.getForwardingAddresses())),
         row("Notes", "detailNotes", orNone(mailbox.getNotes())),
         row("Rental history", "detailHistory", history)));
@@ -111,13 +112,18 @@ final class BoxDetailsView {
       RenewBoxView.show(owner, mailbox, onRenewed);
     });
 
+    var reminderBtn = new Button("Print Reminder…");
+    reminderBtn.setId("detailsReminderButton");
+    reminderBtn.setDisable(mailbox.isClosed() || mailbox.getEndDate() == null);
+    reminderBtn.setOnAction(e -> PriceSheetView.showReminders(owner, List.of(mailbox)));
+
     var closeBtn = new Button("Close");
     closeBtn.setId("detailsCloseButton");
     closeBtn.setCancelButton(true);
     closeBtn.setDefaultButton(true);
     closeBtn.setOnAction(e -> stage.close());
 
-    var content = new VBox(15, title, grid, new HBox(10, editBtn, renewBtn, closeBtn));
+    var content = new VBox(15, title, grid, new HBox(10, editBtn, renewBtn, reminderBtn, closeBtn));
     content.setPadding(new Insets(20));
 
     var scrollPane = new ScrollPane(content);

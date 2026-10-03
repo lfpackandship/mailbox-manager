@@ -92,7 +92,7 @@ class ManageBoxesViewTest {
 
   @Test
   void tableShowsOnlyTheKeyDetails() {
-    var headers = FxTestSupport.call(() -> table().getColumns().stream()
+    var headers = FxTestSupport.call(() -> table().getVisibleLeafColumns().stream()
         .map(column -> column.getText())
         .collect(Collectors.toList()));
 

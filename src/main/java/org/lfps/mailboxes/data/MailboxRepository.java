@@ -25,15 +25,15 @@ public class MailboxRepository {
 
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
       + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date, notes, "
-      + "closed_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      + "closed_date, key_count, key_deposit_cents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   private static final String SELECT_ALL_SQL = "SELECT id, first_name, last_name, "
-      + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date "
-      + "FROM mailboxes";
+      + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date, key_count, "
+      + "key_deposit_cents FROM mailboxes";
 
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
       + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ?, notes = ?, "
-      + "closed_date = ? WHERE id = ?";
+      + "closed_date = ?, key_count = ?, key_deposit_cents = ? WHERE id = ?";
 
   private static final String BOX_NUMBER_TAKEN_SQL = "SELECT 1 FROM mailboxes "
       + "WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? AND closed_date IS NULL LIMIT 1";
@@ -150,7 +150,9 @@ public class MailboxRepository {
             date(rs.getString("end_date")),
             findForwardingAddresses(conn, id),
             rs.getString("notes"),
-            date(rs.getString("closed_date"))));
+            date(rs.getString("closed_date")),
+            rs.getObject("key_count") == null ? null : rs.getInt("key_count"),
+            rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents")));
       }
     }
 
@@ -171,7 +173,7 @@ public class MailboxRepository {
       try {
         try (PreparedStatement stmt = conn.prepareStatement(UPDATE_SQL)) {
           bindMailboxFields(stmt, mailbox);
-          stmt.setInt(11, mailbox.getId());
+          stmt.setInt(13, mailbox.getId());
           stmt.executeUpdate();
         }
         deleteBusinessNames(conn, mailbox.getId());
@@ -264,6 +266,8 @@ public class MailboxRepository {
     stmt.setString(8, mailbox.getEndDate() == null ? null : mailbox.getEndDate().toString());
     stmt.setString(9, mailbox.getNotes() == null || mailbox.getNotes().isBlank() ? null : mailbox.getNotes().strip());
     stmt.setString(10, mailbox.getClosedDate() == null ? null : mailbox.getClosedDate().toString());
+    stmt.setObject(11, mailbox.getKeyCount());
+    stmt.setObject(12, mailbox.getKeyDepositCents());
   }
 
   private static LocalDate date(String value) {

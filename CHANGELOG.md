@@ -3,6 +3,35 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## Unreleased
+
+### Added
+
+- Renewal reminders: **Print Reminders…** on Renewals prints a page for each
+  box that's past due or due soon, to put in the box. It's the price sheet,
+  headed with the box number, the holder's name, and when the rental ends, with
+  the end date and the box's size circled. Boxes can be unticked, and each
+  page previewed. A box's details have **Print Reminder…** for just that box.
+  **Save as PDF…** saves the reminders as a PDF instead, with no printer
+  needed.
+- The price sheet for new customers can be printed with **Print Price
+  Sheet…** on the Prices window or in Settings, with the current prices. The
+  shop's name, address, and phone, and the sheet's wording, are set in a new
+  **Price Sheet and Reminders** section of Settings, and what each size
+  measures in a new **Measures** column on the Prices window.
+- Keys: Add New Box and Edit Box record how many keys were given out and the
+  key deposit paid, which is filled in from a new **Key deposit per key**
+  setting ($10.00 to start with). A box's details show its keys, closing a
+  box reminds you to collect them and give back the deposit, and Payments
+  shows the total of key deposits held.
+- **Print…** and **Save as Spreadsheet…** on Manage Boxes, Renewals, and
+  Payments, to print a list or save it as a file Excel or Google Sheets
+  opens. Printing opens the computer's own Print window. The spreadsheet from Manage Boxes has everything recorded for each
+  box.
+- Restoring from Google Drive: **Restore…** in Settings has a **Google
+  Drive…** button that lists the backups in Google Drive and downloads and
+  restores the one chosen.
+
 ## 1.6.1 – 2026-10-03
 
 ### Removed

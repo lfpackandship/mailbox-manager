@@ -22,7 +22,8 @@ import org.lfps.mailboxes.util.Validators;
  * Form for entering a new mailbox holder and saving it to the database. If
  * an end date is set, the rental is also recorded in the box's rental
  * history, with the amount paid if one is entered. Choosing a rental length
- * fills in its price for the box's size (see {@link PricesView}).
+ * fills in its price for the box's size (see {@link PricesView}), and
+ * entering the number of keys fills in the key deposit.
  */
 public class AddBoxView {
 
@@ -66,6 +67,8 @@ public class AddBoxView {
     endDateField.setStyle("-fx-pref-width: 12em;");
 
     var payment = new PaymentFields();
+
+    var keys = new KeyFields(null, null);
 
     // The rental length chosen with the buttons, or 0 if none has been, so
     // its price can be filled in once the box number is known.
@@ -130,6 +133,15 @@ public class AddBoxView {
         errors.append("Set an end date after today to record a payment.\n");
       }
 
+      Integer keyCount = null;
+      Long keyDeposit = null;
+      try {
+        keyCount = keys.count();
+        keyDeposit = keys.depositCents();
+      } catch (IllegalArgumentException ex) {
+        errors.append(ex.getMessage()).append('\n');
+      }
+
       if (errors.length() > 0) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText(errors.toString().trim());
@@ -138,7 +150,8 @@ public class AddBoxView {
 
       var mailbox = new Mailbox(0, firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumber.getText(), boxNameField.getText(), phone, email,
-          businessNamesEditor.getNames(), endDate, forwardingEditor.getAddresses(), notesField.getText(), null);
+          businessNamesEditor.getNames(), endDate, forwardingEditor.getAddresses(), notesField.getText(), null,
+          keyCount, keyDeposit);
       var rental = hasRental ? new RentalPeriod(0, 0, today, today, endDate, amount, payment.method(), null) : null;
 
       try {
@@ -165,12 +178,13 @@ public class AddBoxView {
     grid.addRow(3, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
     grid.add(rentalLengthButtons, 0, 4, 4, 1);
     grid.addRow(5, new Label("Amount Paid:"), payment.amountField, new Label("Paid By:"), payment.methodField);
-    grid.add(new Label("Alternate Business Names:"), 0, 6, 4, 1);
-    grid.add(businessNamesEditor, 0, 7, 4, 1);
-    grid.add(new Label("Forwarding Addresses:"), 0, 8, 4, 1);
-    grid.add(forwardingEditor, 0, 9, 4, 1);
-    grid.add(new Label("Notes:"), 0, 10, 4, 1);
-    grid.add(notesField, 0, 11, 4, 1);
+    grid.addRow(6, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
+    grid.add(new Label("Alternate Business Names:"), 0, 7, 4, 1);
+    grid.add(businessNamesEditor, 0, 8, 4, 1);
+    grid.add(new Label("Forwarding Addresses:"), 0, 9, 4, 1);
+    grid.add(forwardingEditor, 0, 10, 4, 1);
+    grid.add(new Label("Notes:"), 0, 11, 4, 1);
+    grid.add(notesField, 0, 12, 4, 1);
 
     var layout = new VBox(8, backBtn, grid, submitBtn, resultLabel);
     layout.setPadding(new Insets(15));

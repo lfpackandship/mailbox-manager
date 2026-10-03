@@ -55,6 +55,8 @@ public class EditBoxView {
 
     var rentalLengthButtons = RentalLengthButtons.create(months -> extendEndDate(endDateField, months));
 
+    var keys = new KeyFields(mailbox.getKeyCount(), mailbox.getKeyDepositCents());
+
     var notesField = notesField();
     notesField.setText(orEmpty(mailbox.getNotes()));
 
@@ -90,6 +92,15 @@ public class EditBoxView {
         errors.append("Email address is not valid.\n");
       }
 
+      Integer keyCount = null;
+      Long keyDeposit = null;
+      try {
+        keyCount = keys.count();
+        keyDeposit = keys.depositCents();
+      } catch (IllegalArgumentException ex) {
+        errors.append(ex.getMessage()).append('\n');
+      }
+
       if (errors.length() > 0) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText(errors.toString().trim());
@@ -99,7 +110,7 @@ public class EditBoxView {
       var updated = new Mailbox(mailbox.getId(), firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumberField.getText(), boxNameField.getText(), phone, email,
           businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses(),
-          notesField.getText(), mailbox.getClosedDate());
+          notesField.getText(), mailbox.getClosedDate(), keyCount, keyDeposit);
 
       try {
         repository.update(updated);
@@ -122,12 +133,13 @@ public class EditBoxView {
     grid.addRow(2, new Label("Box Name:"), boxNameField, new Label("Phone Number:"), phoneField);
     grid.addRow(3, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
     grid.add(rentalLengthButtons, 0, 4, 4, 1);
-    grid.add(new Label("Alternate Business Names:"), 0, 5, 4, 1);
-    grid.add(businessNamesEditor, 0, 6, 4, 1);
-    grid.add(new Label("Forwarding Addresses:"), 0, 7, 4, 1);
-    grid.add(forwardingEditor, 0, 8, 4, 1);
-    grid.add(new Label("Notes:"), 0, 9, 4, 1);
-    grid.add(notesField, 0, 10, 4, 1);
+    grid.addRow(5, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
+    grid.add(new Label("Alternate Business Names:"), 0, 6, 4, 1);
+    grid.add(businessNamesEditor, 0, 7, 4, 1);
+    grid.add(new Label("Forwarding Addresses:"), 0, 8, 4, 1);
+    grid.add(forwardingEditor, 0, 9, 4, 1);
+    grid.add(new Label("Notes:"), 0, 10, 4, 1);
+    grid.add(notesField, 0, 11, 4, 1);
 
     var layout = new VBox(8, cancelBtn, grid, saveBtn, resultLabel);
     layout.setPadding(new Insets(15));

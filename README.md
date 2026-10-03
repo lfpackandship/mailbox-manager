@@ -76,7 +76,8 @@ The main menu has six screens:
   add the holder's first and last name, a business title, a nickname for the
   box, a phone number, an email address, any alternate business names (DBAs)
   that receive mail there, the date the rental ends, the amount paid and how,
-  any forwarding addresses, and notes. The rental length buttons (1, 3, 6, and 12 months unless changed
+  any forwarding addresses, how many keys you gave out and the key deposit,
+  and notes. The rental length buttons (1, 3, 6, and 12 months unless changed
   in Settings) set the end date that far from today. If the
   [box inventory](#box-inventory) is set up, **Choose…** next to the box number
   lists the empty boxes to pick from.
@@ -89,11 +90,16 @@ The main menu has six screens:
   click **View** or press Enter; the details open in their own window with
   **Edit** and **Renew…** buttons. Select a row to edit, renew, close, or
   delete it. The menu next to the search field shows closed boxes instead, or
-  all boxes.
+  all boxes. **Print…** prints the list as shown, and **Save as
+  Spreadsheet…** saves it as a file Excel or Google Sheets opens, with
+  everything recorded for each box.
 - **Renewals** – open boxes that are past due, and those due within the next
   30 days (adjustable in Settings), most urgent first. Select a box and click
   **Renew…** to renew it, or double-click it, or select it and click **View**
-  or press Enter, to see its full details.
+  or press Enter, to see its full details. **Print Reminders…** prints a
+  [renewal reminder](#renewal-reminders-and-the-price-sheet) for each box to
+  put in it, and **Print List…** and **Save as Spreadsheet…** print or save
+  the lists.
 - **Calendar** – a month view with each open box shown on the day its rental
   ends. Today is outlined in blue. A day with more than two boxes shows the
   first and how many more, such as "+3 more". Hover over an entry for the holder's name. Click a highlighted day to
@@ -101,7 +107,10 @@ The main menu has six screens:
   renew them.
 - **Payments** – every rental and renewal recorded between two dates, with the
   total paid. It starts on this month; **Last Month** and **This Year** are a
-  click away, or choose any dates and click **Show**.
+  click away, or choose any dates and click **Show**. **Print…** and **Save as
+  Spreadsheet…** print or save the list, for example for whoever does the
+  books. Key deposits aren't counted as paid, since they're given back; the
+  total held for open boxes is shown underneath.
 - **Box Inventory** – every box you have, and whether it's rented or empty.
   See [Box inventory](#box-inventory).
 
@@ -123,6 +132,41 @@ If a renewal was recorded by mistake, select it on Payments and click
 **Delete Entry**. That leaves the box's end date as it is; edit the box to
 change it. Editing a box's end date directly doesn't add anything to its
 history.
+
+### Renewal reminders and the price sheet
+
+To remind box holders to renew, click **Print Reminders…** on Renewals. Each
+box that's past due or due soon gets a page to put in its box: the price
+sheet, headed with the box number, the holder's name, and the day the rental
+ends, with that date and the box's size circled in the table of prices. Untick
+any boxes you don't want reminders for, click a box to preview its page, and
+click **Print**, or **Save as PDF…** to save them as a PDF file instead, which
+needs no printer. To print one for a single box, open its details and click
+**Print Reminder…**.
+
+Printing anything in the app opens your computer's own Print window, the same
+one other programs use, to choose the printer and the number of copies. On a
+Mac it also shows a preview, and its PDF button saves a PDF instead. A printer
+has to be set up first, even to save a PDF; if there isn't one, the computer
+says how to add one.
+
+The plain price sheet, for handing to new customers, is printed or saved as a
+PDF with **Print Price Sheet…** on the Prices window or in Settings. Its prices always match
+the [price table](#prices), with a column for each size and a row for each
+rental length that has a price.
+
+The shop's name, address, and phone number, the text above and below the
+prices, and the reminder's message are set in Settings under
+[Price Sheet and Reminders](#settings). What each size measures is entered on
+the Prices window.
+
+### Keys and deposits
+
+Add New Box and Edit Box have a place for how many keys the holder was given
+and the refundable deposit paid for them. Typing the number of keys fills in
+the deposit, at the **Key deposit per key** set in Settings ($10.00 unless
+changed); you can still change it. A box's details show its keys, and closing
+a box reminds you to collect them and give back the deposit.
 
 ### Closing a box
 
@@ -164,7 +208,8 @@ Click **Prices…** on the Box Inventory screen, or next to **Prices for each
 size** in Settings, to set what a box costs. There's a row for each size in
 the inventory and a column for each rental length, plus a **Default** row for
 boxes with no size, or whose size has no price for that length. Leave a price
-blank if there isn't one, and click **Save**.
+blank if there isn't one, and click **Save**. The **Measures** column is for what each size measures, such
+as `3¾" x 5" x 14"`, which is shown on the printed price sheet.
 
 When you click a rental length button on Add New Box or when renewing, the
 price for that box's size and length is filled in as the amount paid. You can
@@ -193,6 +238,12 @@ take effect when you click **Save**.
   Box, and Renew, such as `1, 3, 6, 12`. Up to six lengths, each from 1 to 120
   months.
 - **Prices for each size** – opens the [price table](#prices).
+- **Key deposit per key** – fills in the key deposit on Add New Box and Edit
+  Box. Leave it blank if you don't take a deposit.
+- **Price Sheet and Reminders** – the shop's name, its address and phone, the
+  text above the prices (start a line with `-` to make it a bullet point), the
+  text below them, and the message on renewal reminders. They start out as on
+  the shop's printed price sheet. **Print Price Sheet…** prints it.
 - **Week starts on** – Sunday or Monday, for the Calendar.
 - **Show boxes due within (days)** – how far ahead the Renewals screen looks.
   Default 30.
@@ -261,15 +312,17 @@ ever signs the app out, the warning has a **Reconnect** button that takes you
 through signing in again.
 
 To stop, click **Disconnect** in Settings. Backups already in your Google
-Drive are kept. To use a backup from Google Drive, download it from the
-**Mailbox Manager Backups** folder, then restore it with **Choose File…** as
-described below.
+Drive are kept. To use a backup from Google Drive, see
+[Restoring a backup](#restoring-a-backup).
 
 ### Restoring a backup
 
 1. Open **File → Settings** and click **Restore…**.
 2. Pick a backup from the list, or click **Choose File…** to use one saved
-   somewhere else, such as a USB drive.
+   somewhere else, such as a USB drive. If Google Drive is connected,
+   **Google Drive…** lists the backups there; pick one and click **Download
+   and Restore**. Downloaded backups are kept in the `from-google-drive`
+   folder inside the `backups` folder.
 3. Confirm. The app saves your current data as a backup first (listed as
    "Data saved before a restore"), so you can undo the restore by restoring
    that.
@@ -350,11 +403,12 @@ src/main/java/org/lfps/mailboxes/
   App.java          start-up: data folder, database schema, daily backup, main window
   data/             database access: Database, MailboxRepository, RentalHistoryRepository,
                     BoxInventoryRepository, PriceRepository, SettingsRepository, Setting
-  drive/            Google Drive backups: DriveBackup (connect, upload), GoogleDrive (talks
-                    to Google), DriveAccount (the saved sign-in)
+  drive/            Google Drive backups: DriveBackup (connect, upload, download),
+                    GoogleDrive (talks to Google), DriveAccount (the saved sign-in)
   model/            Mailbox, ForwardingAddress, RentalPeriod, and InventoryBox
   view/             one class per screen, plus AppWindow (menu bar, text size), SettingsView,
-                    GoogleDriveRow, and RestoreView
+                    GoogleDriveRow, RestoreView, PriceSheet (the printed price sheet and
+                    reminders), Printing, and TableOutput (printing and saving lists)
   util/             input validation, box number sorting, money, rental lengths, error
                     messages, and runtime info
   Launcher.java     the entry point of the jar and installers, which hands off to App

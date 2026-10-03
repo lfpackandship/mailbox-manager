@@ -15,7 +15,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -30,6 +32,7 @@ import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.drive.DriveBackup;
 import org.lfps.mailboxes.util.Errors;
+import org.lfps.mailboxes.util.Money;
 import org.lfps.mailboxes.util.RentalLengths;
 import org.lfps.mailboxes.util.SystemInfo;
 
@@ -123,6 +126,22 @@ public class SettingsView {
       numberField.field.setStyle("-fx-pref-width: 6em;");
     }
 
+    var keyDepositField = new TextField();
+    keyDepositField.setId("keyDepositField");
+    keyDepositField.setPromptText("none");
+    keyDepositField.setStyle("-fx-pref-width: 6em;");
+
+    // The price sheet's wording, each paired with its setting.
+    var shopNameField = new TextField();
+    shopNameField.setId("shopNameField");
+    shopNameField.setStyle("-fx-pref-width: 24em;");
+    var sheetFields = new LinkedHashMap<Setting, TextInputControl>();
+    sheetFields.put(Setting.SHOP_NAME, shopNameField);
+    sheetFields.put(Setting.SHOP_DETAILS, textArea("shopDetailsField", 3));
+    sheetFields.put(Setting.PRICE_SHEET_INTRO, textArea("priceSheetIntroField", 7));
+    sheetFields.put(Setting.PRICE_SHEET_NOTE, textArea("priceSheetNoteField", 2));
+    sheetFields.put(Setting.REMINDER_MESSAGE, textArea("reminderMessageField", 3));
+
     var secondFolderField = new TextField();
     secondFolderField.setId("secondBackupFolderField");
     secondFolderField.setEditable(false);
@@ -138,6 +157,10 @@ public class SettingsView {
         entry.getValue().field.setText(String.valueOf(repository.getInt(entry.getKey())));
       }
       secondFolderField.setText(repository.get(Setting.SECOND_BACKUP_FOLDER));
+      keyDepositField.setText(currentKeyDeposit(repository));
+      for (var entry : sheetFields.entrySet()) {
+        entry.getValue().setText(repository.get(entry.getKey()));
+      }
     } catch (SQLException e) {
       showError(resultLabel, "Failed to load settings: " + e.getMessage());
     }
@@ -194,7 +217,26 @@ public class SettingsView {
 
     var boxes = section("Boxes",
         row("Rental lengths (months):", rentalLengthsField),
-        row("Prices for each size:", pricesBtn));
+        row("Prices for each size:", pricesBtn),
+        row("Key deposit per key:", keyDepositField));
+
+    var printSheetBtn = new Button("Print Price Sheet…");
+    printSheetBtn.setId("settingsPrintPriceSheetButton");
+    printSheetBtn.setOnAction(e -> PriceSheetView.showPriceSheet(owner));
+
+    var sheetExplanation = new Label("Printed at the top of the price sheet and renewal reminders. In the text "
+        + "above the prices, start a line with - to make it a bullet point. Save before printing to use your changes.");
+    sheetExplanation.setWrapText(true);
+    sheetExplanation.setStyle("-fx-max-width: 32em;");
+
+    var priceSheet = section("Price Sheet and Reminders",
+        row("", sheetExplanation),
+        row("Shop name:", shopNameField),
+        row("Address and phone:", sheetFields.get(Setting.SHOP_DETAILS)),
+        row("Text above the prices:", sheetFields.get(Setting.PRICE_SHEET_INTRO)),
+        row("Text below the prices:", sheetFields.get(Setting.PRICE_SHEET_NOTE)),
+        row("Reminder message:", sheetFields.get(Setting.REMINDER_MESSAGE)),
+        row("", printSheetBtn));
 
     var calendar = section("Calendar",
         row("Week starts on:", weekStartChoice));
@@ -238,6 +280,14 @@ public class SettingsView {
         errors.append(ex.getMessage()).append('\n');
       }
 
+      String keyDeposit = "";
+      try {
+        var cents = Money.parse(keyDepositField.getText());
+        keyDeposit = cents == null ? "" : Money.format(cents);
+      } catch (IllegalArgumentException ex) {
+        errors.append("Key deposit per key must be an amount in dollars and cents, like 10 or 10.00.\n");
+      }
+
       if (errors.length() > 0) {
         showError(resultLabel, errors.toString().trim());
         return;
@@ -251,12 +301,17 @@ public class SettingsView {
         repository.put(Setting.RENTAL_LENGTHS, rentalLengths);
         repository.put(Setting.WEEK_START, weekStartChoice.getValue().name());
         repository.put(Setting.SECOND_BACKUP_FOLDER, secondFolderField.getText());
+        repository.put(Setting.KEY_DEPOSIT, keyDeposit);
+        for (var entry : sheetFields.entrySet()) {
+          repository.put(entry.getKey(), entry.getValue().getText().strip());
+        }
       } catch (SQLException ex) {
         showError(resultLabel, "Failed to save: " + ex.getMessage());
         return;
       }
 
       rentalLengthsField.setText(rentalLengths);
+      keyDepositField.setText(keyDeposit);
       AppWindow.applyTextSizeToOpenWindows();
 
       // Copy today's backup to a newly chosen folder straight away, so a
@@ -274,7 +329,7 @@ public class SettingsView {
     closeBtn.setCancelButton(true);
     closeBtn.setOnAction(e -> stage.close());
 
-    var content = new VBox(15, appearance, boxes, calendar, renewals, backups, about,
+    var content = new VBox(15, appearance, boxes, priceSheet, calendar, renewals, backups, about,
         new HBox(10, saveBtn, closeBtn), resultLabel);
     content.setPadding(new Insets(20));
 
@@ -320,6 +375,24 @@ public class SettingsView {
     } catch (IllegalArgumentException e) {
       return RentalLengths.format(RentalLengths.parse(Setting.RENTAL_LENGTHS.defaultValue()));
     }
+  }
+
+  private static String currentKeyDeposit(SettingsRepository repository) throws SQLException {
+    try {
+      var cents = Money.parse(repository.get(Setting.KEY_DEPOSIT));
+      return cents == null ? "" : Money.format(cents);
+    } catch (IllegalArgumentException e) {
+      return "";
+    }
+  }
+
+  private static TextArea textArea(String id, int rows) {
+    var area = new TextArea();
+    area.setId(id);
+    area.setPrefRowCount(rows);
+    area.setWrapText(true);
+    area.setStyle("-fx-pref-width: 24em;");
+    return area;
   }
 
   private static void showError(Label label, String message) {

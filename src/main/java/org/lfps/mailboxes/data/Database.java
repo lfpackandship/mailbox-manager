@@ -228,9 +228,10 @@ public class Database {
   /**
    * Creates the {@code mailboxes}, {@code business_names},
    * {@code forwarding_addresses}, {@code rental_periods},
-   * {@code box_inventory}, {@code prices}, and {@code settings} tables if they don't already
-   * exist, and migrates older databases that predate the {@code box_name},
-   * {@code end_date}, {@code notes}, and {@code closed_date} columns.
+   * {@code box_inventory}, {@code prices}, {@code box_sizes}, and {@code settings} tables if
+   * they don't already exist, and migrates older databases that predate the
+   * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
+   * {@code key_count}, and {@code key_deposit_cents} columns.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -246,7 +247,9 @@ public class Database {
         + "email TEXT, "
         + "end_date TEXT, "
         + "notes TEXT, "
-        + "closed_date TEXT)";
+        + "closed_date TEXT, "
+        + "key_count INTEGER, "
+        + "key_deposit_cents INTEGER)";
 
     var createBusinessNames = "CREATE TABLE IF NOT EXISTS business_names ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -288,6 +291,11 @@ public class Database {
         + "amount_cents INTEGER NOT NULL, "
         + "PRIMARY KEY (size, months))";
 
+    // What each box size measures, such as 3¾" x 5" x 14", for the price sheet.
+    var createBoxSizes = "CREATE TABLE IF NOT EXISTS box_sizes ("
+        + "size TEXT PRIMARY KEY COLLATE NOCASE, "
+        + "description TEXT NOT NULL)";
+
     var createSettings = "CREATE TABLE IF NOT EXISTS settings ("
         + "key TEXT PRIMARY KEY, "
         + "value TEXT NOT NULL)";
@@ -299,11 +307,13 @@ public class Database {
       stmt.execute(createRentalPeriods);
       stmt.execute(createBoxInventory);
       stmt.execute(createPrices);
+      stmt.execute(createBoxSizes);
       stmt.execute(createSettings);
 
-      for (var column : List.of("box_name", "end_date", "notes", "closed_date")) {
+      for (var column : List.of("box_name TEXT", "end_date TEXT", "notes TEXT", "closed_date TEXT",
+          "key_count INTEGER", "key_deposit_cents INTEGER")) {
         try {
-          stmt.execute("ALTER TABLE mailboxes ADD COLUMN " + column + " TEXT");
+          stmt.execute("ALTER TABLE mailboxes ADD COLUMN " + column);
         } catch (SQLException alreadyMigrated) {
           // The column already exists on a pre-existing database.
         }

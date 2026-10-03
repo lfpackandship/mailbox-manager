@@ -29,7 +29,35 @@ public enum Setting {
   WEEK_START("week_start", "SUNDAY"),
 
   /** How large text is throughout the app: NORMAL, LARGE, or EXTRA_LARGE. */
-  TEXT_SIZE("text_size", "NORMAL");
+  TEXT_SIZE("text_size", "NORMAL"),
+
+  /** The refundable deposit taken for each key, such as "$10.00", or empty for none. */
+  KEY_DEPOSIT("key_deposit", "$10.00"),
+
+  /** The shop's name, at the top of the price sheet and renewal reminders. */
+  SHOP_NAME("shop_name", "Lake Forest Pack and Ship"),
+
+  /** The shop's address and phone number, under its name, one item per line. */
+  SHOP_DETAILS("shop_details", "736 N. Western Ave\nLake Forest, IL 60045\n(847) 615-0222"),
+
+  /**
+   * The text above the prices on the price sheet. Lines starting with "-"
+   * are shown as bullet points.
+   */
+  PRICE_SHEET_INTRO("price_sheet_intro", "Mailbox Service Includes:\n"
+      + "- 24-Hour Access to Mailbox\n"
+      + "- Telephone Mail Check\n"
+      + "- Parcel and Overnight Mail Receiving\n"
+      + "- Mail Forwarding *\n"
+      + "\n"
+      + "* requires funding for postage and envelopes"),
+
+  /** The text below the prices on the price sheet. */
+  PRICE_SHEET_NOTE("price_sheet_note", "Plus $10.00 Refundable Key Deposit Required / Key"),
+
+  /** The message on a renewal reminder, under the box's end date. */
+  REMINDER_MESSAGE("reminder_message",
+      "To keep your mailbox, please renew at the counter. Current prices are below, with your box's size circled.");
 
   private final String key;
   private final String defaultValue;

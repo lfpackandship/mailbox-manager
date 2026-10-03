@@ -3,6 +3,8 @@ package org.lfps.mailboxes.view;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -36,7 +38,8 @@ import org.lfps.mailboxes.util.Money;
 
 /**
  * Lists the rentals and renewals recorded between two dates, for every box,
- * with the total paid, for example to see what was taken in this month.
+ * with the total paid, for example to see what was taken in this month, and
+ * the key deposits being held, which are given back.
  */
 public class PaymentsView {
 
@@ -66,8 +69,11 @@ public class PaymentsView {
   private static void show(Stage stage, LocalDate from, LocalDate to) {
     var statusLabel = new Label();
     var entries = new ArrayList<Entry>();
+    var depositsHeld = "";
     try {
-      var mailboxes = new MailboxRepository().findAll().stream()
+      var allMailboxes = new MailboxRepository().findAll();
+      depositsHeld = depositsHeld(allMailboxes);
+      var mailboxes = allMailboxes.stream()
           .collect(Collectors.toMap(Mailbox::getId, Function.identity()));
       for (var period : new RentalHistoryRepository().findRecordedBetween(from, to)) {
         entries.add(new Entry(period, mailboxes.get(period.getMailboxId())));
@@ -144,6 +150,7 @@ public class PaymentsView {
         setText(empty || cents == null ? null : Money.format(cents));
       }
     });
+    TableOutput.formatWith(amountCol, Money::format);
 
     var methodCol = new TableColumn<Entry, String>("Paid By");
     methodCol.setCellValueFactory(cell -> new SimpleStringProperty(
@@ -159,6 +166,12 @@ public class PaymentsView {
     var totalLabel = new Label(total(entries));
     totalLabel.setId("paymentsTotal");
     totalLabel.setStyle("-fx-font-weight: bold;");
+
+    // Not income: it's given back when the keys are returned.
+    var depositsLabel = new Label(depositsHeld);
+    depositsLabel.setId("paymentsDepositsHeld");
+    depositsLabel.setVisible(!depositsHeld.isEmpty());
+    depositsLabel.setManaged(!depositsHeld.isEmpty());
 
     Runnable refresh = () -> show(stage, from, to);
     var selection = table.getSelectionModel().selectedItemProperty();
@@ -209,12 +222,25 @@ public class PaymentsView {
     var backBtn = new Button("Back");
     backBtn.setOnAction(e -> MainMenuView.show(stage));
 
+    var dates = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
+    var printBtn = new Button("Print…");
+    printBtn.setId("printListButton");
+    printBtn.setOnAction(e -> TableOutput.print(
+        "Payments, " + from.format(dates) + " – " + to.format(dates) + "\n" + total(entries),
+        List.of(new TableOutput.Section(null, table)), statusLabel));
+
+    var spreadsheetBtn = new Button("Save as Spreadsheet…");
+    spreadsheetBtn.setId("spreadsheetButton");
+    spreadsheetBtn.setOnAction(e -> TableOutput.run(statusLabel, () -> TableOutput.saveSpreadsheet(stage,
+        "payments-" + from + "-to-" + to + ".csv", List.of(table))));
+
     var layout = new VBox(10,
-        backBtn,
+        new HBox(10, backBtn, printBtn, spreadsheetBtn),
         fromRow,
         new HBox(8, thisMonthBtn, lastMonthBtn, thisYearBtn),
         table,
         totalLabel,
+        depositsLabel,
         new HBox(10, viewBtn, deleteBtn),
         statusLabel);
     layout.setPadding(new Insets(20));
@@ -233,6 +259,21 @@ public class PaymentsView {
         .mapToLong(Long::longValue)
         .sum();
     return entries.size() + (entries.size() == 1 ? " entry, " : " entries, ") + Money.format(cents) + " paid";
+  }
+
+  /**
+   * Describes the key deposits being held for open boxes, which aren't
+   * counted as paid since they're given back, such as "Key deposits held for
+   * open boxes: $120.00 (not included above)".
+   *
+   * @return the description, or an empty string if no deposits are held
+   */
+  static String depositsHeld(List<Mailbox> mailboxes) {
+    var cents = mailboxes.stream()
+        .filter(m -> !m.isClosed() && m.getKeyDepositCents() != null)
+        .mapToLong(Mailbox::getKeyDepositCents)
+        .sum();
+    return cents == 0 ? "" : "Key deposits held for open boxes: " + Money.format(cents) + " (not included above)";
   }
 
   private PaymentsView() {
