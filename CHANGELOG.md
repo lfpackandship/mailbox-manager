@@ -1,7 +1,18 @@
 # Changelog
 
 What changed in each release of Mailbox Manager, newest first. Downloads are on
-the [releases page](https://github.com/wgoodzey/mailbox-manager/releases).
+the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
+
+## Unreleased
+
+### Added
+
+- Backups to Google Drive: in Settings, click **Connect Google Drive** and sign
+  in to Google, and each daily backup is also uploaded to a
+  **Mailbox Manager Backups** folder in your Google Drive. Old backups there
+  are deleted the same way as on the computer. Settings shows which account
+  it's using and when it last uploaded, and if Google signs the app out, a
+  warning offers to reconnect.
 
 ## 1.5.2 – 2026-09-28
 

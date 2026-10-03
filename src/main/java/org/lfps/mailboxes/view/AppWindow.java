@@ -127,6 +127,17 @@ public final class AppWindow {
     }
   }
 
+  /**
+   * Opens a web page in the user's browser.
+   *
+   * @param url the page's address
+   */
+  public static void openWebPage(String url) {
+    if (hostServices != null) {
+      hostServices.showDocument(url);
+    }
+  }
+
   private static TextSize textSize() {
     try {
       return TextSize.fromName(new SettingsRepository().get(Setting.TEXT_SIZE));

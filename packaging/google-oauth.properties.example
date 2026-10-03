@@ -1,0 +1,7 @@
+# The app's Google client ID and secret, for backing up to Google Drive.
+# Copy this file to
+#   src/main/resources/org/lfps/mailboxes/drive/google-oauth.properties
+# and fill in the values from Google Cloud Console (see the README). That copy
+# is ignored by git. Without it the app works, but can't connect to Google Drive.
+client_id=
+client_secret=

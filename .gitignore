@@ -24,6 +24,11 @@ hs_err_pid*
 *.exe
 
 # ======================
+# Google client ID and secret (see README: Google Drive backups)
+# ======================
+src/main/resources/org/lfps/mailboxes/drive/google-oauth.properties
+
+# ======================
 # SQLite (runtime DB)
 # ======================
 *.db

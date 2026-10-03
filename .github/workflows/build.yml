@@ -106,6 +106,21 @@ jobs:
           "$USERPROFILE/.dotnet/tools/wix" extension add --global WixToolset.Util.wixext/5.0.2
           "$USERPROFILE/.dotnet/tools/wix" extension add --global WixToolset.UI.wixext/5.0.2
 
+      # Builds made without these secrets work, but can't connect to Google Drive.
+      - name: Add the Google client ID
+        shell: bash
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          if [ -z "$GOOGLE_CLIENT_ID" ]; then
+            echo "::warning::GOOGLE_CLIENT_ID isn't set, so this build can't back up to Google Drive."
+            exit 0
+          fi
+          file=src/main/resources/org/lfps/mailboxes/drive/google-oauth.properties
+          mkdir -p "$(dirname "$file")"
+          printf 'client_id=%s\nclient_secret=%s\n' "$GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_SECRET" > "$file"
+
       - name: Build installer and jar
         shell: bash
         run: packaging/package.sh ${{ matrix.platform }}
