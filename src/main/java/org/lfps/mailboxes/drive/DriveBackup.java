@@ -73,18 +73,21 @@ public final class DriveBackup {
    * @throws DriveException if connecting can't be started
    */
   public static synchronized CompletableFuture<DriveAccount> connect(Consumer<String> openBrowser) {
-    if (drive == null) {
+    // Each task keeps the client it started with, even if the field changes
+    // (as when a test puts the real one back) before the task runs.
+    var client = drive;
+    if (client == null) {
       throw new DriveException(Problem.OTHER, "This copy of Mailbox Manager can't connect to Google Drive.");
     }
     cancelConnect();
-    var signIn = drive.startSignIn();
+    var signIn = client.startSignIn();
     pendingSignIn = signIn;
     var connected = signIn.result().thenApply(account -> {
       synchronized (ACCOUNT_LOCK) {
         var previous = account();
         account.save();
         if (previous != null && !previous.refreshToken().equals(account.refreshToken())) {
-          UPLOADS.execute(() -> drive.revoke(previous.refreshToken()));
+          UPLOADS.execute(() -> client.revoke(previous.refreshToken()));
         }
       }
       return account;
@@ -110,13 +113,14 @@ public final class DriveBackup {
    * @throws RuntimeException if the saved sign-in can't be deleted
    */
   public static void disconnect() {
+    var client = drive;
     DriveAccount account;
     synchronized (ACCOUNT_LOCK) {
       account = account();
       DriveAccount.delete();
     }
-    if (account != null && drive != null) {
-      UPLOADS.execute(() -> drive.revoke(account.refreshToken()));
+    if (account != null && client != null) {
+      UPLOADS.execute(() -> client.revoke(account.refreshToken()));
     }
   }
 
@@ -134,8 +138,9 @@ public final class DriveBackup {
   }
 
   static DriveAccount backUpToday() {
+    var client = drive;
     var account = account();
-    if (account == null || drive == null) {
+    if (account == null || client == null) {
       return null;
     }
     var todays = Database.todaysBackup();
@@ -148,7 +153,7 @@ public final class DriveBackup {
     } catch (SQLException e) {
       backupsToKeep = Integer.parseInt(Setting.BACKUPS_TO_KEEP.defaultValue());
     }
-    drive.upload(account.refreshToken(), todays, backupsToKeep, Database::isDailyBackupName);
+    client.upload(account.refreshToken(), todays, backupsToKeep, Database::isDailyBackupName);
 
     var updated = account.withLastBackup(LocalDateTime.now());
     synchronized (ACCOUNT_LOCK) {
