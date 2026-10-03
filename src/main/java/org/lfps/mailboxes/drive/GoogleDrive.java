@@ -3,6 +3,7 @@ package org.lfps.mailboxes.drive;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Reader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
+import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.drive.DriveException.Problem;
 import org.lfps.mailboxes.util.Json;
 
@@ -58,7 +60,10 @@ public final class GoogleDrive {
 
   private static final String FOLDER_TYPE = "application/vnd.google-apps.folder";
 
-  /** The file holding the app's Google client ID and secret; see the README. */
+  /**
+   * The file holding the app's Google client ID and secret, in the data
+   * folder or built into the app; see the README.
+   */
   private static final String CREDENTIALS_FILE = "google-oauth.properties";
 
   /** How long to wait for the user to finish signing in before giving up. */
@@ -93,23 +98,20 @@ public final class GoogleDrive {
     this.uploadBase = uploadBase;
   }
 
+  String clientId() {
+    return clientId;
+  }
+
   /**
    * Returns a client for Google's real servers, using the client ID and
-   * secret built into the app.
+   * secret in {@code google-oauth.properties} in the data folder, or else
+   * the one built into the app.
    *
-   * @return the client, or {@code null} if this build of the app has no
-   *     Google client ID, as in builds made without one
+   * @return the client, or {@code null} if neither has a client ID, as in
+   *     builds made without one
    */
   static GoogleDrive standard() {
-    var props = new Properties();
-    try (InputStream in = GoogleDrive.class.getResourceAsStream(CREDENTIALS_FILE)) {
-      if (in == null) {
-        return null;
-      }
-      props.load(in);
-    } catch (IOException e) {
-      return null;
-    }
+    var props = loadCredentials();
     var id = props.getProperty("client_id", "").trim();
     var secret = props.getProperty("client_secret", "").trim();
     if (id.isEmpty()) {
@@ -121,6 +123,41 @@ public final class GoogleDrive {
         "https://oauth2.googleapis.com/revoke",
         "https://www.googleapis.com/drive/v3",
         "https://www.googleapis.com/upload/drive/v3");
+  }
+
+  /**
+   * Returns where a client ID and secret can be put to turn on Google Drive
+   * in a build made without one.
+   *
+   * @return {@code google-oauth.properties} in the data folder
+   */
+  public static Path credentialsFile() {
+    return Database.dataDir().resolve(CREDENTIALS_FILE);
+  }
+
+  /** Reads the data folder's credentials file if it has a client ID, or else the built-in one. */
+  private static Properties loadCredentials() {
+    var props = new Properties();
+    var file = credentialsFile();
+    if (Files.isRegularFile(file)) {
+      try (Reader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+        props.load(in);
+        if (!props.getProperty("client_id", "").trim().isEmpty()) {
+          return props;
+        }
+      } catch (IOException e) {
+        // Fall back to the built-in one.
+      }
+      props.clear();
+    }
+    try (InputStream in = GoogleDrive.class.getResourceAsStream(CREDENTIALS_FILE)) {
+      if (in != null) {
+        props.load(in);
+      }
+    } catch (IOException e) {
+      props.clear();
+    }
+    return props;
   }
 
   /**

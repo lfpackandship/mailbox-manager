@@ -339,6 +339,11 @@ Google Drive isn't available. To set them up once:
    fill in the client ID and secret. For release builds, add them as the
    repository secrets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
+An installed copy made without them can be turned on too: put the filled-in
+`google-oauth.properties` in the app's data folder (next to `mailboxes.db`;
+on Windows, `%APPDATA%\MailboxManager`) and restart the app. A file there takes
+the place of any client ID built into the app.
+
 Google treats a desktop app's client secret as not truly secret, since anyone
 can pull it out of the app; it's kept out of the repository only so that
 copies of the code don't use your Google project.
