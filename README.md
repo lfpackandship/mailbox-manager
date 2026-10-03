@@ -367,6 +367,16 @@ To add a setting, declare it in `data/Setting.java`, add a field for it in
 `view/SettingsView.java`, and read it with `SettingsRepository` where it's
 used. To add a menu item, edit `buildMenuBar` in `view/AppWindow.java`.
 
+### Branches
+
+Work for each version goes on its own branch, named for that version, such
+as `1.7-features` or `1.6.1-features`, and is merged into `main` when it's
+ready to release. Nothing is committed to `main` directly. Once a version is
+released and its branch is fully merged, the branch is deleted.
+
+Instructions for AI coding agents, including these rules, are in
+[AGENTS.md](AGENTS.md). Claude Code reads them through `CLAUDE.md`.
+
 ### Releasing
 
 1. Update the version in `pom.xml` and commit it (`Release x.y.z`). Versions
