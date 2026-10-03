@@ -3,7 +3,7 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
-## Unreleased
+## 1.7.0 – 2026-10-03
 
 ### Added
 
@@ -26,8 +26,8 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   shows the total of key deposits held.
 - **Print…** and **Save as Spreadsheet…** on Manage Boxes, Renewals, and
   Payments, to print a list or save it as a file Excel or Google Sheets
-  opens. Printing opens the computer's own Print window. The spreadsheet from Manage Boxes has everything recorded for each
-  box.
+  opens. Printing opens the computer's own Print window. The spreadsheet from
+  Manage Boxes has everything recorded for each box.
 - Forwarding-only boxes: tick **Forwarding only** on Add New Box or Edit Box
   for a customer whose mail is forwarded rather than kept in a box here. They
   can keep a box number someone else now rents, no longer need a letter added
