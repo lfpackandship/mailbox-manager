@@ -32,6 +32,41 @@ it before making changes. This file covers how to work in the repository.
   repo. If the app starts handling data or Google access differently, update
   the policy and its date there too.
 
+## When asked for a pull request
+
+Push the branch if the user agrees, then give them a title and description
+to paste in. The GitHub CLI may not be installed, so also give the link for
+opening it: `https://github.com/lfpackandship/mailbox-manager/compare/main...<branch>`.
+
+The description is for whoever reviews and merges the branch, so unlike the
+release notes it can name code. Base it on `git log main..<branch>` and the
+diff, not on memory, and keep it short:
+
+```markdown
+## Summary
+
+One or two sentences: what the branch does and why.
+
+## Changes
+
+- One bullet per meaningful change, user-visible ones first. Name the
+  screens or classes involved.
+
+## Testing
+
+- `./mvnw test`: how many tests ran and whether they passed.
+- Anything checked by hand, such as signing in to Google Drive.
+
+## Before merging
+
+- Anything the reviewer must do or know: new repository secrets, Google
+  Cloud or privacy policy changes, data upgrades. Leave this section out if
+  there's nothing.
+```
+
+The title is a short imperative phrase like a commit title, such as "Add
+Google Drive backups". Don't merge the pull request yourself unless asked.
+
 ## When finishing a release
 
 Follow the README's release steps. Then, without being asked, give the user
