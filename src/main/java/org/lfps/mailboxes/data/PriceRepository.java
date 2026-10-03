@@ -5,7 +5,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -163,6 +166,27 @@ public class PriceRepository {
         throw e;
       }
     }
+  }
+
+  /**
+   * Puts sizes in order of price, cheapest first, as smaller boxes cost
+   * less: by each size's lowest price for any rental length. Sizes with no
+   * price come last, in alphabetical order, as do sizes that cost the same.
+   *
+   * @param sizes the sizes
+   * @param prices the prices, as returned by {@link #findAll()}
+   * @return the sizes in order
+   */
+  public static List<String> cheapestFirst(List<String> sizes, Map<String, Long> prices) {
+    var lowest = new HashMap<String, Long>();
+    for (var entry : prices.entrySet()) {
+      var size = entry.getKey().substring(0, entry.getKey().lastIndexOf('|'));
+      lowest.merge(size, entry.getValue(), Math::min);
+    }
+    var ordered = new ArrayList<>(sizes);
+    ordered.sort(Comparator.comparing((String size) -> lowest.getOrDefault(normalize(size), Long.MAX_VALUE))
+        .thenComparing(String.CASE_INSENSITIVE_ORDER));
+    return ordered;
   }
 
   /**

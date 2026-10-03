@@ -73,4 +73,17 @@ class PriceRepositoryTest {
         prices.findAll());
   }
 
+  @Test
+  void ordersSizesCheapestFirstWithUnpricedOnesLast() {
+    var prices = java.util.Map.of(
+        PriceRepository.key("large", 3), 24000L,
+        PriceRepository.key("medium", 3), 15000L,
+        PriceRepository.key("small", 3), 9000L,
+        PriceRepository.key("small", 12), 15000L,
+        PriceRepository.key(PriceRepository.DEFAULT_SIZE, 3), 1000L);
+
+    assertEquals(java.util.List.of("Small", "Medium", "Large", "Huge", "Tiny"), PriceRepository.cheapestFirst(
+        java.util.List.of("Huge", "Large", "Medium", "Small", "Tiny"), prices));
+  }
+
 }

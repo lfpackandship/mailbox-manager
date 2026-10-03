@@ -87,7 +87,10 @@ final class PriceSheet {
     /** The rental lengths with a price, one row each, shortest first. */
     final List<Integer> lengths;
 
-    /** The sizes with a price, one column each, then the default prices if there are any. */
+    /**
+     * The sizes with a price, one column each, cheapest first, then the
+     * default prices if there are any.
+     */
     final List<Column> columns;
 
     Content(String shopName, String shopDetails, String intro, String note, String reminderMessage,
@@ -145,7 +148,7 @@ final class PriceSheet {
     var descriptions = prices.findDescriptions();
 
     var columns = new ArrayList<Column>();
-    for (var size : new BoxInventoryRepository().sizes()) {
+    for (var size : PriceRepository.cheapestFirst(new BoxInventoryRepository().sizes(), saved)) {
       var sizePrices = pricesFor(size, lengths, saved);
       if (!sizePrices.isEmpty()) {
         columns.add(new Column(size, size, descriptions.getOrDefault(size.toLowerCase(Locale.ROOT), ""),
