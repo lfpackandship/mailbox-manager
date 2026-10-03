@@ -16,6 +16,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -41,7 +42,8 @@ import org.lfps.mailboxes.util.Json;
 
 /**
  * Talks to Google: signing in through the browser, and uploading backups to
- * a "Mailbox Manager Backups" folder in the user's Google Drive. The app asks
+ * (and downloading them from) a "Mailbox Manager Backups" folder in the
+ * user's Google Drive. The app asks
  * only for access to files it creates itself, so it can't see anything else
  * in the user's Drive.
  *
@@ -259,6 +261,71 @@ public final class GoogleDrive {
   }
 
   /**
+   * Returns the names of the files in the backups folder, newest first.
+   *
+   * @param refreshToken the saved sign-in
+   * @return the names, or an empty list if there's no backups folder
+   * @throws DriveException if they can't be listed
+   */
+  List<String> backupNames(String refreshToken) {
+    var token = accessToken(refreshToken);
+    var folderId = findFolder(token);
+    if (folderId == null) {
+      return List.of();
+    }
+    return listFolder(token, folderId).stream()
+        .map(f -> f.name)
+        .sorted(Comparator.reverseOrder())
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Downloads a file from the backups folder.
+   *
+   * @param refreshToken the saved sign-in
+   * @param name the file's name
+   * @param target where to save it; replaced if it exists
+   * @throws DriveException if it can't be downloaded; nothing is left at
+   *     {@code target}
+   */
+  void download(String refreshToken, String name, Path target) {
+    var token = accessToken(refreshToken);
+    var folderId = findFolder(token);
+    var file = folderId == null ? null : listFolder(token, folderId).stream()
+        .filter(f -> f.name.equals(name))
+        .findFirst()
+        .orElse(null);
+    if (file == null) {
+      throw new DriveException(Problem.OTHER, name + " isn't in the " + FOLDER_NAME + " folder in Google Drive.");
+    }
+    var partial = target.resolveSibling(target.getFileName() + ".partial");
+    try {
+      Files.createDirectories(target.getParent());
+      var response = http.send(authorized(token, apiBase + "/files/" + file.id + "?alt=media")
+          .timeout(UPLOAD_TIMEOUT).GET().build(), BodyHandlers.ofFile(partial));
+      if (response.statusCode() == 401) {
+        throw new DriveException(Problem.SIGNED_OUT, "Mailbox Manager is no longer signed in to Google Drive.");
+      }
+      if (response.statusCode() != 200) {
+        throw googleError(response.statusCode(), Map.of());
+      }
+      Files.move(partial, target, StandardCopyOption.REPLACE_EXISTING);
+    } catch (IOException e) {
+      throw new DriveException(Problem.OFFLINE, "Couldn't download " + name + " from Google Drive. "
+          + "Check that this computer is connected to the internet.", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new DriveException(Problem.CANCELLED, "The download was stopped.", e);
+    } finally {
+      try {
+        Files.deleteIfExists(partial);
+      } catch (IOException ignored) {
+        // Only a leftover partial download.
+      }
+    }
+  }
+
+  /**
    * Tells Google to cancel a sign-in. Problems are ignored, since the sign-in
    * is forgotten either way.
    *
@@ -331,12 +398,18 @@ public final class GoogleDrive {
     return reply;
   }
 
-  private String findOrCreateFolder(String token) {
+  /** Returns the id of the backups folder, or {@code null} if there isn't one. */
+  private String findFolder(String token) {
     var query = "name = '" + FOLDER_NAME + "' and mimeType = '" + FOLDER_TYPE
         + "' and 'root' in parents and trashed = false";
     var folders = list(token, query);
-    if (!folders.isEmpty()) {
-      return folders.get(0).id;
+    return folders.isEmpty() ? null : folders.get(0).id;
+  }
+
+  private String findOrCreateFolder(String token) {
+    var existing = findFolder(token);
+    if (existing != null) {
+      return existing;
     }
     var metadata = "{\"name\":" + Json.quote(FOLDER_NAME) + ",\"mimeType\":" + Json.quote(FOLDER_TYPE) + "}";
     var created = parseReply(send(authorized(token, apiBase + "/files?fields=id")

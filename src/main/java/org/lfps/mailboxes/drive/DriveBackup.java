@@ -1,8 +1,11 @@
 package org.lfps.mailboxes.drive;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -18,8 +21,9 @@ import org.lfps.mailboxes.drive.DriveException.Problem;
 
 /**
  * Backs up to Google Drive: connecting and disconnecting the user's Google
- * account, and uploading each daily backup. Uploads run one at a time in the
- * background, so the app never waits for them.
+ * account, uploading each daily backup, and downloading backups to restore.
+ * Uploads and downloads run one at a time in the background, so the app never
+ * waits for them.
  */
 public final class DriveBackup {
 
@@ -164,6 +168,49 @@ public final class DriveBackup {
       }
     }
     return updated;
+  }
+
+  /**
+   * Lists the backups in Google Drive in the background, newest first.
+   *
+   * @return completes on a background thread with the backups' file names,
+   *     or with a {@link DriveException} if Google Drive isn't connected or
+   *     they couldn't be listed
+   */
+  public static CompletableFuture<List<String>> listBackupsInBackground() {
+    var client = drive;
+    var account = account();
+    return CompletableFuture.supplyAsync(() -> {
+      requireConnected(client, account);
+      return client.backupNames(account.refreshToken());
+    }, UPLOADS);
+  }
+
+  /**
+   * Downloads a backup from Google Drive in the background, into the
+   * {@code from-google-drive} folder inside the backups folder, ready to be
+   * restored.
+   *
+   * @param name the backup's file name, as listed by {@link #listBackupsInBackground()}
+   * @return completes on a background thread with the downloaded file, or
+   *     with a {@link DriveException} if it couldn't be downloaded
+   */
+  public static CompletableFuture<Path> downloadInBackground(String name) {
+    var client = drive;
+    var account = account();
+    return CompletableFuture.supplyAsync(() -> {
+      requireConnected(client, account);
+      // Never let a name from Google point outside the folder.
+      var target = Database.backupDir().resolve("from-google-drive").resolve(Paths.get(name).getFileName());
+      client.download(account.refreshToken(), name, target);
+      return target;
+    }, UPLOADS);
+  }
+
+  private static void requireConnected(GoogleDrive client, DriveAccount account) {
+    if (client == null || account == null) {
+      throw new DriveException(Problem.SIGNED_OUT, "Google Drive isn't connected.");
+    }
   }
 
   /**

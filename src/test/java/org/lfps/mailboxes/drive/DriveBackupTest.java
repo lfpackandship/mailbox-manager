@@ -154,6 +154,54 @@ class DriveBackupTest {
   }
 
   @Test
+  void listsTheBackupsInGoogleDriveNewestFirst() throws Exception {
+    google.addBackup("mailboxes-2026-09-01.db");
+    google.addBackup("mailboxes-2026-09-03.db");
+    google.addBackup("mailboxes-2026-09-02.db");
+    await(DriveBackup.connect(google.browser()));
+
+    assertEquals(List.of("mailboxes-2026-09-03.db", "mailboxes-2026-09-02.db", "mailboxes-2026-09-01.db"),
+        await(DriveBackup.listBackupsInBackground()));
+  }
+
+  @Test
+  void listingWithNoBackupsFolderFindsNothingAndCreatesNoFolder() throws Exception {
+    await(DriveBackup.connect(google.browser()));
+
+    assertEquals(List.of(), await(DriveBackup.listBackupsInBackground()));
+    assertTrue(google.files.isEmpty());
+  }
+
+  @Test
+  void downloadsABackupReadyToRestore() throws Exception {
+    google.addBackup("mailboxes-2026-09-01.db", "backup".getBytes(StandardCharsets.UTF_8));
+    await(DriveBackup.connect(google.browser()));
+
+    var file = await(DriveBackup.downloadInBackground("mailboxes-2026-09-01.db"));
+
+    assertEquals(Database.backupDir().resolve("from-google-drive").resolve("mailboxes-2026-09-01.db"), file);
+    assertEquals("backup", Files.readString(file));
+    // Kept apart, so it isn't mistaken for this computer's own daily backup.
+    assertFalse(Database.listBackups().contains(file));
+  }
+
+  @Test
+  void downloadingABackupThatsGoneSaysSo() throws Exception {
+    google.addBackup("mailboxes-2026-09-01.db");
+    await(DriveBackup.connect(google.browser()));
+
+    var problem = failure(DriveBackup.downloadInBackground("mailboxes-2020-01-01.db"));
+
+    assertTrue(problem.getMessage().contains("isn't in the"), problem.getMessage());
+    assertFalse(Files.exists(Database.backupDir().resolve("from-google-drive").resolve("mailboxes-2020-01-01.db")));
+  }
+
+  @Test
+  void listingWhenDriveIsntConnectedSaysSo() {
+    assertEquals(Problem.SIGNED_OUT, failure(DriveBackup.listBackupsInBackground()).problem());
+  }
+
+  @Test
   void doesNothingWhenDriveIsntConnected() throws Exception {
     Database.backupDaily();
 
