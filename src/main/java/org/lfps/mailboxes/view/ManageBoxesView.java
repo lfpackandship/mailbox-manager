@@ -8,8 +8,12 @@ import java.util.function.Consumer;
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
+import org.lfps.mailboxes.util.Money;
+
+import java.util.stream.Collectors;
 
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
@@ -30,13 +34,14 @@ import javafx.stage.Stage;
  * Lists mailboxes in a searchable table showing the key details of each, with
  * actions to view the full entry (also by double-clicking a row or pressing
  * Enter), edit, renew, close, reopen, or delete it. Open boxes are shown by
- * default; closed ones can be shown instead, or both.
+ * default; forwarding-only or closed ones can be shown instead, or all.
  */
 public class ManageBoxesView {
 
   /** Which boxes the table shows. */
   enum Show {
     OPEN("Open boxes"),
+    FORWARDING("Forwarding only"),
     CLOSED("Closed boxes"),
     ALL("All boxes");
 
@@ -50,6 +55,9 @@ public class ManageBoxesView {
      * Returns whether a box belongs in the table when this is chosen.
      */
     boolean includes(Mailbox mailbox) {
+      if (this == FORWARDING) {
+        return !mailbox.isClosed() && mailbox.isForwardingOnly();
+      }
       return this == ALL || mailbox.isClosed() == (this == CLOSED);
     }
 
@@ -85,6 +93,7 @@ public class ManageBoxesView {
     var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
     boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
     boxNumberCol.setComparator(BoxNumbers.ORDER);
+    BoxLabels.markForwarding(boxNumberCol);
 
     var firstNameCol = new TableColumn<Mailbox, String>("First Name");
     firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
@@ -99,6 +108,8 @@ public class ManageBoxesView {
     phoneCol.setCellValueFactory(new PropertyValueFactory<>("phone"));
 
     table.getColumns().setAll(List.of(boxNumberCol, firstNameCol, lastNameCol, businessTitleCol, phoneCol));
+    // Hidden, but saved in the spreadsheet so it has everything recorded.
+    table.getColumns().addAll(hiddenColumns());
 
     var allMailboxes = FXCollections.<Mailbox>observableArrayList();
     try {
@@ -168,7 +179,8 @@ public class ManageBoxesView {
       }
       try {
         if (selected.isClosed()) {
-          if (repository.isBoxNumberTaken(selected.getBoxNumber(), selected.getId())) {
+          if (!selected.isForwardingOnly()
+              && repository.isBoxNumberTaken(selected.getBoxNumber(), selected.getId())) {
             statusLabel.setStyle("-fx-text-fill: red;");
             statusLabel.setText("Box " + selected.getBoxNumber().trim() + " has been given to someone else, so "
                 + BoxLabels.holderOr(selected, "its holder") + " can't be reopened in it. Edit the box number first.");
@@ -176,7 +188,8 @@ public class ManageBoxesView {
           }
           repository.setClosedDate(selected.getId(), null);
         } else if (Dialogs.confirm.ask(stage, "Close box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
-            "The box becomes free to rent to someone else. Everything recorded for it is kept, and you can "
+            keysReminder(selected)
+                + "The box becomes free to rent to someone else. Everything recorded for it is kept, and you can "
                 + "find it again by showing closed boxes.")) {
           repository.setClosedDate(selected.getId(), LocalDate.now());
         } else {
@@ -216,8 +229,18 @@ public class ManageBoxesView {
     var backBtn = new Button("Back");
     backBtn.setOnAction(e -> MainMenuView.show(stage));
 
+    var printBtn = new Button("Print…");
+    printBtn.setId("printListButton");
+    printBtn.setOnAction(e -> TableOutput.print(listTitle(showChoice.getValue(), searchField.getText()),
+        List.of(new TableOutput.Section(null, table)), statusLabel));
+
+    var spreadsheetBtn = new Button("Save as Spreadsheet…");
+    spreadsheetBtn.setId("spreadsheetButton");
+    spreadsheetBtn.setOnAction(e -> TableOutput.run(statusLabel, () -> TableOutput.saveSpreadsheet(stage,
+        "boxes-" + LocalDate.now() + ".csv", List.of(table))));
+
     var layout = new VBox(10,
-        backBtn,
+        new HBox(10, backBtn, printBtn, spreadsheetBtn),
         new HBox(10, searchField, showChoice),
         table,
         new HBox(10, viewBtn, editBtn, renewBtn, closeBtn, deleteBtn),
@@ -225,6 +248,74 @@ public class ManageBoxesView {
     layout.setPadding(new Insets(20));
 
     AppWindow.show(stage, layout);
+  }
+
+  /**
+   * Returns the title of the printed list, such as "Open boxes matching
+   * “smith”".
+   */
+  static String listTitle(Show show, String query) {
+    return show + (query == null || query.isBlank() ? "" : " matching “" + query.trim() + "”");
+  }
+
+  private static List<TableColumn<Mailbox, ?>> hiddenColumns() {
+    var boxNameCol = new TableColumn<Mailbox, String>("Box Name");
+    boxNameCol.setCellValueFactory(new PropertyValueFactory<>("boxName"));
+
+    var emailCol = new TableColumn<Mailbox, String>("Email");
+    emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
+
+    var endDateCol = new TableColumn<Mailbox, LocalDate>("End Date");
+    endDateCol.setCellValueFactory(new PropertyValueFactory<>("endDate"));
+
+    var alternateNamesCol = new TableColumn<Mailbox, String>("Also Receives Mail As");
+    alternateNamesCol.setCellValueFactory(cell -> new SimpleStringProperty(
+        String.join("; ", cell.getValue().getAlternateBusinessNames())));
+
+    var forwardingCol = new TableColumn<Mailbox, String>("Forwarding Addresses");
+    forwardingCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getForwardingAddresses()
+        .stream().map(String::valueOf).collect(Collectors.joining("; "))));
+
+    var keysCol = new TableColumn<Mailbox, Integer>("Keys");
+    keysCol.setCellValueFactory(new PropertyValueFactory<>("keyCount"));
+
+    var depositCol = new TableColumn<Mailbox, Long>("Key Deposit");
+    depositCol.setCellValueFactory(new PropertyValueFactory<>("keyDepositCents"));
+    TableOutput.formatWith(depositCol, Money::format);
+
+    var notesCol = new TableColumn<Mailbox, String>("Notes");
+    notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
+
+    var closedCol = new TableColumn<Mailbox, LocalDate>("Closed");
+    closedCol.setCellValueFactory(new PropertyValueFactory<>("closedDate"));
+
+    var forwardingOnlyCol = new TableColumn<Mailbox, String>("Forwarding Only");
+    forwardingOnlyCol.setCellValueFactory(cell -> new SimpleStringProperty(
+        cell.getValue().isForwardingOnly() ? "Yes" : ""));
+
+    var columns = List.<TableColumn<Mailbox, ?>>of(boxNameCol, emailCol, endDateCol, forwardingOnlyCol,
+        alternateNamesCol, forwardingCol, keysCol, depositCol, notesCol, closedCol);
+    columns.forEach(column -> column.setVisible(false));
+    return columns;
+  }
+
+  /**
+   * Reminds whoever closes a box to collect its keys and give back the key
+   * deposit, such as "Collect the 2 keys and give back the $20.00 key
+   * deposit. ", or returns an empty string if neither is recorded.
+   */
+  static String keysReminder(Mailbox mailbox) {
+    var count = mailbox.getKeyCount();
+    var deposit = mailbox.getKeyDepositCents();
+    var keys = count == null || count == 0 ? "" : (count == 1 ? "the key" : "the " + count + " keys");
+    var refund = deposit == null || deposit == 0 ? "" : "give back the " + Money.format(deposit) + " key deposit";
+    if (keys.isEmpty() && refund.isEmpty()) {
+      return "";
+    }
+    if (keys.isEmpty()) {
+      return "Remember to " + refund + ". ";
+    }
+    return "Remember to collect " + keys + (refund.isEmpty() ? "" : " and " + refund) + ". ";
   }
 
   /**
@@ -248,6 +339,9 @@ public class ManageBoxesView {
     }
     mailbox.getAlternateBusinessNames().forEach(name -> haystack.append(name).append('\n'));
     mailbox.getForwardingAddresses().forEach(address -> haystack.append(address).append('\n'));
+    if (mailbox.isForwardingOnly()) {
+      haystack.append("forwarding only\n");
+    }
     var text = haystack.toString().toLowerCase();
     var phoneDigits = mailbox.getPhone() == null ? "" : mailbox.getPhone().replaceAll("[^0-9]", "");
 

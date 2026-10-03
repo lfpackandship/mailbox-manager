@@ -76,6 +76,23 @@ class PricesViewTest {
   }
 
   @Test
+  void savesWhatEachSizeMeasures() throws SQLException {
+    prices.saveDescriptions(Map.of("Large", "11 x 6 x 14"));
+    var window = openPrices();
+    assertEquals("11 x 6 x 14", FxTestSupport.call(() -> field(window, "measures-large").getText()));
+    // The default prices aren't a size, so they have nothing to measure.
+    assertEquals(null, FxTestSupport.call(() -> window.getScene().lookup("#measures-")));
+
+    FxTestSupport.run(() -> {
+      field(window, "measures-small").setText(" 3 x 5 x 14 ");
+      field(window, "measures-large").setText("");
+      ((Button) window.getScene().lookup("#pricesSaveButton")).fire();
+    });
+
+    assertEquals(Map.of("small", "3 x 5 x 14"), prices.findDescriptions());
+  }
+
+  @Test
   void savesPricesAndTidiesThem() throws SQLException {
     var window = openPrices();
 
@@ -175,6 +192,7 @@ class PricesViewTest {
     try (var conn = Database.connect(); var stmt = conn.createStatement()) {
       stmt.execute("DELETE FROM settings");
       stmt.execute("DELETE FROM prices");
+      stmt.execute("DELETE FROM box_sizes");
       stmt.execute("DELETE FROM box_inventory");
     }
   }

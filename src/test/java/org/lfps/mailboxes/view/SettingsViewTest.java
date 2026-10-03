@@ -17,6 +17,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -120,6 +121,44 @@ class SettingsViewTest {
     assertEquals(60, settings.getInt(Setting.RENEWAL_WINDOW_DAYS));
     assertEquals(10, settings.getInt(Setting.BACKUPS_TO_KEEP));
     assertTrue(FxTestSupport.call(window::isShowing));
+  }
+
+  @Test
+  void savesTheKeyDepositAndThePriceSheetWording() throws SQLException {
+    var window = openSettings();
+    assertEquals("$10.00", FxTestSupport.call(() -> field(window, "keyDepositField").getText()));
+    assertEquals("Lake Forest Pack and Ship", FxTestSupport.call(() -> field(window, "shopNameField").getText()));
+
+    FxTestSupport.run(() -> {
+      field(window, "keyDepositField").setText("12.5");
+      field(window, "shopNameField").setText("  Box Shop ");
+      ((TextInputControl) window.getScene().lookup("#reminderMessageField")).setText("Please renew.");
+      button(window, "saveButton").fire();
+    });
+
+    assertEquals("Saved", FxTestSupport.call(() -> resultLabel(window).getText()));
+    assertEquals("$12.50", settings.get(Setting.KEY_DEPOSIT));
+    assertEquals("$12.50", FxTestSupport.call(() -> field(window, "keyDepositField").getText()));
+    assertEquals("Box Shop", settings.get(Setting.SHOP_NAME));
+    assertEquals("Please renew.", settings.get(Setting.REMINDER_MESSAGE));
+  }
+
+  @Test
+  void aBlankKeyDepositMeansNoneAndANonsenseOneIsRejected() throws SQLException {
+    var window = openSettings();
+
+    FxTestSupport.run(() -> {
+      field(window, "keyDepositField").setText("ten");
+      button(window, "saveButton").fire();
+    });
+    assertTrue(FxTestSupport.call(() -> resultLabel(window).getText()).startsWith("Key deposit per key"));
+    assertEquals("$10.00", settings.get(Setting.KEY_DEPOSIT));
+
+    FxTestSupport.run(() -> {
+      field(window, "keyDepositField").setText("");
+      button(window, "saveButton").fire();
+    });
+    assertEquals("", settings.get(Setting.KEY_DEPOSIT));
   }
 
   @Test

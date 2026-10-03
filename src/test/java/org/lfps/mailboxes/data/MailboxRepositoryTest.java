@@ -177,6 +177,23 @@ class MailboxRepositoryTest {
   }
 
   @Test
+  void keysAndDepositRoundTripAndCanBeCleared() throws SQLException {
+    var id = repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "12", null, "", null, null, null, null,
+        null, null, 2, 2000L));
+    var saved = repository.findAll().get(0);
+    assertEquals(2, saved.getKeyCount());
+    assertEquals(2000L, saved.getKeyDepositCents());
+
+    repository.update(new Mailbox(id, "Ada", "Lovelace", null, "12", null, "", null, null, null, null,
+        null, null, 0, null));
+    var updated = repository.findAll().get(0);
+    assertEquals(0, updated.getKeyCount());
+    assertNull(updated.getKeyDepositCents());
+    // Renewing and closing keep them.
+    assertEquals(0, updated.withEndDate(LocalDate.now()).withClosedDate(null).getKeyCount());
+  }
+
+  @Test
   void blankNotesAreStoredAsNone() throws SQLException {
     repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "210", null, "(555) 123-4567", null,
         List.of(), null, null, "   ", null));

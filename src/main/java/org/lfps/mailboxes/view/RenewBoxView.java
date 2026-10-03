@@ -69,7 +69,10 @@ final class RenewBoxView {
     var lengthButtons = RentalLengthButtons.create(months -> {
       var start = startField.getValue() == null ? today : startField.getValue();
       endField.setValue(start.plusMonths(months));
-      payment.suggest(PricesView.priceFor(mailbox.getBoxNumber(), months));
+      // Box sizes' prices don't apply to forwarding.
+      if (!mailbox.isForwardingOnly()) {
+        payment.suggest(PricesView.priceFor(mailbox.getBoxNumber(), months));
+      }
     });
 
     var noteField = new TextField();

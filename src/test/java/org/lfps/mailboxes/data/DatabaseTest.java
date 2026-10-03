@@ -19,6 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
 
 class DatabaseTest {
@@ -200,6 +201,31 @@ class DatabaseTest {
 
     assertTrue(mailboxes.findAll().get(0).isClosed());
     assertEquals(LocalDate.of(2027, 12, 1), mailboxes.findAll().get(0).getEndDate());
+  }
+
+  @Test
+  void upgradesDatabaseCreatedBeforeKeysAndSizeMeasurements() throws SQLException {
+    Database.prepareDataDir();
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("CREATE TABLE mailboxes (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+          + "first_name TEXT NOT NULL, last_name TEXT NOT NULL, business_title TEXT, "
+          + "box_number TEXT NOT NULL, box_name TEXT, phone TEXT NOT NULL, email TEXT, "
+          + "end_date TEXT, notes TEXT, closed_date TEXT)");
+      stmt.execute("INSERT INTO mailboxes (first_name, last_name, box_number, phone) "
+          + "VALUES ('Ada', 'Lovelace', '7', '')");
+    }
+
+    Database.initSchema();
+
+    var mailboxes = new MailboxRepository();
+    var old = mailboxes.findAll().get(0);
+    assertNull(old.getKeyCount());
+    assertNull(old.getKeyDepositCents());
+    mailboxes.update(new Mailbox(old.getId(), "Ada", "Lovelace", null, "7", null, "", null, null, null, null,
+        null, null, 2, 2000L));
+    assertEquals(2, mailboxes.findAll().get(0).getKeyCount());
+    new PriceRepository().saveDescriptions(java.util.Map.of("Small", "3 x 5 x 14"));
+    assertEquals("3 x 5 x 14", new PriceRepository().findDescriptions().get("small"));
   }
 
   private static java.util.List<String> listBackups() throws IOException {

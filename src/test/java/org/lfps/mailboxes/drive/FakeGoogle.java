@@ -67,6 +67,9 @@ public final class FakeGoogle {
   /** How many backups have been uploaded. */
   public int uploads;
 
+  /** How many backups have been downloaded. */
+  public int downloads;
+
   private final HttpServer server;
   private final String base;
   private final GoogleDrive previous = DriveBackup.drive;
@@ -166,13 +169,18 @@ public final class FakeGoogle {
         .collect(Collectors.toList());
   }
 
+  /** Adds an empty file to the backups folder, creating the folder if needed. */
+  public void addBackup(String name) {
+    addBackup(name, new byte[0]);
+  }
+
   /** Adds a file to the backups folder, creating the folder if needed. */
-  public synchronized void addBackup(String name) {
+  public synchronized void addBackup(String name, byte[] content) {
     var folder = files.values().stream()
         .filter(f -> f.folder && f.name.equals(GoogleDrive.FOLDER_NAME))
         .findFirst()
         .orElseGet(() -> add(GoogleDrive.FOLDER_NAME, "root", true, new byte[0]));
-    add(name, folder.id, false, new byte[0]);
+    add(name, folder.id, false, content);
   }
 
   private GoogleDrive client(String url) {
@@ -219,6 +227,20 @@ public final class FakeGoogle {
       var metadata = Json.parseObject(new String(body.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8));
       var folder = add((String) metadata.get("name"), "root", true, new byte[0]);
       reply(exchange, 200, "{\"id\":" + Json.quote(folder.id) + "}");
+      return;
+    }
+    if (path.startsWith("/drive/v3/files/") && method.equals("GET")
+        && "media".equals(GoogleDrive.parseQuery(exchange.getRequestURI().getRawQuery()).get("alt"))) {
+      var file = files.get(path.substring("/drive/v3/files/".length()));
+      if (file == null) {
+        reply(exchange, 404, "{}");
+        return;
+      }
+      downloads++;
+      exchange.sendResponseHeaders(200, file.content.length);
+      try (var out = exchange.getResponseBody()) {
+        out.write(file.content);
+      }
       return;
     }
     if (path.startsWith("/drive/v3/files/") && method.equals("DELETE")) {

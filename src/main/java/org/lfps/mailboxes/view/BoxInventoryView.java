@@ -373,12 +373,15 @@ public class BoxInventoryView {
   }
 
   /**
-   * Returns the open boxes keyed by {@link BoxNumbers#key(String)}.
+   * Returns the open boxes rented here keyed by {@link BoxNumbers#key(String)}.
    */
   private static Map<String, Mailbox> holdersByBoxNumber() throws SQLException {
     var holders = new HashMap<String, Mailbox>();
     for (var mailbox : new MailboxRepository().findOpen()) {
-      holders.putIfAbsent(BoxNumbers.key(mailbox.getBoxNumber()), mailbox);
+      // Forwarding-only boxes don't rent the box whose number they use.
+      if (!mailbox.isForwardingOnly()) {
+        holders.putIfAbsent(BoxNumbers.key(mailbox.getBoxNumber()), mailbox);
+      }
     }
     return holders;
   }

@@ -3,6 +3,7 @@ package org.lfps.mailboxes.view;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -31,7 +32,8 @@ import org.lfps.mailboxes.util.BoxNumbers;
  * Lists open mailboxes whose box rental has already expired and those
  * expiring within the number of days set by
  * {@link Setting#RENEWAL_WINDOW_DAYS}, each sorted with the most urgent entry
- * first, with buttons to view, edit, or renew them.
+ * first, with buttons to view, edit, or renew them, and to print renewal
+ * reminders to put in the boxes.
  */
 public class RenewalsView {
 
@@ -81,8 +83,27 @@ public class RenewalsView {
     var backBtn = new Button("Back");
     backBtn.setOnAction(e -> MainMenuView.show(stage));
 
+    // Past due boxes first, as they're listed.
+    var dueBoxes = new ArrayList<Mailbox>(pastDue);
+    dueBoxes.addAll(upcoming);
+    var printRemindersBtn = new Button("Print Reminders…");
+    printRemindersBtn.setId("printRemindersButton");
+    printRemindersBtn.setDisable(dueBoxes.isEmpty());
+    printRemindersBtn.setOnAction(e -> PriceSheetView.showReminders(stage, dueBoxes));
+
+    var sections = List.of(new TableOutput.Section("Past Due", pastDueTable),
+        new TableOutput.Section(upcomingHeader.getText(), upcomingTable));
+    var printBtn = new Button("Print List…");
+    printBtn.setId("printListButton");
+    printBtn.setOnAction(e -> TableOutput.print("Renewals", sections, statusLabel));
+
+    var spreadsheetBtn = new Button("Save as Spreadsheet…");
+    spreadsheetBtn.setId("spreadsheetButton");
+    spreadsheetBtn.setOnAction(e -> TableOutput.run(statusLabel, () -> TableOutput.saveSpreadsheet(stage,
+        "renewals-" + today + ".csv", List.of(pastDueTable, upcomingTable))));
+
     var layout = new VBox(10,
-        backBtn,
+        new HBox(10, backBtn, printRemindersBtn, printBtn, spreadsheetBtn),
         pastDueHeader,
         pastDueTable,
         tableButtons(pastDueTable, "pastDue", view, edit, renew),
@@ -93,6 +114,21 @@ public class RenewalsView {
     layout.setPadding(new Insets(20));
 
     AppWindow.show(stage, layout);
+  }
+
+  /**
+   * Returns the open boxes listed on Renewals, past due first and then those
+   * due soon, each earliest first, for printing renewal reminders.
+   *
+   * @return the boxes
+   * @throws SQLException if they can't be read
+   */
+  static List<Mailbox> dueBoxes() throws SQLException {
+    var today = LocalDate.now();
+    var mailboxes = new MailboxRepository().findOpen();
+    var boxes = new ArrayList<Mailbox>(pastDue(mailboxes, today));
+    boxes.addAll(upcoming(mailboxes, today, new SettingsRepository().getInt(Setting.RENEWAL_WINDOW_DAYS)));
+    return boxes;
   }
 
   /**
@@ -167,6 +203,7 @@ public class RenewalsView {
     var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
     boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
     boxNumberCol.setComparator(BoxNumbers.ORDER);
+    BoxLabels.markForwarding(boxNumberCol);
 
     var phoneCol = new TableColumn<Mailbox, String>("Phone");
     phoneCol.setCellValueFactory(new PropertyValueFactory<>("phone"));

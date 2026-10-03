@@ -12,7 +12,9 @@ import java.util.Map;
 /**
  * Keeps the price of renting a box of each size for each rental length,
  * stored in the {@code prices} table. The {@link #DEFAULT_SIZE default} price
- * covers boxes with no size, or a size with no price of its own.
+ * covers boxes with no size, or a size with no price of its own. Also keeps
+ * what each size measures, in the {@code box_sizes} table, for the price
+ * sheet.
  */
 public class PriceRepository {
 
@@ -27,6 +29,13 @@ public class PriceRepository {
       + "ON CONFLICT(size, months) DO UPDATE SET amount_cents = excluded.amount_cents";
 
   private static final String DELETE_SQL = "DELETE FROM prices WHERE size = ? AND months = ?";
+
+  private static final String SELECT_DESCRIPTIONS_SQL = "SELECT size, description FROM box_sizes";
+
+  private static final String UPSERT_DESCRIPTION_SQL = "INSERT INTO box_sizes (size, description) VALUES (?, ?) "
+      + "ON CONFLICT(size) DO UPDATE SET description = excluded.description";
+
+  private static final String DELETE_DESCRIPTION_SQL = "DELETE FROM box_sizes WHERE size = ?";
 
   /**
    * Returns the price of renting a box of a size for a number of months,
@@ -93,6 +102,58 @@ public class PriceRepository {
             upsert.setString(1, size);
             upsert.setInt(2, months);
             upsert.setLong(3, entry.getValue());
+            upsert.executeUpdate();
+          }
+        }
+        conn.commit();
+      } catch (SQLException e) {
+        conn.rollback();
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Returns what each box size measures.
+   *
+   * @return the description of each size, such as 3¾" x 5" x 14", keyed by
+   *     the size in lower case
+   * @throws SQLException if the query fails
+   */
+  public Map<String, String> findDescriptions() throws SQLException {
+    var descriptions = new HashMap<String, String>();
+    try (Connection conn = Database.connect();
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(SELECT_DESCRIPTIONS_SQL)) {
+      while (rs.next()) {
+        descriptions.put(normalize(rs.getString("size")), rs.getString("description"));
+      }
+    }
+    return descriptions;
+  }
+
+  /**
+   * Saves what box sizes measure, replacing earlier descriptions. Sizes not
+   * given are left as they are.
+   *
+   * @param descriptions the description of each size, ignoring letter case;
+   *     a blank one clears that size's description
+   * @throws SQLException if the descriptions can't be saved; none are changed
+   */
+  public void saveDescriptions(Map<String, String> descriptions) throws SQLException {
+    try (Connection conn = Database.connect()) {
+      conn.setAutoCommit(false);
+      try (PreparedStatement upsert = conn.prepareStatement(UPSERT_DESCRIPTION_SQL);
+          PreparedStatement delete = conn.prepareStatement(DELETE_DESCRIPTION_SQL)) {
+        for (var entry : descriptions.entrySet()) {
+          var size = normalize(entry.getKey());
+          var description = entry.getValue() == null ? "" : entry.getValue().strip();
+          if (description.isEmpty()) {
+            delete.setString(1, size);
+            delete.executeUpdate();
+          } else {
+            upsert.setString(1, size);
+            upsert.setString(2, description);
             upsert.executeUpdate();
           }
         }

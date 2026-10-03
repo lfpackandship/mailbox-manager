@@ -1,5 +1,8 @@
 package org.lfps.mailboxes.view;
 
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+
 import org.lfps.mailboxes.model.Mailbox;
 
 /**
@@ -33,6 +36,25 @@ final class BoxLabels {
   static String forHolder(Mailbox mailbox) {
     var holder = mailbox.getHolderName();
     return holder.isEmpty() ? "" : " for " + holder;
+  }
+
+  /**
+   * Makes a table's box number column say which boxes are forwarding only,
+   * such as "12 (forwarding)", so they aren't mistaken for the box rented
+   * under the same number. Sorting still goes by the number.
+   *
+   * @param column the box number column
+   */
+  static void markForwarding(TableColumn<Mailbox, String> column) {
+    column.setCellFactory(c -> new TableCell<>() {
+      @Override
+      protected void updateItem(String number, boolean empty) {
+        super.updateItem(number, empty);
+        var mailbox = getTableRow() == null ? null : getTableRow().getItem();
+        setText(empty || number == null ? null
+            : mailbox != null && mailbox.isForwardingOnly() ? number + " (forwarding)" : number);
+      }
+    });
   }
 
   /**

@@ -28,7 +28,8 @@ import org.lfps.mailboxes.util.RentalLengths;
 /**
  * A window for setting the price of each box size for each rental length, as
  * a grid with a row per size and a column per rental length. Choosing a
- * rental length on Add New Box or when renewing fills in the price.
+ * rental length on Add New Box or when renewing fills in the price. What
+ * each size measures is also entered here, for the printed price sheet.
  */
 final class PricesView {
 
@@ -55,6 +56,7 @@ final class PricesView {
     List<String> sizes = List.of();
     List<Integer> lengths = RentalLengths.parse(Setting.RENTAL_LENGTHS.defaultValue());
     Map<String, Long> saved = Map.of();
+    Map<String, String> savedDescriptions = Map.of();
     try {
       sizes = new BoxInventoryRepository().sizes();
       try {
@@ -63,6 +65,7 @@ final class PricesView {
         // Use the default lengths.
       }
       saved = prices.findAll();
+      savedDescriptions = prices.findDescriptions();
     } catch (SQLException e) {
       showError(resultLabel, "Failed to load prices: " + e.getMessage());
     }
@@ -78,9 +81,17 @@ final class PricesView {
       header.setStyle("-fx-font-weight: bold;");
       grid.add(header, col + 1, 0);
     }
+    var measuresHeader = new Label("Measures");
+    measuresHeader.setStyle("-fx-font-weight: bold;");
+    var measuresCol = lengths.size() + 1;
+    if (!sizes.isEmpty()) {
+      grid.add(measuresHeader, measuresCol, 0);
+    }
 
     // Each price field, keyed like the prices in PriceRepository.
     var fields = new LinkedHashMap<String, TextField>();
+    // What each size measures, for the price sheet, keyed by size.
+    var descriptionFields = new LinkedHashMap<String, TextField>();
     for (var row = 0; row < rows.size(); row++) {
       var size = rows.get(row);
       var label = new Label(size.isEmpty() ? "Default:" : size + ":");
@@ -98,6 +109,14 @@ final class PricesView {
         fields.put(key, field);
         grid.add(field, col + 1, row + 1);
       }
+      if (!size.isEmpty()) {
+        var description = new TextField(savedDescriptions.getOrDefault(size.toLowerCase(), ""));
+        description.setId("measures-" + size.toLowerCase());
+        description.setPromptText("e.g. 3¾\" x 5\" x 14\"");
+        description.setStyle("-fx-pref-width: 11em;");
+        descriptionFields.put(size, description);
+        grid.add(description, measuresCol, row + 1);
+      }
     }
 
     var explanation = new Label((sizes.isEmpty()
@@ -106,7 +125,8 @@ final class PricesView {
         : "")
         + "The default price is used for boxes with no size, or whose size has no price for that length. "
         + "Leave a price blank if there isn't one. Choosing a rental length on Add New Box or when renewing "
-        + "fills in the price, which can still be changed.");
+        + "fills in the price, which can still be changed. What each size measures is shown on the "
+        + "printed price sheet.");
     explanation.setWrapText(true);
     explanation.setStyle("-fx-max-width: 36em;");
 
@@ -127,8 +147,11 @@ final class PricesView {
           return;
         }
       }
+      var descriptions = new HashMap<String, String>();
+      descriptionFields.forEach((size, field) -> descriptions.put(size, field.getText()));
       try {
         prices.save(toSave);
+        prices.saveDescriptions(descriptions);
       } catch (SQLException ex) {
         showError(resultLabel, "Failed to save: " + ex.getMessage());
         return;
@@ -141,6 +164,10 @@ final class PricesView {
       resultLabel.setText("Saved");
     });
 
+    var printBtn = new Button("Print Price Sheet…");
+    printBtn.setId("printPriceSheetButton");
+    printBtn.setOnAction(e -> PriceSheetView.showPriceSheet(owner));
+
     var closeBtn = new Button("Close");
     closeBtn.setId("pricesCloseButton");
     closeBtn.setCancelButton(true);
@@ -149,7 +176,7 @@ final class PricesView {
     var title = new Label("Prices");
     title.setStyle("-fx-font-size: 1.25em; -fx-font-weight: bold;");
 
-    var content = new VBox(12, title, explanation, grid, new HBox(10, saveBtn, closeBtn), resultLabel);
+    var content = new VBox(12, title, explanation, grid, new HBox(10, saveBtn, printBtn, closeBtn), resultLabel);
     content.setPadding(new Insets(20));
 
     var scrollPane = new ScrollPane(content);
