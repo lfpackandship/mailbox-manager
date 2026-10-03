@@ -181,15 +181,13 @@ public class SettingsView {
     var backUpNowBtn = new Button("Back Up Now…");
     backUpNowBtn.setId("backUpNowButton");
     backUpNowBtn.setOnAction(e -> {
-      var folder = chooseFolder.apply(stage);
-      if (folder == null) {
-        return;
-      }
       try {
-        var saved = Database.exportBackup(folder.toPath());
-        showSuccess(resultLabel, "Saved a backup to " + saved);
-      } catch (RuntimeException ex) {
-        showError(resultLabel, "Couldn't save the backup: " + Errors.rootMessage(ex));
+        var message = backUpNow(stage);
+        if (message != null) {
+          showSuccess(resultLabel, message);
+        }
+      } catch (IllegalStateException ex) {
+        showError(resultLabel, ex.getMessage());
       }
     });
 
@@ -348,6 +346,36 @@ public class SettingsView {
     window = stage;
     driveRow = drive;
     stage.show();
+  }
+
+  /**
+   * Asks for a folder, such as a USB drive, and saves a backup there.
+   *
+   * @param owner the window the folder dialog belongs to
+   * @return a message saying where it was saved, or {@code null} if cancelled
+   * @throws IllegalStateException if it couldn't be saved, with a message
+   *     suitable for showing to the user
+   */
+  static String backUpNow(Window owner) {
+    var folder = chooseFolder.apply(owner);
+    if (folder == null) {
+      return null;
+    }
+    try {
+      return "Saved a backup to " + Database.exportBackup(folder.toPath());
+    } catch (RuntimeException e) {
+      throw new IllegalStateException("Couldn't save the backup: " + Errors.rootMessage(e), e);
+    }
+  }
+
+  /**
+   * Closes the settings window if it's open, for example after a restore
+   * replaces the settings it shows.
+   */
+  static void close() {
+    if (window != null) {
+      window.close();
+    }
   }
 
   /**

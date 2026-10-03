@@ -114,6 +114,20 @@ The main menu has six screens:
 - **Box Inventory** – every box you have, and whether it's rented or empty.
   See [Box inventory](#box-inventory).
 
+### The menu bar
+
+The menus at the top of the window are there on every screen:
+
+- **File** – **Print Price Sheet…** (⌘P on a Mac, Ctrl+P on Windows and
+  Linux), **Print Renewal Reminders…** for every box past due or due soon,
+  **Back Up Now…**, **Restore a Backup…**, **Settings**, and **Exit**.
+- **Go** – any screen, without going back to the main menu first: **Main
+  Menu** (⌘0 or Ctrl+0), **Add New Box** (⌘N or Ctrl+N), **Manage Boxes**,
+  **Renewals**, **Calendar**, **Payments**, and **Box Inventory** (⌘1 to ⌘5,
+  or Ctrl+1 to Ctrl+5), and the **Prices…** window.
+- **Help** – **Show Data Folder**, and **About Mailbox Manager**, which says
+  which version is installed.
+
 ### Renewing a box
 
 Select a box on Renewals or Manage Boxes, or open its details, and click

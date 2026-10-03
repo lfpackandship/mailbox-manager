@@ -76,11 +76,14 @@ final class RestoreView {
   };
 
   /**
-   * Opens the restore window on top of the settings window. After a
-   * successful restore both windows close and the main window returns to the
-   * main menu, so no screen shows the replaced data.
+   * Opens the restore window on top of the settings window or the main
+   * window. After a successful restore the restore and settings windows
+   * close and the main window returns to the main menu, so no screen shows
+   * the replaced data.
    *
-   * @param settingsWindow the settings window, which this window blocks while open
+   * @param settingsWindow the window it's opened from, which it blocks while
+   *     open: the settings window, or the main window when opened from the
+   *     File menu
    * @param mainWindow the main window
    */
   static void show(Stage settingsWindow, Stage mainWindow) {
@@ -252,7 +255,7 @@ final class RestoreView {
     }
 
     restoreWindow.close();
-    settingsWindow.close();
+    SettingsView.close();
     MainMenuView.show(mainWindow);
 
     var done = new Alert(AlertType.INFORMATION,

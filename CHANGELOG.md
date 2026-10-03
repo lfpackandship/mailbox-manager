@@ -28,6 +28,11 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   Payments, to print a list or save it as a file Excel or Google Sheets
   opens. Printing opens the computer's own Print window. The spreadsheet from Manage Boxes has everything recorded for each
   box.
+- A fuller menu bar on every screen. **File** has **Print Price Sheet…**,
+  **Print Renewal Reminders…**, **Back Up Now…**, and **Restore a Backup…**
+  alongside Settings and Exit; **Go** opens any screen or the Prices window
+  directly, with keyboard shortcuts; and **Help** has **Show Data Folder**
+  and **About Mailbox Manager**, which shows the version.
 - Restoring from Google Drive: **Restore…** in Settings has a **Google
   Drive…** button that lists the backups in Google Drive and downloads and
   restores the one chosen.

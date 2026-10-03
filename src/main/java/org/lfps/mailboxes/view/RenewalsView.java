@@ -117,6 +117,21 @@ public class RenewalsView {
   }
 
   /**
+   * Returns the open boxes listed on Renewals, past due first and then those
+   * due soon, each earliest first, for printing renewal reminders.
+   *
+   * @return the boxes
+   * @throws SQLException if they can't be read
+   */
+  static List<Mailbox> dueBoxes() throws SQLException {
+    var today = LocalDate.now();
+    var mailboxes = new MailboxRepository().findOpen();
+    var boxes = new ArrayList<Mailbox>(pastDue(mailboxes, today));
+    boxes.addAll(upcoming(mailboxes, today, new SettingsRepository().getInt(Setting.RENEWAL_WINDOW_DAYS)));
+    return boxes;
+  }
+
+  /**
    * Returns the mailboxes whose end date is before today, earliest first.
    */
   static List<Mailbox> pastDue(List<Mailbox> mailboxes, LocalDate today) {
