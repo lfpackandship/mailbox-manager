@@ -111,7 +111,6 @@ public class AddBoxView {
       } else if (!forwardingOnly) {
         errors.append(BoxNumberChecks.problem(boxNumber.getText(), 0));
       }
-      errors.append(EditBoxView.forwardingProblem(forwardingOnly, forwardingEditor.getAddresses()));
 
       var phone = phoneField.getText();
       if (!phone.isBlank() && !Validators.isValidPhone(phone)) {

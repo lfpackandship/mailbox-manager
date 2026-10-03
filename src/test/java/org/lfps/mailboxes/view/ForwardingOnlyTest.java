@@ -87,7 +87,7 @@ class ForwardingOnlyTest {
   }
 
   @Test
-  void addNewBoxAcceptsATakenNumberForForwardingButNeedsAnAddress() throws SQLException {
+  void addNewBoxAcceptsATakenNumberForForwarding() throws SQLException {
     new BoxInventoryRepository().add(List.of("12"), "Small");
     mailboxes.insert(rented("12", "Holder"));
 
@@ -99,21 +99,26 @@ class ForwardingOnlyTest {
       checkBox().setSelected(true);
       buttonLabeled("Submit").fire();
     });
-    assertTrue(FxTestSupport.call(() -> labelsText().contains("Add the address to forward their mail to")));
-    assertEquals(1, mailboxes.findAll().size());
-
-    FxTestSupport.run(() -> {
-      fieldWithPrompt("123 Main St").setText("88 Palm Way");
-      fieldWithPrompt("Springfield").setText("Naples");
-      fieldWithPrompt("IL").setText("FL");
-      fieldWithPrompt("62701").setText("34102");
-      ((Button) mainWindow.getScene().lookup("#addForwardingButton")).fire();
-      buttonLabeled("Submit").fire();
-    });
 
     var saved = mailboxes.findAll().stream().filter(Mailbox::isForwardingOnly).collect(Collectors.toList());
     assertEquals(1, saved.size());
     assertEquals("12", saved.get(0).getBoxNumber());
+  }
+
+  @Test
+  void theDetailsSayWhenThereIsNoForwardingAddressYet() throws SQLException {
+    mailboxes.insert(new Mailbox(0, "Ada", "Former", null, "12", null, "", null, null, null, null, null, null,
+        null, null, true));
+    var box = mailboxes.findAll().get(0);
+
+    FxTestSupport.run(() -> BoxDetailsView.show(mainWindow, box, () -> { }, () -> { }));
+
+    var details = FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w.getScene() != null && w.getScene().lookup("#detailForwardingOnly") != null)
+        .findFirst()
+        .orElseThrow());
+    assertTrue(FxTestSupport.call(() -> ((Label) details.getScene().lookup("#detailForwardingOnly")).getText())
+        .endsWith("No forwarding address is recorded yet."));
   }
 
   @Test
@@ -250,12 +255,6 @@ class ForwardingOnlyTest {
         .filter(b -> text.equals(b.getText()))
         .findFirst()
         .orElseThrow();
-  }
-
-  private String labelsText() {
-    return mainWindow.getScene().getRoot().lookupAll(".label").stream()
-        .map(node -> ((Label) node).getText())
-        .collect(Collectors.joining("\n"));
   }
 
 }

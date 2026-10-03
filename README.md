@@ -179,7 +179,8 @@ the Prices window.
 Some customers don't rent a box here; the shop just forwards their mail,
 which still arrives addressed to a box number, often the box they used to
 rent. Tick **Forwarding only** on Add New Box or Edit Box for them, and add
-the address to forward to under **Forwarding Addresses**.
+the address to forward to under **Forwarding Addresses**. Until an address is
+added, the box's details say none is recorded yet.
 
 A forwarding-only box doesn't hold its box number, so the box with that
 number can be rented to someone else, and the Box Inventory counts it as

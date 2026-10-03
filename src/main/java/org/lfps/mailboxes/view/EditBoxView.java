@@ -4,8 +4,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 
 import javafx.geometry.Insets;
-import java.util.List;
-
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -18,7 +16,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.MailboxRepository;
-import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
 import org.lfps.mailboxes.util.Validators;
@@ -89,7 +86,6 @@ public class EditBoxView {
         // check an open box whose number changed or that now holds it.
         errors.append(BoxNumberChecks.problem(boxNumberField.getText(), mailbox.getId()));
       }
-      errors.append(forwardingProblem(forwardingOnly, forwardingEditor.getAddresses()));
 
       var phone = phoneField.getText();
       if (!phone.isBlank() && !Validators.isValidPhone(phone)) {
@@ -180,18 +176,6 @@ public class EditBoxView {
       node.setDisable(checked);
     }
     return box;
-  }
-
-  /**
-   * Checks what a forwarding-only box needs: somewhere to forward the mail.
-   *
-   * @return a message describing the problem, ending in a newline, or an
-   *     empty string if there is none
-   */
-  static String forwardingProblem(boolean forwardingOnly, List<ForwardingAddress> addresses) {
-    return forwardingOnly && addresses.isEmpty()
-        ? "Add the address to forward their mail to under Forwarding Addresses.\n"
-        : "";
   }
 
   /**
