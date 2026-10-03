@@ -34,32 +34,43 @@ it before making changes. This file covers how to work in the repository.
 
 ## When finishing a release
 
-Follow the README's release steps. Then give the user release notes to paste
-into the GitHub release, in this format (match the earlier releases on the
-releases page, and write for the people who use the app, not developers):
+Follow the README's release steps. Then, without being asked, give the user
+release notes to paste into the GitHub release (edit the release, replace the
+generated notes). They're for the people who use the app, not developers.
+Write them like the earlier releases on the releases page:
+
+- **What's new** first. Each feature starts with a short bold sentence
+  naming it, followed by what it does and where to find it, in the app's own
+  words (button and screen names in bold, as they appear). Use numbered
+  steps when there's something to set up, and bullets for details.
+- **Fixes** next, if there are any: what went wrong, as the user saw it,
+  in the past tense, and that it's fixed.
+- **Installing or upgrading** last, always, with the download table. Say if
+  the data is upgraded the first time the new version starts.
+- End with a "See the README for more on …" line for anything new that the
+  README explains further.
+- No commit hashes, code names, file paths inside the app, or developer
+  terms. Leave out sections that don't apply.
+
+For example, the notes for 1.5.2:
 
 ```markdown
 ## What's new
 
-**Feature name.** What it does and how to use it, step by step if needed.
-
-## Fixes
-
-- What was wrong, described as the user saw it.
+**The phone number is now optional.** On Add New Box and Edit Box, only the box number is required. If you do enter a phone number, it still has to be a complete 10-digit number, so typos are caught.
 
 ## Installing or upgrading
 
-Download the installer for your computer below and install it over the old
-version. Your boxes, settings, and backups carry over automatically.
+Download the installer for your computer below and install it over the old version. Your boxes, settings, and backups carry over automatically.
 
 | Computer | File |
 | --- | --- |
-| Windows | mailbox-manager-x.y.z-windows-x64.msi |
-| Mac with Apple silicon (M1 and later) | mailbox-manager-x.y.z-mac-arm64.dmg |
-| Mac with Intel | mailbox-manager-x.y.z-mac-x64.dmg |
-| Linux | mailbox-manager-x.y.z-linux-x64.AppImage |
+| Windows | mailbox-manager-1.5.2-windows-x64.msi |
+| Mac with Apple silicon (M1 and later) | mailbox-manager-1.5.2-mac-arm64.dmg |
+| Mac with Intel | mailbox-manager-1.5.2-mac-x64.dmg |
+| Linux | mailbox-manager-1.5.2-linux-x64.AppImage |
 ```
 
-Leave out sections that don't apply, such as Fixes in a release with none.
-After the build finishes, check that its annotations don't include the
-"GOOGLE_CLIENT_ID isn't set" warning.
+Base the notes on the release's CHANGELOG.md entry. After the build
+finishes, check that its annotations don't include the "GOOGLE_CLIENT_ID
+isn't set" warning; if they do, the installers can't connect to Google Drive.
