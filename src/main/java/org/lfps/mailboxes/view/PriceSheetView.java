@@ -114,8 +114,7 @@ final class PriceSheetView {
       printBtn.setDisable(content == null || count == 0);
     };
     for (var box : boxes) {
-      // A forwarding-only box has no box here to put a reminder in.
-      var property = new SimpleBooleanProperty(!box.isForwardingOnly());
+      var property = new SimpleBooleanProperty(true);
       property.addListener((obs, was, now) -> updatePrintButton.run());
       ticked.put(box, property);
     }
@@ -163,9 +162,7 @@ final class PriceSheetView {
       noneBtn.setOnAction(e -> ticked.values().forEach(property -> property.set(false)));
 
       var explanation = new Label("Tick the boxes to print a reminder for. Each reminder prints on its own page. "
-          + "Click a box to preview its reminder."
-          + (boxes.stream().anyMatch(Mailbox::isForwardingOnly)
-              ? " Forwarding-only boxes start unticked, as there's no box to put a reminder in." : ""));
+          + "Click a box to preview its reminder.");
       explanation.setWrapText(true);
       left.getChildren().addAll(explanation, list, new HBox(8, allBtn, noneBtn));
       list.getSelectionModel().select(0);

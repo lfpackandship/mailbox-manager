@@ -57,7 +57,15 @@ public enum Setting {
 
   /** The message on a renewal reminder, under the box's end date. */
   REMINDER_MESSAGE("reminder_message",
-      "To keep your mailbox, please renew at the counter. Current prices are below, with your box's size circled.");
+      "To keep your mailbox, please renew at the counter. Current prices are below, with your box's size circled."),
+
+  /**
+   * The message on a renewal reminder for a forwarding-only box, under its
+   * end date. Box prices don't apply to forwarding, so it shouldn't refer to
+   * them.
+   */
+  FORWARDING_REMINDER_MESSAGE("forwarding_reminder_message",
+      "To keep your mail forwarded, please renew. Call us or stop by the counter.");
 
   private final String key;
   private final String defaultValue;

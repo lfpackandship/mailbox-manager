@@ -127,6 +127,17 @@ class PriceSheetTest {
   }
 
   @Test
+  void aForwardingReminderHasItsOwnHeadingAndMessage() {
+    var forwarding = new Mailbox(0, "Ada", "Lovelace", null, "12", null, "", null, null, null, null, null,
+        null, null, null, true).withEndDate(LocalDate.of(2026, 10, 31));
+    var page = layOut(PriceSheet.page(content(), forwarding, null, TODAY));
+
+    assertEquals("Mail Forwarding Renewal Reminder", FxTestSupport.call(() -> label(page, "reminderTitle").getText()));
+    assertEquals("Please renew your forwarding.", FxTestSupport.call(() -> label(page, "reminderMessage").getText()));
+    assertNull(FxTestSupport.call(() -> page.lookup("#sizeCircle")));
+  }
+
+  @Test
   void aBoxWithNoSizeHasNoSizeCircledWithoutDefaultPrices() {
     var page = layOut(PriceSheet.page(content(), box(LocalDate.of(2026, 10, 31)), null, TODAY));
 
@@ -190,7 +201,7 @@ class PriceSheetTest {
   private static PriceSheet.Content content() {
     return new PriceSheet.Content("Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045",
         "Mailbox Service Includes:\n- 24-Hour Access to Mailbox\n\n* requires funding", "Plus a key deposit",
-        "Please renew at the counter.", List.of(3, 6, 12), List.of(
+        "Please renew at the counter.", "Please renew your forwarding.", List.of(3, 6, 12), List.of(
             new PriceSheet.Column("Small", "Small", "3¾\" x 5\" x 14\"", Map.of(3, 9000L, 6, 15000L, 12, 24000L)),
             new PriceSheet.Column("Medium", "Medium", "", Map.of(3, 10500L, 6, 18000L, 12, 30000L)),
             new PriceSheet.Column("Large", "Large", "", Map.of(3, 15000L, 6, 26000L, 12, 40000L))));

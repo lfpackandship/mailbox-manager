@@ -41,7 +41,8 @@ import org.lfps.mailboxes.util.RentalLengths;
  * what the service includes, and a table of prices with a column for each box
  * size and a row for each rental length. As a renewal reminder, it also says
  * which box it's for and when its rental ends, with the end date and the
- * box's size circled.
+ * box's size circled. A forwarding-only box's reminder is about renewing its
+ * mail forwarding instead, with its own message and no size circled.
  */
 final class PriceSheet {
 
@@ -83,6 +84,7 @@ final class PriceSheet {
     final String intro;
     final String note;
     final String reminderMessage;
+    final String forwardingReminderMessage;
 
     /** The rental lengths with a price, one row each, shortest first. */
     final List<Integer> lengths;
@@ -94,12 +96,13 @@ final class PriceSheet {
     final List<Column> columns;
 
     Content(String shopName, String shopDetails, String intro, String note, String reminderMessage,
-        List<Integer> lengths, List<Column> columns) {
+        String forwardingReminderMessage, List<Integer> lengths, List<Column> columns) {
       this.shopName = shopName;
       this.shopDetails = shopDetails;
       this.intro = intro;
       this.note = note;
       this.reminderMessage = reminderMessage;
+      this.forwardingReminderMessage = forwardingReminderMessage;
       this.lengths = lengths;
       this.columns = columns;
     }
@@ -170,7 +173,8 @@ final class PriceSheet {
 
     return new Content(settings.get(Setting.SHOP_NAME), settings.get(Setting.SHOP_DETAILS),
         settings.get(Setting.PRICE_SHEET_INTRO), settings.get(Setting.PRICE_SHEET_NOTE),
-        settings.get(Setting.REMINDER_MESSAGE), pricedLengths, columns);
+        settings.get(Setting.REMINDER_MESSAGE), settings.get(Setting.FORWARDING_REMINDER_MESSAGE), pricedLengths,
+        columns);
   }
 
   /**
@@ -250,7 +254,9 @@ final class PriceSheet {
   }
 
   private static Node reminder(Marked marked, Content content, Mailbox mailbox, LocalDate today) {
-    var title = new Label("Mailbox Renewal Reminder");
+    var forwarding = mailbox.isForwardingOnly();
+    var title = new Label(forwarding ? "Mail Forwarding Renewal Reminder" : "Mailbox Renewal Reminder");
+    title.setId("reminderTitle");
     title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
     var holder = mailbox.getHolderName();
@@ -277,8 +283,9 @@ final class PriceSheet {
       marked.circle("endDateCircle", 7, 3, date);
     }
 
-    if (!content.reminderMessage.isBlank()) {
-      var message = new Label(content.reminderMessage.strip());
+    var text = forwarding ? content.forwardingReminderMessage : content.reminderMessage;
+    if (!text.isBlank()) {
+      var message = new Label(text.strip());
       message.setId("reminderMessage");
       message.setWrapText(true);
       card.getChildren().add(message);

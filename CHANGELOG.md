@@ -10,6 +10,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 - Settings is split into tabs: **General**, **Price Sheet and Reminders**,
   **Backups**, and **About**, with **Save** and **Close** always showing below
   them. If something can't be saved, Settings shows the tab it's on.
+- **Print Reminders…** now ticks forwarding-only boxes too, instead of leaving
+  them unticked. Their reminder is headed **Mail Forwarding Renewal Reminder**
+  and has its own message, set in Settings as **Forwarding reminder message**,
+  since box prices don't apply to forwarding.
 
 ### Fixed
 

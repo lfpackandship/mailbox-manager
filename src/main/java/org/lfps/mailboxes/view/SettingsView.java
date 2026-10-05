@@ -148,6 +148,7 @@ public class SettingsView {
     sheetFields.put(Setting.PRICE_SHEET_INTRO, textArea("priceSheetIntroField", 7));
     sheetFields.put(Setting.PRICE_SHEET_NOTE, textArea("priceSheetNoteField", 2));
     sheetFields.put(Setting.REMINDER_MESSAGE, textArea("reminderMessageField", 3));
+    sheetFields.put(Setting.FORWARDING_REMINDER_MESSAGE, textArea("forwardingReminderMessageField", 2));
 
     var secondFolderField = new TextField();
     secondFolderField.setId("secondBackupFolderField");
@@ -241,6 +242,7 @@ public class SettingsView {
         row("Text above the prices:", sheetFields.get(Setting.PRICE_SHEET_INTRO)),
         row("Text below the prices:", sheetFields.get(Setting.PRICE_SHEET_NOTE)),
         row("Reminder message:", sheetFields.get(Setting.REMINDER_MESSAGE)),
+        row("Forwarding reminder message:", sheetFields.get(Setting.FORWARDING_REMINDER_MESSAGE)),
         row("", printSheetBtn));
 
     var calendar = section("Calendar",

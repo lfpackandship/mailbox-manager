@@ -170,7 +170,7 @@ the [price table](#prices), with a column for each size and a row for each
 rental length that has a price.
 
 The shop's name, address, and phone number, the text above and below the
-prices, and the reminder's message are set in Settings under
+prices, and the reminders' messages are set in Settings under
 [Price Sheet and Reminders](#settings). What each size measures is entered on
 the Prices window.
 
@@ -191,8 +191,10 @@ the menu next to the search field shows just these.
 
 Forwarding-only boxes still have an end date, appear on Renewals and the
 Calendar, and are renewed the same way, but no box price is filled in when
-renewing, and the key fields are turned off. **Print Reminders…** leaves them
-unticked, since there's no box to put a reminder in.
+renewing, and the key fields are turned off. **Print Reminders…** ticks them
+like any other box, to mail or hand over. Their reminder is headed **Mail
+Forwarding Renewal Reminder**, has no size circled, and has its own message,
+set in Settings as **Forwarding reminder message**.
 
 ### Keys and deposits
 
@@ -284,8 +286,9 @@ On **General**:
 
 On **Price Sheet and Reminders**: the shop's name, its address and phone, the
 text above the prices (start a line with `-` to make it a bullet point), the
-text below them, and the message on renewal reminders. They start out as on
-the shop's printed price sheet. **Print Price Sheet…** prints it.
+text below them, and the messages on renewal reminders, with a separate one
+for forwarding-only boxes. They start out as on the shop's printed price sheet.
+**Print Price Sheet…** prints it.
 
 On **Backups**:
 
