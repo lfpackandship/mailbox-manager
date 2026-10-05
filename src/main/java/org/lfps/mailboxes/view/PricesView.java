@@ -189,7 +189,7 @@ final class PricesView {
     stage.setScene(new Scene(scrollPane));
     stage.setOnHidden(e -> window = null);
     window = stage;
-    stage.show();
+    AppWindow.showWithinScreen(stage);
   }
 
   /**

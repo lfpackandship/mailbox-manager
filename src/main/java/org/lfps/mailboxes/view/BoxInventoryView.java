@@ -369,7 +369,7 @@ public class BoxInventoryView {
     stage.initModality(Modality.WINDOW_MODAL);
     stage.setTitle("Choose an Empty Box");
     stage.setScene(new Scene(content));
-    stage.show();
+    AppWindow.showWithinScreen(stage);
   }
 
   /**

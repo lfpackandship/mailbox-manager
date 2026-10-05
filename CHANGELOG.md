@@ -3,6 +3,24 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## 1.7.2 – 2026-10-05
+
+### Changed
+
+- Settings is split into tabs: **General**, **Price Sheet and Reminders**,
+  **Backups**, and **About**, with **Save** and **Close** always showing below
+  them. If something can't be saved, Settings shows the tab it's on.
+- **Print Reminders…** now ticks forwarding-only boxes too, instead of leaving
+  them unticked. Their reminder is headed **Mail Forwarding Renewal Reminder**
+  and has its own message, set in Settings as **Forwarding reminder message**,
+  since box prices don't apply to forwarding.
+
+### Fixed
+
+- Settings and other separate windows, such as Prices and a box's details,
+  could be taller than the screen, putting their buttons out of reach,
+  especially with larger text. They now fit on the screen and scroll instead.
+
 ## 1.7.1 – 2026-10-03
 
 ### Changed

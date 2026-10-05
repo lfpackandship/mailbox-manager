@@ -149,7 +149,7 @@ final class RenewBoxView {
     stage.initModality(Modality.WINDOW_MODAL);
     stage.setTitle("Renew Box " + mailbox.getBoxNumber());
     stage.setScene(new Scene(scrollPane));
-    stage.show();
+    AppWindow.showWithinScreen(stage);
   }
 
   private RenewBoxView() {

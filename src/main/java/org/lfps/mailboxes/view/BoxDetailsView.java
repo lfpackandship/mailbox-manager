@@ -142,7 +142,7 @@ final class BoxDetailsView {
       }
     });
     window = stage;
-    stage.show();
+    AppWindow.showWithinScreen(stage);
   }
 
   /**

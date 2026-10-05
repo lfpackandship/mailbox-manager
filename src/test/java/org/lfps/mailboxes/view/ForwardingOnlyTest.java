@@ -189,7 +189,7 @@ class ForwardingOnlyTest {
   }
 
   @Test
-  void remindersForForwardingBoxesStartUnticked() throws SQLException {
+  void remindersForForwardingBoxesStartTicked() throws SQLException {
     mailboxes.insert(rented("12", "Holder").withEndDate(LocalDate.now().minusDays(1)));
     mailboxes.insert(forwarding("12", "Former").withEndDate(LocalDate.now().minusDays(1)));
 
@@ -200,7 +200,7 @@ class ForwardingOnlyTest {
         .filter(w -> w.getScene() != null && w.getScene().lookup("#printButton") != null)
         .findFirst()
         .orElseThrow());
-    assertEquals("Print 1 Reminder",
+    assertEquals("Print 2 Reminders",
         FxTestSupport.call(() -> ((Button) window.getScene().lookup("#printButton")).getText()));
   }
 

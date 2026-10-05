@@ -170,7 +170,7 @@ the [price table](#prices), with a column for each size and a row for each
 rental length that has a price.
 
 The shop's name, address, and phone number, the text above and below the
-prices, and the reminder's message are set in Settings under
+prices, and the reminders' messages are set in Settings under
 [Price Sheet and Reminders](#settings). What each size measures is entered on
 the Prices window.
 
@@ -191,8 +191,10 @@ the menu next to the search field shows just these.
 
 Forwarding-only boxes still have an end date, appear on Renewals and the
 Calendar, and are renewed the same way, but no box price is filled in when
-renewing, and the key fields are turned off. **Print Reminders…** leaves them
-unticked, since there's no box to put a reminder in.
+renewing, and the key fields are turned off. **Print Reminders…** ticks them
+like any other box, to mail or hand over. Their reminder is headed **Mail
+Forwarding Renewal Reminder**, has no size circled, and has its own message,
+set in Settings as **Forwarding reminder message**.
 
 ### Keys and deposits
 
@@ -263,8 +265,12 @@ addresses; the notes help staff pick the right one.
 ### Settings
 
 Open **File → Settings** (⌘, on a Mac, Ctrl+, on Windows and Linux). Settings
-opens in its own window, so whatever you were doing stays as it was. Changes
-take effect when you click **Save**.
+opens in its own window, so whatever you were doing stays as it was. It's
+split into tabs: **General**, **Price Sheet and Reminders**, **Backups**, and
+**About**. Changes on every tab take effect when you click **Save**, below the
+tabs. If something can't be saved, Settings shows the tab it's on.
+
+On **General**:
 
 - **Text size** – Normal, Large, or Extra large, for the whole app. Larger
   text applies right away; restart the app to also enlarge its window to match.
@@ -274,19 +280,24 @@ take effect when you click **Save**.
 - **Prices for each size** – opens the [price table](#prices).
 - **Key deposit per key** – fills in the key deposit on Add New Box and Edit
   Box. Leave it blank if you don't take a deposit.
-- **Price Sheet and Reminders** – the shop's name, its address and phone, the
-  text above the prices (start a line with `-` to make it a bullet point), the
-  text below them, and the message on renewal reminders. They start out as on
-  the shop's printed price sheet. **Print Price Sheet…** prints it.
 - **Week starts on** – Sunday or Monday, for the Calendar.
 - **Show boxes due within (days)** – how far ahead the Renewals screen looks.
   Default 30.
+
+On **Price Sheet and Reminders**: the shop's name, its address and phone, the
+text above the prices (start a line with `-` to make it a bullet point), the
+text below them, and the messages on renewal reminders, with a separate one
+for forwarding-only boxes. They start out as on the shop's printed price sheet.
+**Print Price Sheet…** prints it.
+
+On **Backups**:
+
 - **Daily backups to keep** – how many daily backups to keep before the oldest
   are deleted. Default 30.
 - **Also copy backups to** – see [A second copy of your backups](#a-second-copy-of-your-backups).
 - **Google Drive** – see [Backing up to Google Drive](#backing-up-to-google-drive).
 
-The Backups section also has **Back Up Now…**, **Restore…**, and an **Open**
+The Backups tab also has **Back Up Now…**, **Restore…**, and an **Open**
 button that shows the data folder in Explorer or Finder.
 
 ## Your data and backups
@@ -310,12 +321,12 @@ time it starts.
 The daily backups are on the same computer as the data, so they won't help if
 the computer itself fails. To keep copies somewhere else:
 
-- **Automatically:** in Settings, next to **Also copy backups to**, click
-  **Choose…** and pick a folder on a USB drive, a network drive, or a synced
-  folder such as OneDrive or Dropbox, then click **Save**. Each daily backup is
-  copied there too, and old copies are deleted the same way. If the folder
-  isn't available when the app starts (for example, the USB drive is
-  unplugged), the app shows a warning and tries again next time.
+- **Automatically:** on the Backups tab of Settings, next to **Also copy
+  backups to**, click **Choose…** and pick a folder on a USB drive, a network
+  drive, or a synced folder such as OneDrive or Dropbox, then click **Save**.
+  Each daily backup is copied there too, and old copies are deleted the same
+  way. If the folder isn't available when the app starts (for example, the
+  USB drive is unplugged), the app shows a warning and tries again next time.
 - **Whenever you like:** click **Back Up Now…** and pick a folder. It saves a
   backup named with the date and time, such as
   `mailboxes-backup-2026-09-26-143005.db`. These are never deleted
@@ -326,8 +337,8 @@ the computer itself fails. To keep copies somewhere else:
 The app can also put a copy of each daily backup in your Google Drive, so your
 data is safe even if the computer is lost or broken. To turn it on:
 
-1. Open **File → Settings** and, next to **Google Drive**, click
-   **Connect Google Drive**.
+1. Open **File → Settings**, go to **Backups**, and next to **Google
+   Drive**, click **Connect Google Drive**.
 2. Your web browser opens Google's sign-in page. Sign in to the Google account
    you want the backups in, and click **Allow**.
 3. Go back to the app. It shows "Backing up to Google Drive as" and your
@@ -351,7 +362,7 @@ Drive are kept. To use a backup from Google Drive, see
 
 ### Restoring a backup
 
-1. Open **File → Settings** and click **Restore…**.
+1. Open **File → Settings**, go to **Backups**, and click **Restore…**.
 2. Pick a backup from the list, or click **Choose File…** to use one saved
    somewhere else, such as a USB drive. If Google Drive is connected,
    **Google Drive…** lists the backups there; pick one and click **Download
