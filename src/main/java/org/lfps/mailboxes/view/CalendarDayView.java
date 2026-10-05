@@ -122,7 +122,7 @@ final class CalendarDayView {
       }
     });
     window = stage;
-    stage.show();
+    AppWindow.showWithinScreen(stage);
   }
 
   /**

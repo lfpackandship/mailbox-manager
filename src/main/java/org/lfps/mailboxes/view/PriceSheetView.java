@@ -216,7 +216,7 @@ final class PriceSheetView {
       }
     });
     window = stage;
-    stage.show();
+    AppWindow.showWithinScreen(stage);
   }
 
   /**

@@ -16,9 +16,13 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyCode;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -179,6 +183,46 @@ class SettingsViewTest {
   }
 
   @Test
+  void settingsAreGroupedIntoTabsThatEachScroll() {
+    var window = openSettings();
+
+    var names = FxTestSupport.call(() -> tabs(window).getTabs().stream()
+        .map(Tab::getText).collect(Collectors.toList()));
+    assertEquals(List.of("General", "Price Sheet and Reminders", "Backups", "About"), names);
+    assertEquals("General", selectedTab(window));
+    for (var tab : FxTestSupport.call(() -> tabs(window).getTabs())) {
+      var content = FxTestSupport.call(tab::getContent);
+      assertTrue(content instanceof ScrollPane, "Not scrollable: " + tab.getText());
+    }
+  }
+
+  @Test
+  void aMistakeOnAnotherTabShowsThatTab() {
+    var window = openSettings();
+
+    FxTestSupport.run(() -> {
+      field(window, "backupsToKeepField").setText("0");
+      button(window, "saveButton").fire();
+    });
+
+    assertEquals("Backups", selectedTab(window));
+  }
+
+  @Test
+  void theWindowFitsOnTheScreenWithExtraLargeText() throws SQLException {
+    settings.put(Setting.TEXT_SIZE, TextSize.EXTRA_LARGE.name());
+    try {
+      var window = openSettings();
+
+      var screen = FxTestSupport.call(() -> Screen.getPrimary().getVisualBounds());
+      assertTrue(FxTestSupport.call(window::getHeight) <= screen.getHeight() + 0.5);
+      assertTrue(FxTestSupport.call(window::getWidth) <= screen.getWidth() + 0.5);
+    } finally {
+      settings.put(Setting.TEXT_SIZE, TextSize.NORMAL.name());
+    }
+  }
+
+  @Test
   void enterSaves() throws SQLException {
     var window = openSettings();
 
@@ -265,6 +309,14 @@ class SettingsViewTest {
 
   private static Button button(Stage window, String id) {
     return (Button) window.getScene().lookup("#" + id);
+  }
+
+  private static TabPane tabs(Stage window) {
+    return (TabPane) window.getScene().lookup(".tab-pane");
+  }
+
+  private static String selectedTab(Stage window) {
+    return FxTestSupport.call(() -> tabs(window).getSelectionModel().getSelectedItem().getText());
   }
 
   private static Label resultLabel(Stage window) {

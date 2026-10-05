@@ -15,9 +15,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -38,8 +41,8 @@ import org.lfps.mailboxes.util.SystemInfo;
 
 /**
  * A separate window that lets the user adjust app settings, grouped into
- * sections, and back up or restore their data. To add a setting, declare it
- * in {@link Setting}, add a field for it to a section here (loading it in
+ * tabs, and back up or restore their data. To add a setting, declare it in
+ * {@link Setting}, add a field for it to a tab here (loading it in
  * {@code show} and saving it in the Save button's handler), and read it with
  * {@link SettingsRepository} where it's used.
  */
@@ -57,6 +60,9 @@ public class SettingsView {
   /** The Google Drive part of the open settings window. */
   private static GoogleDriveRow driveRow;
 
+  /** The tab of the open settings window that Google Drive is on. */
+  private static Tab backupsTab;
+
   /**
    * Opens the settings window and starts connecting Google Drive, for when
    * the app has been signed out of it.
@@ -65,6 +71,7 @@ public class SettingsView {
    */
   public static void showAndConnectDrive(Stage owner) {
     show(owner);
+    backupsTab.getTabPane().getSelectionModel().select(backupsTab);
     driveRow.connect();
   }
 
@@ -227,7 +234,7 @@ public class SettingsView {
     sheetExplanation.setWrapText(true);
     sheetExplanation.setStyle("-fx-max-width: 32em;");
 
-    var priceSheet = section("Price Sheet and Reminders",
+    var priceSheet = grid(
         row("", sheetExplanation),
         row("Shop name:", shopNameField),
         row("Address and phone:", sheetFields.get(Setting.SHOP_DETAILS)),
@@ -242,16 +249,23 @@ public class SettingsView {
     var renewals = section("Renewals",
         row("Show boxes due within (days):", renewalWindowField));
 
-    var backups = section("Backups",
+    var backups = grid(
         row("Daily backups to keep:", backupsToKeepField),
         row("Also copy backups to:", new HBox(8, secondFolderField, chooseSecondFolderBtn, clearSecondFolderBtn)),
         row("Google Drive:", drive),
         row("", new HBox(8, backUpNowBtn, restoreBtn)),
         row("Data folder:", new HBox(8, dataFolderField, openDataFolderBtn)));
 
-    var about = section("About",
+    var about = grid(
         row("Java version:", new Label(SystemInfo.javaVersion())),
         row("JavaFX version:", new Label(SystemInfo.javafxVersion())));
+
+    var tabs = new TabPane(
+        tab("General", appearance, boxes, calendar, renewals),
+        tab("Price Sheet and Reminders", priceSheet),
+        tab("Backups", backups),
+        tab("About", about));
+    tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
     var saveBtn = new Button("Save");
     saveBtn.setId("saveButton");
@@ -259,6 +273,8 @@ public class SettingsView {
     saveBtn.setOnAction(e -> {
       var errors = new StringBuilder();
       var numbers = new LinkedHashMap<Setting, Integer>();
+      // The first field with a mistake, to show it if it's on another tab.
+      var firstBadField = new TextField[1];
 
       for (var entry : numberFields.entrySet()) {
         var numberField = entry.getValue();
@@ -268,6 +284,9 @@ public class SettingsView {
         } else {
           errors.append(numberField.label + " must be a whole number from "
               + numberField.min + " to " + numberField.max + ".\n");
+          if (firstBadField[0] == null) {
+            firstBadField[0] = numberField.field;
+          }
         }
       }
 
@@ -276,6 +295,9 @@ public class SettingsView {
         rentalLengths = RentalLengths.format(RentalLengths.parse(rentalLengthsField.getText()));
       } catch (IllegalArgumentException ex) {
         errors.append(ex.getMessage()).append('\n');
+        if (firstBadField[0] == null) {
+          firstBadField[0] = rentalLengthsField;
+        }
       }
 
       String keyDeposit = "";
@@ -284,10 +306,14 @@ public class SettingsView {
         keyDeposit = cents == null ? "" : Money.format(cents);
       } catch (IllegalArgumentException ex) {
         errors.append("Key deposit per key must be an amount in dollars and cents, like 10 or 10.00.\n");
+        if (firstBadField[0] == null) {
+          firstBadField[0] = keyDepositField;
+        }
       }
 
       if (errors.length() > 0) {
         showError(resultLabel, errors.toString().trim());
+        showField(tabs, firstBadField[0]);
         return;
       }
 
@@ -327,25 +353,27 @@ public class SettingsView {
     closeBtn.setCancelButton(true);
     closeBtn.setOnAction(e -> stage.close());
 
-    var content = new VBox(15, appearance, boxes, priceSheet, calendar, renewals, backups, about,
-        new HBox(10, saveBtn, closeBtn), resultLabel);
-    content.setPadding(new Insets(20));
+    // Save and Close stay below the tabs, as they save and close them all.
+    var buttons = new VBox(10, new HBox(10, saveBtn, closeBtn), resultLabel);
+    buttons.setPadding(new Insets(15, 20, 20, 20));
 
-    var scrollPane = new ScrollPane(content);
-    scrollPane.setFitToWidth(true);
-    AppWindow.applyTextSize(scrollPane);
+    var root = new BorderPane(tabs);
+    root.setBottom(buttons);
+    AppWindow.applyTextSize(root);
 
     stage.initOwner(owner);
     stage.setTitle("Settings");
-    stage.setScene(new Scene(scrollPane));
+    stage.setScene(new Scene(root));
     stage.setOnHidden(e -> {
       window = null;
       driveRow = null;
+      backupsTab = null;
       DriveBackup.cancelConnect();
     });
     window = stage;
     driveRow = drive;
-    stage.show();
+    backupsTab = tabs.getTabs().get(2);
+    AppWindow.showWithinScreen(stage);
   }
 
   /**
@@ -433,10 +461,43 @@ public class SettingsView {
     label.setText(message);
   }
 
+  /**
+   * Makes a tab holding the given sections, which scroll if they don't fit,
+   * as happens with larger text.
+   */
+  private static Tab tab(String name, Node... sections) {
+    var content = new VBox(15, sections);
+    content.setPadding(new Insets(20));
+
+    var scrollPane = new ScrollPane(content);
+    scrollPane.setFitToWidth(true);
+    scrollPane.getStyleClass().add("edge-to-edge");
+    return new Tab(name, scrollPane);
+  }
+
+  /**
+   * Shows the tab a field is on, and puts the cursor in the field, so a
+   * mistake on another tab can be found.
+   */
+  private static void showField(TabPane tabs, Node field) {
+    for (var tab : tabs.getTabs()) {
+      for (var node = field; node != null; node = node.getParent()) {
+        if (node == tab.getContent()) {
+          tabs.getSelectionModel().select(tab);
+          field.requestFocus();
+          return;
+        }
+      }
+    }
+  }
+
   private static VBox section(String title, Node[]... rows) {
     var header = new Label(title);
     header.setStyle("-fx-font-size: 1.1em; -fx-font-weight: bold;");
+    return new VBox(8, header, grid(rows));
+  }
 
+  private static GridPane grid(Node[]... rows) {
     var grid = new GridPane();
     grid.setHgap(10);
     grid.setVgap(8);
@@ -445,8 +506,7 @@ public class SettingsView {
       // Keep each control at its own width rather than the widest row's.
       GridPane.setFillWidth(rows[i][1], false);
     }
-
-    return new VBox(8, header, grid);
+    return grid;
   }
 
   private static Node[] row(String label, Node control) {

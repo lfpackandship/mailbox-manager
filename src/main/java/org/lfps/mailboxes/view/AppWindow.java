@@ -19,6 +19,7 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -73,6 +74,30 @@ public final class AppWindow {
     applyTextSize(root);
     stage.setScene(new Scene(root));
     stage.show();
+  }
+
+  /**
+   * Shows a separate window, such as Settings, made smaller if needed so it
+   * fits on the screen. A window is otherwise as big as its contents, which
+   * with larger text or a small laptop screen can put its buttons off the
+   * bottom of the screen. Its contents scroll or shrink to fit instead.
+   *
+   * @param stage the window to show, with its scene already set
+   */
+  public static void showWithinScreen(Stage stage) {
+    stage.show();
+    var centerX = stage.getX() + stage.getWidth() / 2;
+    var centerY = stage.getY() + stage.getHeight() / 2;
+    var screens = Screen.getScreensForRectangle(centerX, centerY, 1, 1);
+    var bounds = (screens.isEmpty() ? Screen.getPrimary() : screens.get(0)).getVisualBounds();
+    if (stage.getWidth() > bounds.getWidth()) {
+      stage.setWidth(bounds.getWidth());
+    }
+    if (stage.getHeight() > bounds.getHeight()) {
+      stage.setHeight(bounds.getHeight());
+    }
+    stage.setX(Math.max(bounds.getMinX(), Math.min(stage.getX(), bounds.getMaxX() - stage.getWidth())));
+    stage.setY(Math.max(bounds.getMinY(), Math.min(stage.getY(), bounds.getMaxY() - stage.getHeight())));
   }
 
   /**

@@ -152,7 +152,7 @@ final class RestoreView {
     stage.initModality(Modality.WINDOW_MODAL);
     stage.setTitle("Restore Backup");
     stage.setScene(new Scene(content));
-    stage.show();
+    AppWindow.showWithinScreen(stage);
   }
 
   /**
@@ -228,7 +228,7 @@ final class RestoreView {
     stage.initModality(Modality.WINDOW_MODAL);
     stage.setTitle("Restore from Google Drive");
     stage.setScene(new Scene(content));
-    stage.show();
+    AppWindow.showWithinScreen(stage);
   }
 
   private static void showStatus(Label label, String message, boolean error) {
