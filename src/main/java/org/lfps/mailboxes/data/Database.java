@@ -28,18 +28,28 @@ import org.sqlite.SQLiteConfig;
  */
 public class Database {
 
+  /** The database file's name. */
   private static final String FILE_NAME = "mailboxes.db";
 
+  /** The folder the database and backups are kept in. */
   private static final Path DATA_DIR = resolveDataDir();
 
+  /** The database file. */
   private static final Path DB_PATH = DATA_DIR.resolve(FILE_NAME);
 
+  /** The folder daily backups are kept in. */
   private static final Path BACKUP_DIR = DATA_DIR.resolve("backups");
 
+  /** The address the database driver opens the database by. */
   private static final String URL = "jdbc:sqlite:" + DB_PATH;
 
+  /** What daily backups are named, such as mailboxes-2026-10-05.db. */
   private static final String DAILY_BACKUP_NAME = "mailboxes-\\d{4}-\\d{2}-\\d{2}\\.db";
 
+  /**
+   * Formats the date and time in the names of backups saved with Back Up Now,
+   * and of the backup saved before a restore.
+   */
   private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss");
 
   /**
@@ -293,6 +303,16 @@ public class Database {
         + "amount_cents INTEGER NOT NULL, "
         + "PRIMARY KEY (size, months))";
 
+    // A price change that starts on a later date: the new price for each size
+    // and length, or NULL for no price. Every row has the same start date, as
+    // there's only one change at a time. On that date they replace the prices.
+    var createScheduledPrices = "CREATE TABLE IF NOT EXISTS scheduled_prices ("
+        + "size TEXT NOT NULL COLLATE NOCASE, "
+        + "months INTEGER NOT NULL, "
+        + "amount_cents INTEGER, "
+        + "starts_on TEXT NOT NULL, "
+        + "PRIMARY KEY (size, months))";
+
     // What each box size measures, such as 3¾" x 5" x 14", for the price sheet.
     var createBoxSizes = "CREATE TABLE IF NOT EXISTS box_sizes ("
         + "size TEXT PRIMARY KEY COLLATE NOCASE, "
@@ -309,6 +329,7 @@ public class Database {
       stmt.execute(createRentalPeriods);
       stmt.execute(createBoxInventory);
       stmt.execute(createPrices);
+      stmt.execute(createScheduledPrices);
       stmt.execute(createBoxSizes);
       stmt.execute(createSettings);
 
@@ -349,6 +370,10 @@ public class Database {
    * Writes a consistent copy of the database to {@code target} under a
    * temporary name, renaming it once complete, so a failure never leaves a
    * partial file that looks like a finished backup.
+   *
+   * @param target where to write the copy; it must not exist
+   * @throws IOException if the copy can't be moved into place
+   * @throws SQLException if the copy can't be made
    */
   private static void writeCopy(Path target) throws IOException, SQLException {
     var partial = target.resolveSibling(target.getFileName() + ".partial");
@@ -370,6 +395,11 @@ public class Database {
    * Deletes all but the newest daily backups in a folder, keeping as many as
    * the {@link Setting#BACKUPS_TO_KEEP} setting allows. Only files named like
    * daily backups are touched.
+   *
+   * @param folder the folder
+   * @throws IOException if the folder can't be listed or a backup can't be
+   *     deleted
+   * @throws SQLException if the setting can't be read
    */
   private static void deleteOldDailyBackups(Path folder) throws IOException, SQLException {
     // Always keep at least today's backup, even if the setting is out of range.
@@ -386,6 +416,13 @@ public class Database {
     }
   }
 
+  /**
+   * Checks that a file is a Mailbox Manager database, before restoring it.
+   *
+   * @param file the file
+   * @throws IllegalArgumentException if it isn't, with a message suitable for
+   *     showing to the user
+   */
   private static void requireMailboxDatabase(Path file) {
     var notABackup = new IllegalArgumentException(
         file.getFileName() + " isn't a Mailbox Manager backup.");
@@ -407,6 +444,13 @@ public class Database {
     }
   }
 
+  /**
+   * Returns when a file was last changed, for sorting backups.
+   *
+   * @param path the file
+   * @return when it was last changed, or the earliest possible time if that
+   *     can't be read
+   */
   private static FileTime lastModified(Path path) {
     try {
       return Files.getLastModifiedTime(path);
@@ -415,6 +459,12 @@ public class Database {
     }
   }
 
+  /**
+   * Returns the folder the app keeps its data in, which depends on the
+   * operating system.
+   *
+   * @return the folder; it may not exist yet
+   */
   private static Path resolveDataDir() {
     var home = Paths.get(System.getProperty("user.home"));
     var os = System.getProperty("os.name", "").toLowerCase();
@@ -428,6 +478,7 @@ public class Database {
     return home.resolve(".mailbox-manager");
   }
 
+  /** Not used: the database is reached with static methods. */
   private Database() {
   }
 

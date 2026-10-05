@@ -197,6 +197,7 @@ class CalendarDayViewTest {
     assertEquals("February 2026", monthShown());
   }
 
+  /** Returns the month the calendar shows, such as "October 2026". */
   private String monthShown() {
     return FxTestSupport.call(() -> ((Label) mainWindow.getScene().getRoot().lookup("#monthLabel")).getText());
   }
@@ -221,10 +222,12 @@ class CalendarDayViewTest {
     assertNull(window("#dayTitle"));
   }
 
+  /** Returns the calendar's cell for a day. */
   private VBox dayCell(LocalDate date) {
     return (VBox) mainWindow.getScene().getRoot().lookup("#day-" + date);
   }
 
+  /** Returns the boxes listed in a day's cell. */
   private List<String> entries(LocalDate date) {
     return FxTestSupport.call(() -> dayCell(date).getChildren().stream()
         .map(node -> ((Label) node).getText())
@@ -232,20 +235,27 @@ class CalendarDayViewTest {
         .collect(Collectors.toList()));
   }
 
+  /** Clicks a day on the calendar. */
   private void clickDay(LocalDate date) {
     click(FxTestSupport.call(() -> dayCell(date)));
   }
 
+  /** Clicks something once with the main mouse button. */
   private static void click(Node node) {
     FxTestSupport.run(() -> Event.fireEvent(node, new MouseEvent(MouseEvent.MOUSE_CLICKED, 0, 0, 0, 0,
         MouseButton.PRIMARY, 1, false, false, false, false, true, false, false, true, false, false, null)));
   }
 
+  /** Returns the table of boxes on a day's window. */
   @SuppressWarnings("unchecked")
   private static TableView<Mailbox> dayTable(Stage day) {
     return (TableView<Mailbox>) day.getScene().lookup("#dayTable");
   }
 
+  /**
+   * Returns the open window containing something matching a selector, or {@code
+   * null}.
+   */
   private static Stage window(String marker) {
     return FxTestSupport.call(() -> Window.getWindows().stream()
         .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup(marker) != null)
@@ -254,10 +264,12 @@ class CalendarDayViewTest {
         .orElse(null));
   }
 
+  /** Returns the text of the label with the given id on a window. */
   private static String text(Stage window, String id) {
     return FxTestSupport.call(() -> ((Label) window.getScene().lookup("#" + id)).getText());
   }
 
+  /** Makes a box with the given names and end date. */
   private static Mailbox box(String boxNumber, String first, String last, String business, LocalDate end) {
     return new Mailbox(0, first, last, business, boxNumber, null, "5551000001", null, null, end, null);
   }

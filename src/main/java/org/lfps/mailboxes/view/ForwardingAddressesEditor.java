@@ -21,6 +21,7 @@ import org.lfps.mailboxes.util.Validators;
  */
 public class ForwardingAddressesEditor extends VBox {
 
+  /** The addresses added so far. */
   private final ListView<ForwardingAddress> addressList = new ListView<>();
 
   /**
@@ -108,6 +109,9 @@ public class ForwardingAddressesEditor extends VBox {
 
   /**
    * Joins items as a list in a sentence: "a", "a and b", or "a, b, and c".
+   *
+   * @param items the items
+   * @return the items joined, such as "a, b, and c"
    */
   static String joinWithAnd(List<String> items) {
     if (items.size() <= 2) {
@@ -116,6 +120,14 @@ public class ForwardingAddressesEditor extends VBox {
     return String.join(", ", items.subList(0, items.size() - 1)) + ", and " + items.get(items.size() - 1);
   }
 
+  /**
+   * Makes a field for part of an address.
+   *
+   * @param id the field's id
+   * @param prompt the hint shown while it's empty
+   * @param widthEm how wide it is, in ems
+   * @return the field
+   */
   private static TextField field(String id, String prompt, int widthEm) {
     var field = new TextField();
     field.setId(id);

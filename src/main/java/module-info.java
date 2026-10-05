@@ -1,3 +1,7 @@
+/**
+ * Mailbox Manager, a desktop app for keeping track of rented mailboxes: who
+ * rents each box, when rentals end, payments, prices, and backups.
+ */
 module org.lfps.mailboxes {
     requires transitive javafx.controls;
 	requires java.desktop;

@@ -7,6 +7,9 @@ import java.sql.SQLException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for saving and reading settings, and their defaults.
+ */
 class SettingsRepositoryTest {
 
   private final SettingsRepository repository = new SettingsRepository();

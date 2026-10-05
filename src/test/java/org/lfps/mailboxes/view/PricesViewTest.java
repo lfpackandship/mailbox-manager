@@ -146,6 +146,7 @@ class PricesViewTest {
     assertEquals("$50.00", FxTestSupport.call(amount::getText));
   }
 
+  /** Opens the Prices window from the Box Inventory screen and returns it. */
   private Stage openPrices() {
     FxTestSupport.run(() -> ((Button) mainWindow.getScene().getRoot().lookup("#inventoryPricesButton")).fire());
     var window = pricesWindow();
@@ -153,6 +154,9 @@ class PricesViewTest {
     return window;
   }
 
+  /**
+   * Returns the open Prices window, or {@code null} if there isn't one.
+   */
   private static Stage pricesWindow() {
     return FxTestSupport.call(() -> Window.getWindows().stream()
         .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup("#pricesSaveButton") != null)
@@ -161,14 +165,17 @@ class PricesViewTest {
         .orElse(null));
   }
 
+  /** Returns the text field with the given id on a window. */
   private static TextField field(Stage window, String id) {
     return (TextField) window.getScene().lookup("#" + id);
   }
 
+  /** Returns the message under the Prices window's Save button. */
   private static String text(Stage window) {
     return FxTestSupport.call(() -> ((Label) window.getScene().lookup("#pricesResultLabel")).getText());
   }
 
+  /** Returns the box number field on Add New Box. */
   private TextField boxNumberField() {
     return mainWindow.getScene().getRoot().lookupAll(".text-field").stream()
         .map(node -> (TextField) node)
@@ -177,6 +184,7 @@ class PricesViewTest {
         .orElseThrow();
   }
 
+  /** Returns the button on the main window with the given text. */
   private Button buttonLabeled(String text) {
     return mainWindow.getScene().getRoot().lookupAll(".button").stream()
         .map(node -> (Button) node)
@@ -185,6 +193,7 @@ class PricesViewTest {
         .orElseThrow();
   }
 
+  /** Deletes the prices, sizes, inventory, and settings from the test database. */
   private static void emptyDatabase() throws SQLException {
     TestSandbox.require();
     Database.prepareDataDir();
@@ -192,6 +201,7 @@ class PricesViewTest {
     try (var conn = Database.connect(); var stmt = conn.createStatement()) {
       stmt.execute("DELETE FROM settings");
       stmt.execute("DELETE FROM prices");
+      stmt.execute("DELETE FROM scheduled_prices");
       stmt.execute("DELETE FROM box_sizes");
       stmt.execute("DELETE FROM box_inventory");
     }

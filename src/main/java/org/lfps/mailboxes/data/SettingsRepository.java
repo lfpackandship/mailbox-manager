@@ -11,8 +11,14 @@ import java.sql.SQLException;
  */
 public class SettingsRepository {
 
+  /** Makes a repository for the app's database. */
+  public SettingsRepository() {
+  }
+
+  /** Reads a setting's value. */
   private static final String SELECT_SQL = "SELECT value FROM settings WHERE key = ?";
 
+  /** Saves a setting, replacing its earlier value. */
   private static final String UPSERT_SQL = "INSERT INTO settings (key, value) VALUES (?, ?) "
       + "ON CONFLICT(key) DO UPDATE SET value = excluded.value";
 

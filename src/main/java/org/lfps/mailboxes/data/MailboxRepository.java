@@ -23,44 +23,61 @@ import org.lfps.mailboxes.util.BoxNumbers;
  */
 public class MailboxRepository {
 
+  /** Makes a repository for the app's database. */
+  public MailboxRepository() {
+  }
+
+  /** Adds a mailbox. */
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
       + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date, notes, "
       + "closed_date, key_count, key_deposit_cents, forwarding_only) "
       + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+  /** Reads every mailbox. */
   private static final String SELECT_ALL_SQL = "SELECT id, first_name, last_name, "
       + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date, key_count, "
       + "key_deposit_cents, forwarding_only FROM mailboxes";
 
+  /** Replaces a mailbox's details. */
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
       + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ?, notes = ?, "
       + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ? WHERE id = ?";
 
+  /** Checks whether another open, rented box has a box number. */
   private static final String BOX_NUMBER_TAKEN_SQL = "SELECT 1 FROM mailboxes "
       + "WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? AND closed_date IS NULL AND forwarding_only = 0 "
       + "LIMIT 1";
 
+  /** Closes or reopens a mailbox. */
   private static final String SET_CLOSED_DATE_SQL = "UPDATE mailboxes SET closed_date = ? WHERE id = ?";
 
+  /** Deletes a mailbox. */
   private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
 
+  /** Deletes a mailbox's rental history. */
   private static final String DELETE_RENTAL_PERIODS_SQL = "DELETE FROM rental_periods WHERE mailbox_id = ?";
 
+  /** Adds an alternate business name to a mailbox. */
   private static final String INSERT_BUSINESS_NAME_SQL =
       "INSERT INTO business_names (mailbox_id, name) VALUES (?, ?)";
 
+  /** Reads a mailbox's alternate business names, in the order they were added. */
   private static final String SELECT_BUSINESS_NAMES_SQL =
       "SELECT name FROM business_names WHERE mailbox_id = ? ORDER BY id";
 
+  /** Deletes a mailbox's alternate business names. */
   private static final String DELETE_BUSINESS_NAMES_SQL =
       "DELETE FROM business_names WHERE mailbox_id = ?";
 
+  /** Adds a forwarding address to a mailbox. */
   private static final String INSERT_FORWARDING_ADDRESS_SQL = "INSERT INTO forwarding_addresses "
       + "(mailbox_id, street, unit, city, state, zip, note) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
+  /** Reads a mailbox's forwarding addresses, in the order they were added. */
   private static final String SELECT_FORWARDING_ADDRESSES_SQL = "SELECT street, unit, city, state, zip, note "
       + "FROM forwarding_addresses WHERE mailbox_id = ? ORDER BY id";
 
+  /** Deletes a mailbox's forwarding addresses. */
   private static final String DELETE_FORWARDING_ADDRESSES_SQL =
       "DELETE FROM forwarding_addresses WHERE mailbox_id = ?";
 
@@ -259,6 +276,14 @@ public class MailboxRepository {
     }
   }
 
+  /**
+   * Fills in a mailbox's details as the first 13 parameters of an insert or
+   * update.
+   *
+   * @param stmt the insert or update
+   * @param mailbox the mailbox
+   * @throws SQLException if a parameter can't be set
+   */
   private void bindMailboxFields(PreparedStatement stmt, Mailbox mailbox) throws SQLException {
     stmt.setString(1, mailbox.getFirstName());
     stmt.setString(2, mailbox.getLastName());
@@ -275,10 +300,24 @@ public class MailboxRepository {
     stmt.setInt(13, mailbox.isForwardingOnly() ? 1 : 0);
   }
 
+  /**
+   * Reads a date stored as text, such as 2026-10-05.
+   *
+   * @param value the stored date, or {@code null}
+   * @return the date, or {@code null} if there's none
+   */
   private static LocalDate date(String value) {
     return value == null ? null : LocalDate.parse(value);
   }
 
+  /**
+   * Adds alternate business names to a mailbox.
+   *
+   * @param conn the connection, which may be in a transaction
+   * @param mailboxId the mailbox's id
+   * @param names the names; blank ones are skipped
+   * @throws SQLException if they can't be added
+   */
   private void insertBusinessNames(Connection conn, int mailboxId, List<String> names) throws SQLException {
     try (PreparedStatement stmt = conn.prepareStatement(INSERT_BUSINESS_NAME_SQL)) {
       for (var name : names) {
@@ -293,6 +332,13 @@ public class MailboxRepository {
     }
   }
 
+  /**
+   * Deletes a mailbox's alternate business names.
+   *
+   * @param conn the connection, which may be in a transaction
+   * @param mailboxId the mailbox's id
+   * @throws SQLException if they can't be deleted
+   */
   private void deleteBusinessNames(Connection conn, int mailboxId) throws SQLException {
     try (PreparedStatement stmt = conn.prepareStatement(DELETE_BUSINESS_NAMES_SQL)) {
       stmt.setInt(1, mailboxId);
@@ -300,6 +346,14 @@ public class MailboxRepository {
     }
   }
 
+  /**
+   * Adds forwarding addresses to a mailbox.
+   *
+   * @param conn the connection, which may be in a transaction
+   * @param mailboxId the mailbox's id
+   * @param addresses the addresses
+   * @throws SQLException if they can't be added
+   */
   private void insertForwardingAddresses(Connection conn, int mailboxId, List<ForwardingAddress> addresses)
       throws SQLException {
     try (PreparedStatement stmt = conn.prepareStatement(INSERT_FORWARDING_ADDRESS_SQL)) {
@@ -317,6 +371,13 @@ public class MailboxRepository {
     }
   }
 
+  /**
+   * Deletes a mailbox's forwarding addresses.
+   *
+   * @param conn the connection, which may be in a transaction
+   * @param mailboxId the mailbox's id
+   * @throws SQLException if they can't be deleted
+   */
   private void deleteForwardingAddresses(Connection conn, int mailboxId) throws SQLException {
     try (PreparedStatement stmt = conn.prepareStatement(DELETE_FORWARDING_ADDRESSES_SQL)) {
       stmt.setInt(1, mailboxId);
@@ -324,6 +385,14 @@ public class MailboxRepository {
     }
   }
 
+  /**
+   * Reads a mailbox's forwarding addresses.
+   *
+   * @param conn the connection
+   * @param mailboxId the mailbox's id
+   * @return the addresses, in the order they were added
+   * @throws SQLException if they can't be read
+   */
   private List<ForwardingAddress> findForwardingAddresses(Connection conn, int mailboxId) throws SQLException {
     var addresses = new ArrayList<ForwardingAddress>();
 
@@ -340,6 +409,14 @@ public class MailboxRepository {
     return addresses;
   }
 
+  /**
+   * Reads a mailbox's alternate business names.
+   *
+   * @param conn the connection
+   * @param mailboxId the mailbox's id
+   * @return the names, in the order they were added
+   * @throws SQLException if they can't be read
+   */
   private List<String> findBusinessNames(Connection conn, int mailboxId) throws SQLException {
     var names = new ArrayList<String>();
 

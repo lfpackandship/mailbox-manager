@@ -65,9 +65,18 @@ final class TableOutput {
   /** A list to print or save, with a heading if it's one of several. */
   static final class Section {
 
+    /** The section's heading, such as Past Due. */
     final String heading;
+
+    /** The section's table. */
     final TableView<?> table;
 
+    /**
+     * Makes a section.
+     *
+     * @param heading the section's heading
+     * @param table the section's table
+     */
     Section(String heading, TableView<?> table) {
       this.heading = heading;
       this.table = table;
@@ -76,11 +85,12 @@ final class TableOutput {
   }
 
   /**
-   * Sets how a column's values are written when printed or saved, for a
-   * column whose cells format them, such as amounts kept in cents.
+   * Sets how a column's values are written when printed or saved, for a column
+   * whose cells format them, such as amounts kept in cents.
    *
    * @param column the column
    * @param format turns a value into its text
+   * @param <T> the type of the column's values
    */
   static <T> void formatWith(TableColumn<?, T> column, Function<T, String> format) {
     column.getProperties().put(FORMAT, format);
@@ -134,6 +144,9 @@ final class TableOutput {
   /**
    * Writes the lists in CSV format: a row of column headings, then each row
    * shown, one list after another.
+   *
+   * @param tables the tables
+   * @return the spreadsheet's text
    */
   static String csv(List<TableView<?>> tables) {
     var out = new StringBuilder();
@@ -150,6 +163,11 @@ final class TableOutput {
   /**
    * Lays out the printed pages of the lists, with the column headings at the
    * top of each page and each list's heading before its rows.
+   *
+   * @param title the heading on each page
+   * @param sections the sections to print
+   * @param today the date printed
+   * @return the pages, laid out
    */
   static List<Region> pages(String title, List<Section> sections, LocalDate today) {
     var columns = sections.get(0).table.getVisibleLeafColumns();
@@ -257,6 +275,12 @@ final class TableOutput {
     }
   }
 
+  /**
+   * Makes the text of a printed cell, cut short with "…" if it doesn't fit.
+   *
+   * @param text the cell's text
+   * @return the label
+   */
   private static Label cellLabel(String text) {
     var label = new Label(text);
     label.setTextOverrun(OverrunStyle.ELLIPSIS);
@@ -264,6 +288,12 @@ final class TableOutput {
     return label;
   }
 
+  /**
+   * Returns the columns' headings.
+   *
+   * @param columns the columns
+   * @return their headings, in order
+   */
   private static List<String> headings(List<? extends TableColumn<?, ?>> columns) {
     var headings = new ArrayList<String>();
     for (var column : columns) {
@@ -272,6 +302,16 @@ final class TableOutput {
     return headings;
   }
 
+  /**
+   * Returns the text of a row's cells, each on one line.
+   *
+   * @param table the table
+   * @param row the row's index
+   * @param forPrinting {@code true} for printing, which uses the columns shown
+   *     and nicer dates; {@code false} for a spreadsheet, which uses every
+   *     column
+   * @return the cells' text, in column order
+   */
   @SuppressWarnings({ "unchecked", "rawtypes" })
   private static List<String> cells(TableView<?> table, int row, boolean forPrinting) {
     var cells = new ArrayList<String>();
@@ -294,6 +334,12 @@ final class TableOutput {
     return cells;
   }
 
+  /**
+   * Makes a line of a spreadsheet, quoting cells that need it.
+   *
+   * @param cells the cells' text
+   * @return the line, without a line ending
+   */
   private static String csvRow(List<String> cells) {
     var row = new StringBuilder();
     for (var i = 0; i < cells.size(); i++) {
@@ -310,6 +356,7 @@ final class TableOutput {
     return row.append("\r\n").toString();
   }
 
+  /** Not used: tables are output with static methods. */
   private TableOutput() {
   }
 

@@ -255,6 +255,7 @@ class PaymentsViewTest {
     assertTrue(messages.contains("The second date must be on or after the first."), messages.toString());
   }
 
+  /** Makes a box with the given closing date. */
   private static Mailbox box(String boxNumber, LocalDate closedDate) {
     return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "5551000001", null, null, null, null,
         null, closedDate);
@@ -265,14 +266,17 @@ class PaymentsViewTest {
     return (TableView<PaymentsView.Entry>) lookup("#paymentsTable");
   }
 
+  /** Returns what matches a selector on the main window. */
   private Node lookup(String selector) {
     return mainWindow.getScene().getRoot().lookup(selector);
   }
 
+  /** Returns the text of the label with the given id on the main window. */
   private String text(String id) {
     return FxTestSupport.call(() -> ((Label) lookup("#" + id)).getText());
   }
 
+  /** Returns the text field on the main window showing the given hint while empty. */
   private TextField fieldWithPrompt(String prompt) {
     return mainWindow.getScene().getRoot().lookupAll(".text-field").stream()
         .map(node -> (TextField) node)
@@ -281,6 +285,7 @@ class PaymentsViewTest {
         .orElseThrow();
   }
 
+  /** Returns the button on the main window with the given text. */
   private Button buttonLabeled(String text) {
     return mainWindow.getScene().getRoot().lookupAll(".button").stream()
         .map(node -> (Button) node)

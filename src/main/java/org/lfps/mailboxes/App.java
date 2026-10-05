@@ -26,6 +26,10 @@ import org.lfps.mailboxes.view.SettingsView;
  */
 public class App extends Application {
 
+  /** Makes the app; JavaFX calls this when it starts. */
+  public App() {
+  }
+
   /**
    * Locates the database, initializes its schema, takes the daily backup and
    * copies it to the second backup folder if one is set, and shows the main
@@ -72,6 +76,14 @@ public class App extends Application {
     });
   }
 
+  /**
+   * Warns that today's backup couldn't be uploaded to Google Drive, offering to
+   * reconnect if Google signed the app out. Nothing is shown if the user
+   * cancelled.
+   *
+   * @param owner the main window
+   * @param problem what went wrong
+   */
   private static void showDriveWarning(Stage owner, DriveException problem) {
     if (problem.problem() == Problem.CANCELLED) {
       return;
@@ -98,6 +110,13 @@ public class App extends Application {
     alert.show();
   }
 
+  /**
+   * Warns that today's backup couldn't be saved on this computer, or copied to
+   * the second backup folder.
+   *
+   * @param owner the main window
+   * @param problems what went wrong, one message each
+   */
   private static void showBackupWarning(Stage owner, List<String> problems) {
     var alert = new Alert(AlertType.WARNING);
     alert.initOwner(owner);

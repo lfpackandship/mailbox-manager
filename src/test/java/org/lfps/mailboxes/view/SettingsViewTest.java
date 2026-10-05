@@ -36,6 +36,10 @@ import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 
+/**
+ * UI tests for the Settings window: opening it, its tabs, and saving or
+ * rejecting settings.
+ */
 class SettingsViewTest {
 
   private final SettingsRepository settings = new SettingsRepository();
@@ -274,11 +278,13 @@ class SettingsViewTest {
     assertEquals("14", FxTestSupport.call(() -> field(reopened, "renewalWindowField").getText()));
   }
 
+  /** Opens the Settings window and returns it. */
   private Stage openSettings() {
     FxTestSupport.run(() -> SettingsView.show(mainWindow));
     return settingsWindow();
   }
 
+  /** Returns the item with the given name in the File menu. */
   private MenuItem fileMenuItem(String text) {
     var menuBar = (MenuBar) mainWindow.getScene().getRoot().lookup(".menu-bar");
     return menuBar.getMenus().stream()
@@ -289,6 +295,9 @@ class SettingsViewTest {
         .orElseThrow();
   }
 
+  /**
+   * Returns the open Settings window, or {@code null} if there isn't one.
+   */
   private static Stage settingsWindow() {
     return FxTestSupport.call(() -> {
       var windows = settingsWindows();
@@ -296,6 +305,7 @@ class SettingsViewTest {
     });
   }
 
+  /** Returns every open Settings window, to check there is only one. */
   private static List<Stage> settingsWindows() {
     return Window.getWindows().stream()
         .filter(w -> w instanceof Stage && "Settings".equals(((Stage) w).getTitle()))
@@ -303,22 +313,27 @@ class SettingsViewTest {
         .collect(Collectors.toList());
   }
 
+  /** Returns the text field with the given id on a window. */
   private static TextField field(Stage window, String id) {
     return (TextField) window.getScene().lookup("#" + id);
   }
 
+  /** Returns the button with the given id on a window. */
   private static Button button(Stage window, String id) {
     return (Button) window.getScene().lookup("#" + id);
   }
 
+  /** Returns the Settings window's tabs. */
   private static TabPane tabs(Stage window) {
     return (TabPane) window.getScene().lookup(".tab-pane");
   }
 
+  /** Returns the name of the tab shown. */
   private static String selectedTab(Stage window) {
     return FxTestSupport.call(() -> tabs(window).getSelectionModel().getSelectedItem().getText());
   }
 
+  /** Returns the label under the Save button. */
   private static Label resultLabel(Stage window) {
     return (Label) window.getScene().lookup("#resultLabel");
   }

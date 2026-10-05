@@ -22,12 +22,27 @@ import org.lfps.mailboxes.data.Database;
  */
 public final class DriveAccount {
 
+  /** The file the account is saved in, in the data folder. */
   private static final String FILE_NAME = "google-drive.properties";
 
+  /** The Google account's email address. */
   private final String email;
+
+  /** The lasting sign-in, used to get tokens for Google Drive. */
   private final String refreshToken;
+
+  /**
+   * When a backup was last uploaded, or {@code null} if never.
+   */
   private final LocalDateTime lastBackup;
 
+  /**
+   * Makes an account.
+   *
+   * @param email the Google account's email address
+   * @param refreshToken the lasting sign-in
+   * @param lastBackup when a backup was last uploaded, or {@code null} if never
+   */
   DriveAccount(String email, String refreshToken, LocalDateTime lastBackup) {
     this.email = email;
     this.refreshToken = refreshToken;
@@ -43,6 +58,11 @@ public final class DriveAccount {
     return email;
   }
 
+  /**
+   * Returns the lasting sign-in.
+   *
+   * @return the refresh token
+   */
   String refreshToken() {
     return refreshToken;
   }
@@ -56,6 +76,12 @@ public final class DriveAccount {
     return lastBackup;
   }
 
+  /**
+   * Returns this account with a new time for the last upload.
+   *
+   * @param time when a backup was uploaded
+   * @return the updated account
+   */
   DriveAccount withLastBackup(LocalDateTime time) {
     return new DriveAccount(email, refreshToken, time);
   }
@@ -136,6 +162,11 @@ public final class DriveAccount {
     }
   }
 
+  /**
+   * Returns the file the account is saved in.
+   *
+   * @return the file; it may not exist
+   */
   private static Path file() {
     return Database.dataDir().resolve(FILE_NAME);
   }

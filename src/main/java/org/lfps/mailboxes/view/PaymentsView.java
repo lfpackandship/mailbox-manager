@@ -46,9 +46,20 @@ public class PaymentsView {
   /** A rental history entry and the box it belongs to. */
   static final class Entry {
 
+    /** The rental history entry. */
     final RentalPeriod period;
+
+    /**
+     * The box it belongs to, or {@code null} if the box was deleted.
+     */
     final Mailbox mailbox;
 
+    /**
+     * Makes an entry.
+     *
+     * @param period the rental history entry
+     * @param mailbox the box it belongs to
+     */
     Entry(RentalPeriod period, Mailbox mailbox) {
       this.period = period;
       this.mailbox = mailbox;
@@ -66,6 +77,13 @@ public class PaymentsView {
     show(stage, today.withDayOfMonth(1), today);
   }
 
+  /**
+   * Builds and displays the payments recorded between two days.
+   *
+   * @param stage the window to render the list into
+   * @param from the first day, inclusive
+   * @param to the last day, inclusive
+   */
   private static void show(Stage stage, LocalDate from, LocalDate to) {
     var statusLabel = new Label();
     var entries = new ArrayList<Entry>();
@@ -249,8 +267,11 @@ public class PaymentsView {
   }
 
   /**
-   * Describes how many entries there are and the total paid, such as
-   * "3 entries, $180.00 paid".
+   * Describes how many entries there are and the total paid, such as "3
+   * entries, $180.00 paid".
+   *
+   * @param entries the payments
+   * @return the total
    */
   static String total(List<Entry> entries) {
     var cents = entries.stream()
@@ -262,11 +283,12 @@ public class PaymentsView {
   }
 
   /**
-   * Describes the key deposits being held for open boxes, which aren't
-   * counted as paid since they're given back, such as "Key deposits held for
-   * open boxes: $120.00 (not included above)".
+   * Describes the key deposits being held for open boxes, which aren't counted
+   * as paid since they're given back, such as "Key deposits held for open
+   * boxes: $120.00 (not included above)".
    *
    * @return the description, or an empty string if no deposits are held
+   * @param mailboxes every box
    */
   static String depositsHeld(List<Mailbox> mailboxes) {
     var cents = mailboxes.stream()
@@ -276,6 +298,7 @@ public class PaymentsView {
     return cents == 0 ? "" : "Key deposits held for open boxes: " + Money.format(cents) + " (not included above)";
   }
 
+  /** Not used: the screen is built with static methods. */
   private PaymentsView() {
   }
 

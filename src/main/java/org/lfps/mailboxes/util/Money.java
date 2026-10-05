@@ -47,6 +47,7 @@ public final class Money {
     return NumberFormat.getCurrencyInstance(Locale.US).format(BigDecimal.valueOf(cents, 2));
   }
 
+  /** Not used: amounts are handled with static methods. */
   private Money() {
   }
 

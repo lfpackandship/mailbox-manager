@@ -1,7 +1,8 @@
 package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,8 +13,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -22,7 +23,6 @@ import org.lfps.mailboxes.data.BoxInventoryRepository;
 import org.lfps.mailboxes.data.PriceRepository;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
-import org.lfps.mailboxes.util.Money;
 import org.lfps.mailboxes.util.RentalLengths;
 
 /**
@@ -71,17 +71,8 @@ final class PricesView {
       showError(resultLabel, "Failed to load prices: " + e.getMessage());
     }
 
-    var rows = new ArrayList<String>(sizes);
-    rows.add(PriceRepository.DEFAULT_SIZE);
-
-    var grid = new GridPane();
-    grid.setHgap(10);
-    grid.setVgap(8);
-    for (var col = 0; col < lengths.size(); col++) {
-      var header = new Label(RentalLengths.label(lengths.get(col)));
-      header.setStyle("-fx-font-weight: bold;");
-      grid.add(header, col + 1, 0);
-    }
+    var priceGrid = new PriceGrid(sizes, lengths, saved, "price");
+    var grid = priceGrid.grid;
     var measuresHeader = new Label("Measures");
     measuresHeader.setStyle("-fx-font-weight: bold;");
     var measuresCol = lengths.size() + 1;
@@ -89,35 +80,16 @@ final class PricesView {
       grid.add(measuresHeader, measuresCol, 0);
     }
 
-    // Each price field, keyed like the prices in PriceRepository.
-    var fields = new LinkedHashMap<String, TextField>();
     // What each size measures, for the price sheet, keyed by size.
     var descriptionFields = new LinkedHashMap<String, TextField>();
-    for (var row = 0; row < rows.size(); row++) {
-      var size = rows.get(row);
-      var label = new Label(size.isEmpty() ? "Default:" : size + ":");
-      if (size.isEmpty()) {
-        label.setStyle("-fx-font-style: italic;");
-      }
-      grid.add(label, 0, row + 1);
-      for (var col = 0; col < lengths.size(); col++) {
-        var key = PriceRepository.key(size, lengths.get(col));
-        var field = new TextField();
-        field.setId("price-" + (size.isEmpty() ? "default" : size.toLowerCase()) + "-" + lengths.get(col));
-        field.setStyle("-fx-pref-width: 7em;");
-        var price = saved.get(key);
-        field.setText(price == null ? "" : Money.format(price));
-        fields.put(key, field);
-        grid.add(field, col + 1, row + 1);
-      }
-      if (!size.isEmpty()) {
-        var description = new TextField(savedDescriptions.getOrDefault(size.toLowerCase(), ""));
-        description.setId("measures-" + size.toLowerCase());
-        description.setPromptText("e.g. 3¾\" x 5\" x 14\"");
-        description.setStyle("-fx-pref-width: 11em;");
-        descriptionFields.put(size, description);
-        grid.add(description, measuresCol, row + 1);
-      }
+    for (var row = 0; row < sizes.size(); row++) {
+      var size = sizes.get(row);
+      var description = new TextField(savedDescriptions.getOrDefault(size.toLowerCase(), ""));
+      description.setId("measures-" + size.toLowerCase());
+      description.setPromptText("e.g. 3¾\" x 5\" x 14\"");
+      description.setStyle("-fx-pref-width: 11em;");
+      descriptionFields.put(size, description);
+      grid.add(description, measuresCol, row + 1);
     }
 
     var explanation = new Label((sizes.isEmpty()
@@ -137,16 +109,12 @@ final class PricesView {
     saveBtn.setId("pricesSaveButton");
     saveBtn.setDefaultButton(true);
     saveBtn.setOnAction(e -> {
-      var toSave = new HashMap<String, Long>();
-      for (var entry : fields.entrySet()) {
-        try {
-          toSave.put(entry.getKey(), Money.parse(entry.getValue().getText()));
-        } catch (IllegalArgumentException ex) {
-          entry.getValue().requestFocus();
-          showError(resultLabel, "\"" + entry.getValue().getText().trim() + "\" isn't a price. Enter prices in "
-              + "dollars and cents, like 60 or 60.00.");
-          return;
-        }
+      Map<String, Long> toSave;
+      try {
+        toSave = priceGrid.read();
+      } catch (IllegalArgumentException ex) {
+        showError(resultLabel, ex.getMessage());
+        return;
       }
       var descriptions = new HashMap<String, String>();
       descriptionFields.forEach((size, field) -> descriptions.put(size, field.getText()));
@@ -157,10 +125,7 @@ final class PricesView {
         showError(resultLabel, "Failed to save: " + ex.getMessage());
         return;
       }
-      for (var entry : fields.entrySet()) {
-        var price = toSave.get(entry.getKey());
-        entry.getValue().setText(price == null ? "" : Money.format(price));
-      }
+      priceGrid.show(toSave);
       resultLabel.setStyle("-fx-text-fill: green;");
       resultLabel.setText("Saved");
     });
@@ -177,7 +142,21 @@ final class PricesView {
     var title = new Label("Prices");
     title.setStyle("-fx-font-size: 1.25em; -fx-font-weight: bold;");
 
-    var content = new VBox(12, title, explanation, grid, new HBox(10, saveBtn, printBtn, closeBtn), resultLabel);
+    // A price change scheduled for a later date, set on its own window.
+    var changeLabel = new Label();
+    changeLabel.setId("priceChangeLabel");
+    changeLabel.setWrapText(true);
+    Runnable showChange = () -> changeLabel.setText(describeChange());
+    showChange.run();
+    var changeBtn = new Button("Price Change…");
+    changeBtn.setId("priceChangeButton");
+    changeBtn.setOnAction(e -> PriceChangeView.show(stage, owner, showChange));
+    var changeHeader = new Label("Price Change");
+    changeHeader.setStyle("-fx-font-size: 1.1em; -fx-font-weight: bold;");
+    var changeBox = new VBox(8, changeHeader, changeLabel, changeBtn);
+
+    var content = new VBox(12, title, explanation, grid, new HBox(10, saveBtn, printBtn, closeBtn), resultLabel,
+        new Separator(), changeBox);
     content.setPadding(new Insets(20));
 
     var scrollPane = new ScrollPane(content);
@@ -210,11 +189,36 @@ final class PricesView {
     }
   }
 
+  /**
+   * Says whether a price change is scheduled, and when it starts.
+   *
+   * @return the description
+   */
+  private static String describeChange() {
+    try {
+      var change = new PriceRepository().findChange();
+      return change == null
+          ? "To raise prices from a later date, click Price Change…. You can also print notices for box holders."
+          : "New prices start on " + change.startsOn.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
+              + ". Until then, adding or renewing a box uses the prices above. To see or change the new prices, "
+              + "or print notices, click Price Change….";
+    } catch (SQLException e) {
+      return "Couldn't check for a price change: " + e.getMessage();
+    }
+  }
+
+  /**
+   * Shows a problem in red.
+   *
+   * @param label where to show it
+   * @param message the problem
+   */
   private static void showError(Label label, String message) {
     label.setStyle("-fx-text-fill: red;");
     label.setText(message);
   }
 
+  /** Not used: the window is built with static methods. */
   private PricesView() {
   }
 

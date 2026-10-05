@@ -7,6 +7,9 @@ import java.time.DayOfWeek;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+/**
+ * Tests for which column of the calendar each day of the week goes in.
+ */
 class CalendarColumnTest {
 
   @ParameterizedTest

@@ -257,6 +257,10 @@ class DriveBackupTest {
     assertEquals(List.of("refresh-2"), google.revoked);
   }
 
+  /**
+   * Waits for something running in the background to finish, rethrowing its
+   * problem as a {@link DriveException}.
+   */
   private static <T> T await(CompletableFuture<T> future) throws Exception {
     try {
       return future.get(10, TimeUnit.SECONDS);
@@ -265,6 +269,7 @@ class DriveBackupTest {
     }
   }
 
+  /** Waits for something running in the background to fail, and returns its problem. */
   private static DriveException failure(CompletableFuture<?> future) {
     try {
       future.get(10, TimeUnit.SECONDS);
@@ -276,6 +281,7 @@ class DriveBackupTest {
     throw new AssertionError("Expected it to fail");
   }
 
+  /** Deletes a folder and everything in it, if it exists. */
   private static void deleteRecursively(Path dir) throws IOException {
     if (!Files.exists(dir)) {
       return;

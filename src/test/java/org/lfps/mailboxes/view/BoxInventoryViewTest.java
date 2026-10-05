@@ -316,6 +316,7 @@ class BoxInventoryViewTest {
         BoxInventoryView.describeList(List.of("1", "2", "3", "4", "5", "6", "7")));
   }
 
+  /** Deletes all boxes, the inventory, prices, and settings from the test database. */
   private static void emptyDatabase() throws SQLException {
     TestSandbox.require();
     Database.prepareDataDir();
@@ -331,10 +332,12 @@ class BoxInventoryViewTest {
     }
   }
 
+  /** Returns the size of each box in the inventory, in box number order. */
   private List<String> sizes() throws SQLException {
     return inventory.findAll().stream().map(InventoryBox::getSize).collect(Collectors.toList());
   }
 
+  /** Returns the box numbers in the table, as shown. */
   private List<String> boxNumbersShown() {
     return FxTestSupport.call(() -> table().getItems().stream()
         .map(row -> row.box.getBoxNumber())
@@ -351,18 +354,22 @@ class BoxInventoryViewTest {
     return (ChoiceBox<BoxInventoryView.Show>) mainWindow.getScene().getRoot().lookup("#inventoryShowChoice");
   }
 
+  /** Returns the text of the label with the given id on the main window. */
   private String text(String id) {
     return FxTestSupport.call(() -> ((Label) mainWindow.getScene().getRoot().lookup("#" + id)).getText());
   }
 
+  /** Returns the text field with the given id on the main window. */
   private TextField field(String id) {
     return (TextField) mainWindow.getScene().getRoot().lookup("#" + id);
   }
 
+  /** Returns the button with the given id on the main window. */
   private Button button(String id) {
     return (Button) mainWindow.getScene().getRoot().lookup("#" + id);
   }
 
+  /** Returns the text field on the main window showing the given hint while empty. */
   private TextField fieldWithPrompt(String prompt) {
     return mainWindow.getScene().getRoot().lookupAll(".text-field").stream()
         .map(node -> (TextField) node)
@@ -371,6 +378,7 @@ class BoxInventoryViewTest {
         .orElseThrow();
   }
 
+  /** Returns the button on the main window with the given text. */
   private Button buttonLabeled(String text) {
     return mainWindow.getScene().getRoot().lookupAll(".button").stream()
         .map(node -> (Button) node)

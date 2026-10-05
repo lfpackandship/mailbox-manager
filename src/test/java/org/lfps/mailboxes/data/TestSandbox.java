@@ -23,6 +23,7 @@ public final class TestSandbox {
     }
   }
 
+  /** Not used: the check is a static method. */
   private TestSandbox() {
   }
 

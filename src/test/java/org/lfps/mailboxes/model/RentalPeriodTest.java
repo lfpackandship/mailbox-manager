@@ -9,6 +9,9 @@ import java.time.format.FormatStyle;
 
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for a rental history entry's fields and its description.
+ */
 class RentalPeriodTest {
 
   @Test

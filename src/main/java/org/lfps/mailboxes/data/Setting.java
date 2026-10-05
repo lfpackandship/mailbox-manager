@@ -65,11 +65,25 @@ public enum Setting {
    * them.
    */
   FORWARDING_REMINDER_MESSAGE("forwarding_reminder_message",
-      "To keep your mail forwarded, please renew. Call us or stop by the counter.");
+      "To keep your mail forwarded, please renew. Call us or stop by the counter."),
 
+  /** The message on a price change notice, under the date the new prices start. */
+  PRICE_CHANGE_MESSAGE("price_change_message",
+      "Renew before then to keep today's prices. Today's prices and the new ones are below, "
+          + "with your box's size circled.");
+
+  /** The key the setting is stored under. */
   private final String key;
+
+  /** The value used until the user changes it. */
   private final String defaultValue;
 
+  /**
+   * Makes a setting.
+   *
+   * @param key the key it is stored under
+   * @param defaultValue the value used until the user changes it
+   */
   Setting(String key, String defaultValue) {
     this.key = key;
     this.defaultValue = defaultValue;

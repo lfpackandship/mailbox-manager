@@ -87,11 +87,13 @@ public final class FxTestSupport {
     press(target, key, true);
   }
 
+  /** Presses a key on a node, with the shortcut key (Cmd on a Mac, Ctrl elsewhere) held if asked. */
   private static void press(Node target, KeyCode key, boolean shortcut) {
     Event.fireEvent(target, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", key,
         false, shortcut && !MAC, false, shortcut && MAC));
   }
 
+  /** Not used: the helpers are static methods. */
   private FxTestSupport() {
   }
 

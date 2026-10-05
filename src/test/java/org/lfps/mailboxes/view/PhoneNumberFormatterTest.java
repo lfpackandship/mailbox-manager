@@ -9,6 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+/**
+ * Tests for formatting phone numbers as they're typed, keeping the cursor in
+ * the right place.
+ */
 class PhoneNumberFormatterTest {
 
   @BeforeAll
@@ -79,6 +83,7 @@ class PhoneNumberFormatterTest {
     assertEquals("(555".length(), field.getCaretPosition());
   }
 
+  /** Makes a text field that formats phone numbers as they're typed. */
   private static TextField phoneField() {
     var field = new TextField();
     field.setTextFormatter(PhoneNumberFormatter.create());

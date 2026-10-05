@@ -33,12 +33,16 @@ public final class DriveBackup {
   /** Guards the saved account, so a disconnect isn't undone by an upload finishing. */
   private static final Object ACCOUNT_LOCK = new Object();
 
+  /** Runs uploads and downloads one at a time, in the background, so the app never waits for Google. */
   private static final ExecutorService UPLOADS = Executors.newSingleThreadExecutor(task -> {
     var thread = new Thread(task, "Google Drive backup");
     thread.setDaemon(true);
     return thread;
   });
 
+  /**
+   * The sign-in in progress, or {@code null} if none, so it can be cancelled.
+   */
   private static GoogleDrive.SignIn pendingSignIn;
 
   /**
@@ -141,6 +145,14 @@ public final class DriveBackup {
     return CompletableFuture.supplyAsync(DriveBackup::backUpToday, UPLOADS);
   }
 
+  /**
+   * Uploads today's backup to Google Drive if it isn't there yet, and deletes
+   * old ones there, waiting until it's done.
+   *
+   * @return the account, with the time of this upload, or {@code null} if
+   *     Google Drive isn't connected
+   * @throws DriveException if the upload fails
+   */
   static DriveAccount backUpToday() {
     var client = drive;
     var account = account();
@@ -207,6 +219,14 @@ public final class DriveBackup {
     }, UPLOADS);
   }
 
+  /**
+   * Checks that Google Drive is connected.
+   *
+   * @param client Google's servers, or {@code null} if this build can't use
+   *     them
+   * @param account the saved account, or {@code null} if none
+   * @throws DriveException if either is missing
+   */
   private static void requireConnected(GoogleDrive client, DriveAccount account) {
     if (client == null || account == null) {
       throw new DriveException(Problem.SIGNED_OUT, "Google Drive isn't connected.");
@@ -233,6 +253,7 @@ public final class DriveBackup {
     return new DriveException(Problem.OTHER, String.valueOf(cause.getMessage()), cause);
   }
 
+  /** Not used: backups are made with static methods. */
   private DriveBackup() {
   }
 

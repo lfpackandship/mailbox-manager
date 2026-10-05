@@ -139,10 +139,12 @@ class DriveRestoreTest {
     waitFor(() -> status(drive).contains("internet"));
   }
 
+  /** Connects Google Drive to the fake Google, waiting until it's done. */
   private void connect() throws Exception {
     DriveBackup.connect(google.browser()).get(10, TimeUnit.SECONDS);
   }
 
+  /** Opens Settings and then the Restore Backup window, and returns it. */
   private Stage openRestore() {
     SettingsView.show(mainWindow);
     var settings = (Stage) Window.getWindows().stream()
@@ -156,6 +158,7 @@ class DriveRestoreTest {
         .orElseThrow();
   }
 
+  /** Opens the Restore from Google Drive window, and returns it. */
   private Stage openDriveRestore() {
     return FxTestSupport.call(() -> {
       ((Button) openRestore().getScene().lookup("#restoreFromDriveButton")).fire();
@@ -166,15 +169,18 @@ class DriveRestoreTest {
     });
   }
 
+  /** Returns the list of backups in Google Drive. */
   @SuppressWarnings("unchecked")
   private static ListView<String> list(Stage window) {
     return (ListView<String>) window.getScene().lookup("#driveBackupList");
   }
 
+  /** Returns the message on the Restore from Google Drive window. */
   private static String status(Stage window) {
     return FxTestSupport.call(() -> ((Label) window.getScene().lookup("#driveRestoreStatusLabel")).getText());
   }
 
+  /** Returns the box numbers in the database. */
   private static List<String> boxNumbers() {
     try {
       return new MailboxRepository().findAll().stream().map(Mailbox::getBoxNumber)
@@ -184,6 +190,7 @@ class DriveRestoreTest {
     }
   }
 
+  /** Waits up to ten seconds for something to become true, such as a background upload finishing. */
   private static void waitFor(Supplier<Boolean> condition) {
     var deadline = System.currentTimeMillis() + 10_000;
     while (!condition.get()) {
@@ -198,6 +205,7 @@ class DriveRestoreTest {
     }
   }
 
+  /** Deletes a folder and everything in it, if it exists. */
   private static void deleteRecursively(Path dir) throws IOException {
     if (!Files.exists(dir)) {
       return;

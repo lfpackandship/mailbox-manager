@@ -73,6 +73,7 @@ public final class RentalLengths {
     return months == 1 ? "1 Month" : months + " Months";
   }
 
+  /** Not used: rental lengths are handled with static methods. */
   private RentalLengths() {
   }
 

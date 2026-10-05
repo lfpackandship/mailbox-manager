@@ -227,19 +227,23 @@ class ForwardingOnlyTest {
     assertEquals("", FxTestSupport.call(() -> ((TextField) renew.getScene().lookup("#amountField")).getText()));
   }
 
+  /** Makes a box rented here. */
   private static Mailbox rented(String boxNumber, String lastName) {
     return new Mailbox(0, "Ada", lastName, null, boxNumber, null, "", null, null, null, null);
   }
 
+  /** Makes a forwarding-only box with an address to forward to. */
   private static Mailbox forwarding(String boxNumber, String lastName) {
     return new Mailbox(0, "Ada", lastName, null, boxNumber, null, "", null, null, null, List.of(NAPLES), null,
         null, null, null, true);
   }
 
+  /** Returns the Forwarding only checkbox. */
   private CheckBox checkBox() {
     return (CheckBox) mainWindow.getScene().lookup("#forwardingOnlyBox");
   }
 
+  /** Returns the text field on the main window showing the given hint while empty. */
   private TextField fieldWithPrompt(String prompt) {
     return mainWindow.getScene().getRoot().lookupAll(".text-field").stream()
         .filter(node -> node instanceof TextField)
@@ -249,6 +253,7 @@ class ForwardingOnlyTest {
         .orElseThrow();
   }
 
+  /** Returns the button on the main window with the given text. */
   private Button buttonLabeled(String text) {
     return mainWindow.getScene().getRoot().lookupAll(".button").stream()
         .map(node -> (Button) node)

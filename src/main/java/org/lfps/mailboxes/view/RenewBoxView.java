@@ -30,6 +30,7 @@ import org.lfps.mailboxes.model.RentalPeriod;
  */
 final class RenewBoxView {
 
+  /** Formats dates in full, such as Monday, October 5, 2026. */
   private static final DateTimeFormatter DATE = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL);
 
   /**
@@ -152,6 +153,7 @@ final class RenewBoxView {
     AppWindow.showWithinScreen(stage);
   }
 
+  /** Not used: the window is built with static methods. */
   private RenewBoxView() {
   }
 

@@ -43,13 +43,17 @@ import org.lfps.mailboxes.util.Errors;
  */
 final class RestoreView {
 
+  /** Matches the name of a daily backup, capturing its date. */
   private static final Pattern DAILY = Pattern.compile("mailboxes-(\\d{4}-\\d{2}-\\d{2})\\.db");
 
+  /** Matches the name of the backup saved before a restore, capturing its date and time. */
   private static final Pattern BEFORE_RESTORE =
       Pattern.compile("mailboxes-before-restore-(\\d{4}-\\d{2}-\\d{2}-\\d{6})\\.db");
 
+  /** Matches the name of a backup saved with Back Up Now, capturing its date and time. */
   private static final Pattern EXPORTED = Pattern.compile("mailboxes-backup-(\\d{4}-\\d{2}-\\d{2}-\\d{6})\\.db");
 
+  /** Reads the date and time in a backup's name. */
   private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss");
 
   /**
@@ -156,8 +160,12 @@ final class RestoreView {
   }
 
   /**
-   * Opens a window listing the backups in Google Drive, on top of the
-   * restore window. Restoring one downloads it first.
+   * Opens a window listing the backups in Google Drive, on top of the restore
+   * window. Restoring one downloads it first.
+   *
+   * @param restoreWindow the Restore Backup window
+   * @param settingsWindow the Settings window, closed after restoring
+   * @param mainWindow the main window, refreshed after restoring
    */
   private static void showDrive(Stage restoreWindow, Stage settingsWindow, Stage mainWindow) {
     var stage = new Stage();
@@ -231,12 +239,29 @@ final class RestoreView {
     AppWindow.showWithinScreen(stage);
   }
 
+  /**
+   * Shows a message, in red if it's a problem.
+   *
+   * @param label where to show it
+   * @param message the message
+   * @param error whether it's a problem
+   */
   private static void showStatus(Label label, String message, boolean error) {
     label.setStyle(error ? "-fx-text-fill: red;" : "");
     label.setText(message);
   }
 
-  /** Restores a backup if the user confirms, returning whether it was restored. */
+  /**
+   * Restores a backup if the user confirms, returning whether it was restored.
+   *
+   * @param backup the backup file
+   * @param restoreWindow the window the restore was started from, closed after
+   *     restoring
+   * @param settingsWindow the Settings window, closed after restoring
+   * @param mainWindow the main window, refreshed after restoring
+   * @param errorLabel where to show a problem
+   * @return {@code true} if it was restored
+   */
   private static boolean restore(Path backup, Stage restoreWindow, Stage settingsWindow, Stage mainWindow,
       Label errorLabel) {
     if (!confirm.test("Replace all current data with the " + describe(backup).toLowerCase() + "?\n\n"
@@ -270,8 +295,11 @@ final class RestoreView {
   }
 
   /**
-   * Describes a backup file by what it is and when it was made, such as
-   * "Daily backup from Saturday, September 26, 2026".
+   * Describes a backup file by what it is and when it was made, such as "Daily
+   * backup from Saturday, September 26, 2026".
+   *
+   * @param file the backup file
+   * @return the description
    */
   static String describe(Path file) {
     var name = file.getFileName().toString();
@@ -295,11 +323,18 @@ final class RestoreView {
     return "Backup " + name;
   }
 
+  /**
+   * Formats the date and time in a backup's name for people to read.
+   *
+   * @param timestamp the date and time, such as 2026-10-05-143005
+   * @return the formatted date and time
+   */
   private static String formatTimestamp(String timestamp) {
     return LocalDateTime.parse(timestamp, TIMESTAMP)
         .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.SHORT));
   }
 
+  /** Not used: the window is built with static methods. */
   private RestoreView() {
   }
 

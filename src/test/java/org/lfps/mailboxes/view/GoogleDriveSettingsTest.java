@@ -146,6 +146,7 @@ class GoogleDriveSettingsTest {
     assertTrue(GoogleDriveRow.describe(LocalDateTime.of(2026, 3, 5, 9, 2)).startsWith("on Mar 5 at "));
   }
 
+  /** Opens the Settings window and returns it. */
   private Stage openSettings() {
     return FxTestSupport.call(() -> {
       SettingsView.show(mainWindow);
@@ -156,18 +157,22 @@ class GoogleDriveSettingsTest {
     });
   }
 
+  /** Returns the button with the given id on a window. */
   private static Button button(Stage window, String id) {
     return (Button) window.getScene().lookup("#" + id);
   }
 
+  /** Returns whether the part with the given id on a window is shown. */
   private static boolean visible(Stage window, String id) {
     return FxTestSupport.call(() -> window.getScene().lookup("#" + id).isVisible());
   }
 
+  /** Returns the text of the label with the given id on a window. */
   private static String text(Stage window, String id) {
     return FxTestSupport.call(() -> ((Label) window.getScene().lookup("#" + id)).getText());
   }
 
+  /** Waits up to ten seconds for something to become true, such as a background upload finishing. */
   private static void waitFor(Supplier<Boolean> condition) {
     var deadline = System.currentTimeMillis() + 10_000;
     while (!condition.get()) {
@@ -182,6 +187,7 @@ class GoogleDriveSettingsTest {
     }
   }
 
+  /** Deletes a folder and everything in it, if it exists. */
   private static void deleteRecursively(Path dir) throws IOException {
     if (!Files.exists(dir)) {
       return;

@@ -158,6 +158,7 @@ class ForwardingAddressesTest {
     assertTrue(FxTestSupport.call(() -> button("removeForwardingButton").isDisabled()));
   }
 
+  /** Types an address into the forwarding address fields. */
   private void enterAddress(String street, String unit, String city, String state, String zip, String note) {
     field("streetField").setText(street);
     field("unitField").setText(unit);
@@ -167,10 +168,12 @@ class ForwardingAddressesTest {
     field("noteField").setText(note);
   }
 
+  /** Returns the text field with the given id on the main window. */
   private TextField field(String id) {
     return (TextField) mainWindow.getScene().getRoot().lookup("#" + id);
   }
 
+  /** Returns the text field on the main window showing the given hint while empty. */
   private TextField fieldWithPrompt(String prompt) {
     return mainWindow.getScene().getRoot().lookupAll(".text-field").stream()
         .map(node -> (TextField) node)
@@ -179,10 +182,12 @@ class ForwardingAddressesTest {
         .orElseThrow();
   }
 
+  /** Returns the button with the given id on the main window. */
   private Button button(String id) {
     return (Button) mainWindow.getScene().getRoot().lookup("#" + id);
   }
 
+  /** Returns the button on the main window with the given text. */
   private Button buttonLabeled(String text) {
     return mainWindow.getScene().getRoot().lookupAll(".button").stream()
         .map(node -> (Button) node)
@@ -191,11 +196,13 @@ class ForwardingAddressesTest {
         .orElseThrow();
   }
 
+  /** Returns the list of forwarding addresses added. */
   @SuppressWarnings("unchecked")
   private ListView<ForwardingAddress> addressList() {
     return (ListView<ForwardingAddress>) mainWindow.getScene().getRoot().lookup("#forwardingList");
   }
 
+  /** Returns the problem shown under the forwarding address fields. */
   private String errorText() {
     return ((Label) mainWindow.getScene().getRoot().lookup("#forwardingErrorLabel")).getText();
   }

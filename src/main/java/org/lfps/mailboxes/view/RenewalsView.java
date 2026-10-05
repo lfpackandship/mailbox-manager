@@ -133,6 +133,10 @@ public class RenewalsView {
 
   /**
    * Returns the mailboxes whose end date is before today, earliest first.
+   *
+   * @param mailboxes the boxes
+   * @param today today's date
+   * @return the boxes past due
    */
   static List<Mailbox> pastDue(List<Mailbox> mailboxes, LocalDate today) {
     return mailboxes.stream()
@@ -142,8 +146,13 @@ public class RenewalsView {
   }
 
   /**
-   * Returns the mailboxes whose end date is from today through
-   * {@code windowDays} days from now inclusive, earliest first.
+   * Returns the mailboxes whose end date is from today through {@code
+   * windowDays} days from now inclusive, earliest first.
+   *
+   * @param mailboxes the boxes
+   * @param today today's date
+   * @param windowDays how many days ahead to look
+   * @return the boxes due soon
    */
   static List<Mailbox> upcoming(List<Mailbox> mailboxes, LocalDate today, int windowDays) {
     var windowEnd = today.plusDays(windowDays);
@@ -158,6 +167,10 @@ public class RenewalsView {
   /**
    * Describes how far a rental end date is from today, such as "In 3 days",
    * "Due today", or "2 days overdue".
+   *
+   * @param endDate the rental's end date
+   * @param today today's date
+   * @return the description
    */
   static String dueStatus(LocalDate endDate, LocalDate today) {
     var days = ChronoUnit.DAYS.between(today, endDate);
@@ -169,6 +182,17 @@ public class RenewalsView {
     return "In " + days + " day" + (days == 1 ? "" : "s");
   }
 
+  /**
+   * Makes the View, Edit, and Renew buttons under a table, which act on its
+   * selected box.
+   *
+   * @param table the table
+   * @param idPrefix starts the buttons' ids, such as "pastDue"
+   * @param view opens a box's details
+   * @param edit opens a box for editing
+   * @param renew opens the renewal window for a box
+   * @return the buttons
+   */
   private static HBox tableButtons(TableView<Mailbox> table, String idPrefix, Consumer<Mailbox> view,
       Consumer<Mailbox> edit, Consumer<Mailbox> renew) {
     var viewBtn = new Button("View");
@@ -189,6 +213,13 @@ public class RenewalsView {
     return new HBox(10, viewBtn, editBtn, renewBtn);
   }
 
+  /**
+   * Makes a table of boxes with their names, numbers, phones, end dates, and
+   * how soon they're due.
+   *
+   * @param today today's date, for the status column
+   * @return the table
+   */
   private static TableView<Mailbox> buildTable(LocalDate today) {
     var table = new TableView<Mailbox>();
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
@@ -225,6 +256,7 @@ public class RenewalsView {
     return table;
   }
 
+  /** Not used: the screen is built with static methods. */
   private RenewalsView() {
   }
 

@@ -52,6 +52,7 @@ public class MainMenuView {
     AppWindow.show(stage, grid);
   }
 
+  /** Not used: the screen is built with static methods. */
   private MainMenuView() {
   }
 

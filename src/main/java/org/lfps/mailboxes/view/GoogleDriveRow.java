@@ -32,20 +32,38 @@ final class GoogleDriveRow extends VBox {
    */
   static Consumer<String> openBrowser = AppWindow::openWebPage;
 
+  /** Formats the time of a backup, such as 9:02 AM. */
   private static final DateTimeFormatter TIME = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT);
 
+  /** Formats the day of a backup more than a day ago, such as Oct 3. */
   private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("MMM d");
 
+  /** The Settings window, which questions are asked over. */
   private final Window owner;
+
+  /** Says whether Google Drive is connected, and to which account. */
   private final Label status = new Label();
+
+  /** Says when the last backup was uploaded, or what went wrong. */
   private final Label detail = new Label();
+
+  /** Starts signing in to Google Drive. */
   private final Button connectBtn = new Button("Connect Google Drive");
+
+  /** Stops signing in. */
   private final Button cancelBtn = new Button("Cancel");
+
+  /** Stops backing up to Google Drive. */
   private final Button disconnectBtn = new Button("Disconnect");
 
   /** The sign-in in progress, so an earlier one that was replaced is ignored when it ends. */
   private CompletableFuture<DriveAccount> connecting;
 
+  /**
+   * Makes the row, showing whether Google Drive is connected.
+   *
+   * @param owner the Settings window
+   */
   GoogleDriveRow(Window owner) {
     super(6);
     this.owner = owner;
@@ -110,6 +128,7 @@ final class GoogleDriveRow extends VBox {
     }
   }
 
+  /** Uploads today's backup in the background, showing how it went. */
   private void backUpNow() {
     showDetail("Backing up to Google Drive now…", false);
     DriveBackup.backUpTodayInBackground().whenComplete((account, error) -> Platform.runLater(() -> {
@@ -122,6 +141,7 @@ final class GoogleDriveRow extends VBox {
     }));
   }
 
+  /** Asks whether to stop backing up to Google Drive, and does if the user agrees. */
   private void disconnect() {
     var yes = Dialogs.confirm.ask(owner, "Stop backing up to Google Drive?",
         "Backups already in your Google Drive will be kept. You can connect again at any time.");
@@ -136,6 +156,12 @@ final class GoogleDriveRow extends VBox {
     }
   }
 
+  /**
+   * Shows which account backups go to and when the last one was uploaded, or
+   * that Google Drive isn't connected.
+   *
+   * @param account the connected account, or {@code null} if none
+   */
   private void showAccount(DriveAccount account) {
     if (account == null) {
       status.setText("Not connected. Connect to keep a copy of each daily backup in your Google Drive.");
@@ -150,17 +176,36 @@ final class GoogleDriveRow extends VBox {
     showButtons(false, false, true);
   }
 
+  /**
+   * Shows only the buttons that apply.
+   *
+   * @param connect whether to show Connect Google Drive
+   * @param cancel whether to show Cancel
+   * @param disconnect whether to show Disconnect
+   */
   private void showButtons(boolean connect, boolean cancel, boolean disconnect) {
     show(connectBtn, connect);
     show(cancelBtn, cancel);
     show(disconnectBtn, disconnect);
   }
 
+  /**
+   * Shows or hides a button, closing up the space when it's hidden.
+   *
+   * @param button the button
+   * @param shown whether to show it
+   */
   private static void show(Button button, boolean shown) {
     button.setVisible(shown);
     button.setManaged(shown);
   }
 
+  /**
+   * Shows the line under the status, hiding it when there's nothing to say.
+   *
+   * @param text what to show, or an empty string to hide the line
+   * @param problem whether it's a problem, shown in red
+   */
   private void showDetail(String text, boolean problem) {
     detail.setStyle(problem ? "-fx-text-fill: red;" : "");
     detail.setText(text);
@@ -170,6 +215,9 @@ final class GoogleDriveRow extends VBox {
 
   /**
    * Describes when a backup was uploaded, such as "today at 9:02 AM".
+   *
+   * @param time when the backup was uploaded
+   * @return the description
    */
   static String describe(LocalDateTime time) {
     var day = time.toLocalDate();

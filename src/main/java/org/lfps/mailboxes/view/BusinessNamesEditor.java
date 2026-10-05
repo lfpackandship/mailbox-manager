@@ -15,6 +15,7 @@ import javafx.scene.layout.VBox;
  */
 public class BusinessNamesEditor extends VBox {
 
+  /** The names added so far. */
   private final ListView<String> namesList = new ListView<>();
 
   /**

@@ -318,17 +318,20 @@ class SettingsFeaturesTest {
 
   // Helpers
 
+  /** Opens the Settings window and returns it. */
   private Stage openSettings() {
     FxTestSupport.run(() -> SettingsView.show(mainWindow));
     return windowTitled("Settings");
   }
 
+  /** Opens Settings and then the Restore Backup window, and returns it. */
   private Stage openRestore() {
     var settingsWindow = openSettings();
     FxTestSupport.run(() -> button(settingsWindow, "restoreButton").fire());
     return windowTitled("Restore Backup");
   }
 
+  /** Returns the open window with the given title, failing if there isn't one. */
   private static Stage windowTitled(String title) {
     return FxTestSupport.call(() -> Window.getWindows().stream()
         .filter(w -> w instanceof Stage && title.equals(((Stage) w).getTitle()))
@@ -337,10 +340,12 @@ class SettingsFeaturesTest {
         .orElse(null));
   }
 
+  /** Returns the message under the Save button on a window. */
   private String resultText(Stage window) {
     return FxTestSupport.call(() -> ((Label) window.getScene().lookup("#resultLabel")).getText());
   }
 
+  /** Returns the rental length buttons on the main window, such as "3 Months". */
   private List<String> rentalButtonLabels() {
     return FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookupAll(".button").stream()
         .map(node -> ((Button) node).getText())
@@ -348,6 +353,7 @@ class SettingsFeaturesTest {
         .collect(Collectors.toList()));
   }
 
+  /** Returns the button on the main window with the given text. */
   private Button buttonLabeled(String text) {
     return mainWindow.getScene().getRoot().lookupAll(".button").stream()
         .map(node -> (Button) node)
@@ -356,6 +362,7 @@ class SettingsFeaturesTest {
         .orElseThrow();
   }
 
+  /** Returns the first day of the week shown on the calendar. */
   private String firstCalendarHeader() {
     return FxTestSupport.call(() -> {
       var grid = (GridPane) mainWindow.getScene().getRoot().lookupAll("*").stream()
@@ -372,38 +379,46 @@ class SettingsFeaturesTest {
     });
   }
 
+  /** Returns the box numbers in the database. */
   private List<String> boxNumbers() throws SQLException {
     return mailboxes.findAll().stream().map(Mailbox::getBoxNumber).collect(Collectors.toList());
   }
 
+  /** Returns the choice box with the given id on a window. */
   @SuppressWarnings("unchecked")
   private <T> ChoiceBox<T> choice(Stage window, String id) {
     return (ChoiceBox<T>) window.getScene().lookup("#" + id);
   }
 
+  /** Returns the list of backups on the Restore Backup window. */
   @SuppressWarnings("unchecked")
   private static ListView<Path> backupList(Stage window) {
     return (ListView<Path>) window.getScene().lookup("#backupList");
   }
 
+  /** Returns the text field with the given id on a window. */
   private static TextField field(Stage window, String id) {
     return (TextField) window.getScene().lookup("#" + id);
   }
 
+  /** Returns the button with the given id on a window. */
   private static Button button(Stage window, String id) {
     return (Button) window.getScene().lookup("#" + id);
   }
 
+  /** Makes a box with the given number and a holder. */
   private static Mailbox box(String boxNumber) {
     return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null, null, null, null);
   }
 
+  /** Returns the names of the files in a folder, in alphabetical order. */
   private static List<String> fileNames(Path folder) throws IOException {
     try (Stream<Path> files = Files.list(folder)) {
       return files.map(p -> p.getFileName().toString()).sorted().collect(Collectors.toList());
     }
   }
 
+  /** Deletes a folder and everything in it, if it exists. */
   private static void deleteRecursively(Path dir) throws IOException {
     if (!Files.exists(dir)) {
       return;

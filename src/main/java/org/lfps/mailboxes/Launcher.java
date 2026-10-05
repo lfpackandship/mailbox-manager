@@ -18,6 +18,9 @@ public final class Launcher {
     App.main(args);
   }
 
+  /**
+   * Not used: the app starts from {@link #main(String[])}.
+   */
   private Launcher() {
   }
 

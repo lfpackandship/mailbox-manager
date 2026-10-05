@@ -23,6 +23,27 @@ it before making changes. This file covers how to work in the repository.
 - Match the surrounding code's style and comment density. User-facing text
   is plain and friendly, written for someone who isn't technical.
 - Add each user-visible change to the "Unreleased" section of CHANGELOG.md.
+
+## Documentation
+
+Everything is documented, so someone new can read any file cold.
+
+- In `src/main/java`, every class, field, constructor, and method has a
+  Javadoc comment, private ones included, with `@param`, `@return`, and
+  `@throws` where they apply. The build checks this: the compiler runs with
+  `-Xdoclint` and `-Werror` (see `pom.xml`), so `./mvnw test` fails on a
+  missing comment or tag. Don't turn the check off or work around it.
+- Say what the code does and why, not what its name already says: what a
+  value means, its units (cents, points, days), what `null` or an empty
+  value means, what's changed or saved, and what can go wrong. Name the
+  screen or setting a user would know it by.
+- A new class starts with a comment on what it's for and where it fits.
+  Inside methods, comment the reasons that aren't obvious from the code.
+- In tests, every class has a comment saying what it covers, and every
+  helper method has one. Test method names already read as sentences, so
+  `@Test` methods don't need one.
+- When code changes, change its comments with it. A wrong comment is worse
+  than none.
 - Google Drive backups need the app's Google client ID. Release builds get
   it from the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` repository
   secrets; local builds from the gitignored

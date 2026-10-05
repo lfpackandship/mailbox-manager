@@ -52,18 +52,30 @@ public class BoxInventoryView {
 
   /** Which boxes the table shows. */
   enum Show {
+    /** Every box in the inventory. */
     ALL("All boxes"),
+    /** Boxes no one is renting. */
     EMPTY("Empty boxes"),
+    /** Boxes someone is renting. */
     RENTED("Rented boxes");
 
+    /** What the choice is called in the menu. */
     private final String label;
 
+    /**
+     * Makes a choice.
+     *
+     * @param label what the choice is called in the menu
+     */
     Show(String label) {
       this.label = label;
     }
 
     /**
      * Returns whether a box belongs in the table when this is chosen.
+     *
+     * @param row the box
+     * @return {@code true} if it's shown
      */
     boolean includes(Row row) {
       return this == ALL || (row.holder == null) == (this == EMPTY);
@@ -78,9 +90,20 @@ public class BoxInventoryView {
   /** A box in the inventory and whoever is renting it. */
   static final class Row {
 
+    /** The box. */
     final InventoryBox box;
+
+    /**
+     * Whoever is renting it, or {@code null} if it's empty.
+     */
     final Mailbox holder;
 
+    /**
+     * Makes a row.
+     *
+     * @param box the box
+     * @param holder whoever is renting it, or {@code null} if it's empty
+     */
     Row(InventoryBox box, Mailbox holder) {
       this.box = box;
       this.holder = holder;
@@ -97,6 +120,14 @@ public class BoxInventoryView {
     show(stage, Show.ALL, "");
   }
 
+  /**
+   * Builds and displays the box inventory, showing some of the boxes and a
+   * message, as after adding or removing boxes.
+   *
+   * @param stage the window to render the inventory into
+   * @param initialShow which boxes to show
+   * @param message the message under the table, or an empty string
+   */
   private static void show(Stage stage, Show initialShow, String message) {
     var inventory = new BoxInventoryRepository();
     var statusLabel = new Label(message);
@@ -374,6 +405,9 @@ public class BoxInventoryView {
 
   /**
    * Returns the open boxes rented here keyed by {@link BoxNumbers#key(String)}.
+   *
+   * @return each holder, keyed by box number
+   * @throws SQLException if the boxes can't be read
    */
   private static Map<String, Mailbox> holdersByBoxNumber() throws SQLException {
     var holders = new HashMap<String, Mailbox>();
@@ -387,11 +421,12 @@ public class BoxInventoryView {
   }
 
   /**
-   * Describes how many boxes of each size are empty, such as
-   * "Large: 2 of 5 empty · Small: 30 of 35 empty · No size: 1 of 1 empty",
-   * with sizes in alphabetical order, ignoring letter case.
+   * Describes how many boxes of each size are empty, such as "Large: 2 of 5
+   * empty · Small: 30 of 35 empty · No size: 1 of 1 empty", with sizes in
+   * alphabetical order, ignoring letter case.
    *
    * @return the description, or an empty string if no box has a size
+   * @param rows every box in the inventory
    */
   static String sizeCounts(List<Row> rows) {
     if (rows.stream().allMatch(row -> row.box.getSize() == null)) {
@@ -414,32 +449,55 @@ public class BoxInventoryView {
         .collect(Collectors.joining(" · "));
   }
 
+  /** How many boxes of a size there are, and how many of them are empty. */
   private static final class SizeCount {
 
+    /** The size, as shown, or "No size". */
     final String label;
+
+    /** How many boxes of the size are empty. */
     int empty;
+
+    /** How many boxes of the size there are. */
     int total;
 
+    /**
+     * Makes a count of none.
+     *
+     * @param label the size, as shown
+     */
     SizeCount(String label) {
       this.label = label;
     }
 
   }
 
+  /**
+   * Returns the boxes' numbers.
+   *
+   * @param rows the boxes
+   * @return their numbers, in the same order
+   */
   private static List<String> boxNumbers(List<Row> rows) {
     return rows.stream().map(row -> row.box.getBoxNumber()).collect(Collectors.toList());
   }
 
   /**
    * Describes some boxes for a message, such as "box 12" or "3 boxes".
+   *
+   * @param boxNumbers the boxes' numbers
+   * @return the description
    */
   static String describe(List<String> boxNumbers) {
     return boxNumbers.size() == 1 ? "box " + boxNumbers.get(0) : boxNumbers.size() + " boxes";
   }
 
   /**
-   * Lists box numbers for a message, shortening a long list, such as
-   * "1, 2, 3, 4, 5, and 12 more".
+   * Lists box numbers for a message, shortening a long list, such as "1, 2, 3,
+   * 4, 5, and 12 more".
+   *
+   * @param boxNumbers the boxes' numbers
+   * @return the list
    */
   static String describeList(List<String> boxNumbers) {
     var shown = 5;
@@ -449,15 +507,28 @@ public class BoxInventoryView {
     return String.join(", ", boxNumbers.subList(0, shown)) + ", and " + (boxNumbers.size() - shown) + " more";
   }
 
+  /**
+   * Shows a problem in red.
+   *
+   * @param label where to show it
+   * @param message the problem
+   */
   private static void error(Label label, String message) {
     label.setStyle("-fx-text-fill: red;");
     label.setText(message);
   }
 
+  /**
+   * Returns text, or an empty string in place of {@code null}.
+   *
+   * @param value the text, or {@code null}
+   * @return the text, never {@code null}
+   */
   private static String orEmpty(String value) {
     return value == null ? "" : value;
   }
 
+  /** Not used: the screen is built with static methods. */
   private BoxInventoryView() {
   }
 

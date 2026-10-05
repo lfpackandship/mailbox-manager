@@ -42,7 +42,9 @@ import org.lfps.mailboxes.util.RentalLengths;
  * size and a row for each rental length. As a renewal reminder, it also says
  * which box it's for and when its rental ends, with the end date and the
  * box's size circled. A forwarding-only box's reminder is about renewing its
- * mail forwarding instead, with its own message and no size circled.
+ * mail forwarding instead, with its own message and no size circled. As a
+ * price change notice, it says when new prices start and shows today's prices
+ * and the new ones, with the box's size circled in both.
  */
 final class PriceSheet {
 
@@ -67,6 +69,15 @@ final class PriceSheet {
     /** The price in cents for each rental length that has one. */
     final Map<Integer, Long> prices;
 
+    /**
+     * Makes a column.
+     *
+     * @param size the size, or {@link PriceRepository#DEFAULT_SIZE} for the
+     *     default prices
+     * @param heading what the column is headed with
+     * @param description what the size measures, or an empty string
+     * @param prices the price in cents for each rental length that has one
+     */
     Column(String size, String heading, String description, Map<Integer, Long> prices) {
       this.size = size;
       this.heading = heading;
@@ -79,12 +90,26 @@ final class PriceSheet {
   /** Everything printed on the sheet apart from the box it's for. */
   static final class Content {
 
+    /** The shop's name, at the top of the page. */
     final String shopName;
+
+    /** The shop's address and phone number, one item per line. */
     final String shopDetails;
+
+    /** The text above the prices; lines starting with "-" are bullet points. */
     final String intro;
+
+    /** The text below the prices. */
     final String note;
+
+    /** The message on a renewal reminder, under the end date. */
     final String reminderMessage;
+
+    /** The message on a forwarding-only box's renewal reminder. */
     final String forwardingReminderMessage;
+
+    /** The message on a price change notice, under the day new prices start. */
+    final String priceChangeMessage;
 
     /** The rental lengths with a price, one row each, shortest first. */
     final List<Integer> lengths;
@@ -95,14 +120,30 @@ final class PriceSheet {
      */
     final List<Column> columns;
 
+    /**
+     * Makes the content.
+     *
+     * @param shopName the shop's name
+     * @param shopDetails the shop's address and phone number
+     * @param intro the text above the prices
+     * @param note the text below the prices
+     * @param reminderMessage the message on a renewal reminder
+     * @param forwardingReminderMessage the message on a forwarding-only box's
+     *     renewal reminder
+     * @param priceChangeMessage the message on a price change notice
+     * @param lengths the rental lengths with a price, shortest first
+     * @param columns the columns of prices, cheapest size first
+     */
     Content(String shopName, String shopDetails, String intro, String note, String reminderMessage,
-        String forwardingReminderMessage, List<Integer> lengths, List<Column> columns) {
+        String forwardingReminderMessage, String priceChangeMessage, List<Integer> lengths,
+        List<Column> columns) {
       this.shopName = shopName;
       this.shopDetails = shopDetails;
       this.intro = intro;
       this.note = note;
       this.reminderMessage = reminderMessage;
       this.forwardingReminderMessage = forwardingReminderMessage;
+      this.priceChangeMessage = priceChangeMessage;
       this.lengths = lengths;
       this.columns = columns;
     }
@@ -139,6 +180,30 @@ final class PriceSheet {
    * @throws SQLException if it can't be read
    */
   static Content load() throws SQLException {
+    return load(new PriceRepository().findAll());
+  }
+
+  /**
+   * Loads the sheet as it will be once a price change starts: today's prices
+   * with the change's prices in place of them.
+   *
+   * @param change the price change
+   * @return the content
+   * @throws SQLException if it can't be read
+   */
+  static Content loadAfter(PriceRepository.PriceChange change) throws SQLException {
+    return load(change.applyTo(new PriceRepository().findAll()));
+  }
+
+  /**
+   * Loads the sheet's wording from the settings, and the sizes and rental
+   * lengths, with the given prices.
+   *
+   * @param saved the prices, keyed by {@link PriceRepository#key(String, int)}
+   * @return the content
+   * @throws SQLException if it can't be read
+   */
+  private static Content load(Map<String, Long> saved) throws SQLException {
     var settings = new SettingsRepository();
     List<Integer> lengths;
     try {
@@ -146,9 +211,7 @@ final class PriceSheet {
     } catch (IllegalArgumentException badSetting) {
       lengths = RentalLengths.parse(Setting.RENTAL_LENGTHS.defaultValue());
     }
-    var prices = new PriceRepository();
-    var saved = prices.findAll();
-    var descriptions = prices.findDescriptions();
+    var descriptions = new PriceRepository().findDescriptions();
 
     var columns = new ArrayList<Column>();
     for (var size : PriceRepository.cheapestFirst(new BoxInventoryRepository().sizes(), saved)) {
@@ -173,8 +236,8 @@ final class PriceSheet {
 
     return new Content(settings.get(Setting.SHOP_NAME), settings.get(Setting.SHOP_DETAILS),
         settings.get(Setting.PRICE_SHEET_INTRO), settings.get(Setting.PRICE_SHEET_NOTE),
-        settings.get(Setting.REMINDER_MESSAGE), settings.get(Setting.FORWARDING_REMINDER_MESSAGE), pricedLengths,
-        columns);
+        settings.get(Setting.REMINDER_MESSAGE), settings.get(Setting.FORWARDING_REMINDER_MESSAGE),
+        settings.get(Setting.PRICE_CHANGE_MESSAGE), pricedLengths, columns);
   }
 
   /**
@@ -200,18 +263,7 @@ final class PriceSheet {
    */
   static Region page(Content content, Mailbox mailbox, String size, LocalDate today) {
     var marked = new Marked();
-
-    var name = new Label(content.shopName);
-    name.setId("sheetShopName");
-    name.setStyle("-fx-font-size: 26px; -fx-font-weight: bold;");
-    name.setWrapText(true);
-
-    var details = new Label(content.shopDetails.strip());
-    details.setId("sheetShopDetails");
-    details.setStyle("-fx-font-weight: bold;");
-    details.setWrapText(true);
-
-    var body = new VBox(16, new VBox(4, name, details));
+    var body = new VBox(16, shop(content));
 
     if (mailbox != null) {
       body.getChildren().add(reminder(marked, content, mailbox, today));
@@ -225,9 +277,132 @@ final class PriceSheet {
       none.setId("sheetNoPrices");
       body.getChildren().add(none);
     } else {
-      body.getChildren().add(table(marked, content, mailbox == null ? null : content.columnFor(size)));
+      body.getChildren().add(table(marked, content, mailbox == null ? null : content.columnFor(size), "sheet",
+          "sizeCircle"));
     }
 
+    addNoteAndDate(body, content, (mailbox == null ? "Prices as of " : "Printed ") + longDate(today));
+    return finish(marked, body);
+  }
+
+  /**
+   * Builds a notice for a box that prices are changing, with today's prices
+   * and the new ones, and the box's size circled in each.
+   *
+   * @param current what's printed now, with today's prices
+   * @param after what will be printed once the new prices start
+   * @param mailbox the box the notice is for
+   * @param size the box's size in the inventory, or {@code null} if it has none
+   * @param startsOn the day the new prices start
+   * @param today the date the notice is printed
+   * @return the page, laid out {@link #PAGE_WIDTH} wide
+   */
+  static Region notice(Content current, Content after, Mailbox mailbox, String size, LocalDate startsOn,
+      LocalDate today) {
+    var marked = new Marked();
+    var body = new VBox(14, shop(current));
+
+    var title = new Label("Mailbox Price Change");
+    title.setId("noticeTitle");
+    title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+
+    var holder = mailbox.getHolderName();
+    var box = new Label("Box " + mailbox.getBoxNumber().trim() + (holder.isEmpty() ? "" : " – " + holder));
+    box.setId("noticeBox");
+    box.setStyle("-fx-font-size: 15px;");
+
+    var date = new Label(startsOn.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)));
+    date.setId("noticeStartDate");
+    date.setStyle("-fx-font-size: 15px; -fx-font-weight: bold;");
+    date.setMinWidth(Region.USE_PREF_SIZE);
+    var before = new Label("New prices start on");
+    before.setStyle("-fx-font-size: 15px;");
+    before.setMinWidth(Region.USE_PREF_SIZE);
+    // Room between the words and the circle around the date.
+    var line = new HBox(14, before, date);
+    line.setAlignment(Pos.BASELINE_LEFT);
+    // Room for the circle around the date.
+    line.setPadding(new Insets(4, 0, 4, 0));
+    marked.circle("startDateCircle", 7, 3, date);
+
+    var card = new VBox(6, title, box, line);
+    if (mailbox.getEndDate() != null) {
+      var ends = new Label((mailbox.getEndDate().isBefore(today) ? "Your rental ended on " : "Your rental ends on ")
+          + longDate(mailbox.getEndDate()) + ".");
+      ends.setId("noticeEndDate");
+      card.getChildren().add(ends);
+    }
+    if (!current.priceChangeMessage.isBlank()) {
+      var message = new Label(current.priceChangeMessage.strip());
+      message.setId("noticeMessage");
+      message.setWrapText(true);
+      card.getChildren().add(message);
+    }
+    card.setPadding(new Insets(12));
+    card.setStyle("-fx-border-color: black; -fx-border-width: 1.5; -fx-border-radius: 6;");
+    body.getChildren().add(card);
+
+    body.getChildren().add(heading("Today's prices"));
+    body.getChildren().add(current.columns.isEmpty() ? new Label("No prices are set.")
+        : table(marked, current, current.columnFor(size), "sheet", "sizeCircle"));
+    body.getChildren().add(heading("New prices from " + longDate(startsOn)));
+    body.getChildren().add(after.columns.isEmpty() ? new Label("No prices are set.")
+        : table(marked, after, after.columnFor(size), "new", "newSizeCircle"));
+
+    addNoteAndDate(body, after, "Printed " + longDate(today));
+    return finish(marked, body);
+  }
+
+  /**
+   * The shop's name, address, and phone, at the top of each page.
+   *
+   * @param content what to print
+   * @return the shop's details
+   */
+  private static Node shop(Content content) {
+    var name = new Label(content.shopName);
+    name.setId("sheetShopName");
+    name.setStyle("-fx-font-size: 26px; -fx-font-weight: bold;");
+    name.setWrapText(true);
+
+    var details = new Label(content.shopDetails.strip());
+    details.setId("sheetShopDetails");
+    details.setStyle("-fx-font-weight: bold;");
+    details.setWrapText(true);
+    return new VBox(4, name, details);
+  }
+
+  /**
+   * Makes a heading above a table of prices.
+   *
+   * @param text the heading
+   * @return the heading's label
+   */
+  private static Label heading(String text) {
+    var label = new Label(text);
+    label.setStyle("-fx-font-size: 15px; -fx-font-weight: bold;");
+    return label;
+  }
+
+  /**
+   * Formats a date in full, such as October 5, 2026.
+   *
+   * @param date the date
+   * @return the formatted date
+   */
+  private static String longDate(LocalDate date) {
+    return date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG));
+  }
+
+  /**
+   * Adds the text below the prices and the date printed in small type at the
+   * bottom.
+   *
+   * @param body the page's contents, to add to
+   * @param content what to print
+   * @param dateText the line in small type, such as "Printed October 5, 2026"
+   */
+  private static void addNoteAndDate(VBox body, Content content, String dateText) {
     if (!content.note.isBlank()) {
       var note = new Label(content.note.strip());
       note.setId("sheetNote");
@@ -236,12 +411,20 @@ final class PriceSheet {
       body.getChildren().add(note);
     }
 
-    var asOf = new Label((mailbox == null ? "Prices as of " : "Printed ")
-        + today.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)));
+    var asOf = new Label(dateText);
     asOf.setId("sheetDate");
     asOf.setStyle("-fx-font-size: 10px; -fx-text-fill: #555555;");
     body.getChildren().add(asOf);
+  }
 
+  /**
+   * Puts the page's contents on the page, at a fixed width and text size.
+   *
+   * @param marked the page, which draws the circles
+   * @param body the page's contents
+   * @return the page
+   */
+  private static Region finish(Marked marked, VBox body) {
     // Fixed sizes, so the page looks the same whatever the app's text size.
     body.setStyle("-fx-font-size: 13px; -fx-text-fill: black;");
     body.setPadding(new Insets(4));
@@ -253,6 +436,17 @@ final class PriceSheet {
     return marked;
   }
 
+  /**
+   * Builds the box at the top of a renewal reminder: which box it's for, when
+   * its rental ends (circled), and the reminder's message.
+   *
+   * @param marked the page, which draws the circles
+   * @param content what to print
+   * @param mailbox the box the reminder is for
+   * @param today the date the reminder is printed, to say whether the rental
+   *     has ended
+   * @return the reminder's box
+   */
   private static Node reminder(Marked marked, Content content, Mailbox mailbox, LocalDate today) {
     var forwarding = mailbox.isForwardingOnly();
     var title = new Label(forwarding ? "Mail Forwarding Renewal Reminder" : "Mailbox Renewal Reminder");
@@ -296,7 +490,13 @@ final class PriceSheet {
     return card;
   }
 
-  /** Lays out the text above the prices, showing lines that start with "-" as bullet points. */
+  /**
+   * Lays out the text above the prices, showing lines that start with "-" as
+   * bullet points.
+   *
+   * @param text the text, with lines starting with "-" for bullet points
+   * @return the laid-out text
+   */
   private static Node intro(String text) {
     var lines = new VBox(3);
     lines.setId("sheetIntro");
@@ -324,9 +524,20 @@ final class PriceSheet {
     return lines;
   }
 
-  private static Node table(Marked marked, Content content, Column circled) {
+  /**
+   * Builds a table of prices. Its parts' ids start with {@code idPrefix}, so a
+   * page can have two.
+   *
+   * @param marked the page, which draws the circle
+   * @param content the prices to show
+   * @param circled the column to circle, or {@code null} for none
+   * @param idPrefix starts the ids of the table's parts, such as "sheet"
+   * @param circleId the circle's id
+   * @return the table
+   */
+  private static Node table(Marked marked, Content content, Column circled, String idPrefix, String circleId) {
     var grid = new GridPane();
-    grid.setId("sheetPrices");
+    grid.setId(idPrefix + "Prices");
     grid.setStyle("-fx-border-color: black; -fx-border-width: 0 1 1 0;");
     grid.getColumnConstraints().add(new ColumnConstraints(110));
     for (var i = 0; i < content.columns.size(); i++) {
@@ -352,7 +563,7 @@ final class PriceSheet {
         header.getChildren().add(measures);
       }
       var headerCell = cell(header, Pos.CENTER);
-      headerCell.setId("sheetHeader-" + col);
+      headerCell.setId(idPrefix + "Header-" + col);
       grid.add(headerCell, col + 1, 0);
     }
 
@@ -366,7 +577,7 @@ final class PriceSheet {
         var priceLabel = new Label(price == null ? "—" : Money.format(price));
         priceLabel.setStyle("-fx-font-size: 15px;");
         var priceCell = cell(priceLabel, Pos.CENTER);
-        priceCell.setId("sheetPrice-" + months + "-" + col);
+        priceCell.setId(idPrefix + "Price-" + months + "-" + col);
         grid.add(priceCell, col + 1, row + 1);
       }
     }
@@ -380,7 +591,7 @@ final class PriceSheet {
           cells.add(node);
         }
       }
-      marked.circle("sizeCircle", 6, 6, cells.toArray(new Node[0]));
+      marked.circle(circleId, 6, 6, cells.toArray(new Node[0]));
     }
 
     var holder = new HBox(grid);
@@ -390,6 +601,13 @@ final class PriceSheet {
     return holder;
   }
 
+  /**
+   * Makes a cell of the table of prices, with borders on its top and left.
+   *
+   * @param content what's in the cell
+   * @param alignment where in the cell it goes
+   * @return the cell
+   */
   private static StackPane cell(Node content, Pos alignment) {
     var cell = new StackPane(content);
     StackPane.setAlignment(content, alignment);
@@ -400,6 +618,15 @@ final class PriceSheet {
     return cell;
   }
 
+  /**
+   * Returns a size's prices for the given rental lengths.
+   *
+   * @param size the size, or {@link PriceRepository#DEFAULT_SIZE}
+   * @param lengths the rental lengths
+   * @param saved all the prices, keyed by {@link PriceRepository#key(String,
+   *     int)}
+   * @return the price in cents for each length that has one, shortest first
+   */
   private static Map<Integer, Long> pricesFor(String size, List<Integer> lengths, Map<String, Long> saved) {
     var prices = new LinkedHashMap<Integer, Long>();
     for (var months : lengths) {
@@ -417,16 +644,27 @@ final class PriceSheet {
    */
   static final class Marked extends StackPane {
 
+    /** The parts each circle goes around. */
     private final List<Node[]> targets = new ArrayList<>();
+
+    /** The circles, in the order they were added. */
     private final List<Rectangle> circles = new ArrayList<>();
+
+    /** How far each circle stands off its parts, across and down. */
     private final List<double[]> paddings = new ArrayList<>();
 
+    /** Makes an empty page. */
     Marked() {
       setAlignment(Pos.TOP_LEFT);
     }
 
     /**
      * Circles the area covering the given parts of the page.
+     *
+     * @param id the circle's id
+     * @param padX how far the circle stands off the parts on the left and right
+     * @param padY how far it stands off them above and below
+     * @param parts the parts to circle
      */
     void circle(String id, double padX, double padY, Node... parts) {
       var circle = new Rectangle();
@@ -473,7 +711,12 @@ final class PriceSheet {
       }
     }
 
-    /** Returns the area covering the parts, in this page's coordinates. */
+    /**
+     * Returns the area covering the parts, in this page's coordinates.
+     *
+     * @param parts the parts
+     * @return the area, or {@code null} if none of them are on this page
+     */
     private BoundingBox areaOf(Node[] parts) {
       double minX = Double.MAX_VALUE;
       double minY = Double.MAX_VALUE;
@@ -492,6 +735,12 @@ final class PriceSheet {
       return minX > maxX ? null : new BoundingBox(minX, minY, maxX - minX, maxY - minY);
     }
 
+    /**
+     * Returns where a part is, in this page's coordinates.
+     *
+     * @param node the part
+     * @return its bounds, or {@code null} if it isn't on this page
+     */
     private Bounds boundsHere(Node node) {
       Bounds bounds = node.getBoundsInLocal();
       var current = node;
@@ -507,6 +756,7 @@ final class PriceSheet {
 
   }
 
+  /** Not used: the price sheet is built with static methods. */
   private PriceSheet() {
   }
 

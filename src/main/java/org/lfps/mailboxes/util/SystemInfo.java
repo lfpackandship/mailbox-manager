@@ -23,4 +23,8 @@ public class SystemInfo {
         return System.getProperty("javafx.version");
     }
 
+    /** Not used: versions are read with static methods. */
+    private SystemInfo() {
+    }
+
 }

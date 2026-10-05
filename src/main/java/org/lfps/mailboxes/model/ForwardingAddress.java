@@ -9,11 +9,27 @@ import java.util.Objects;
  */
 public final class ForwardingAddress {
 
+  /** The street address. */
   private final String street;
+
+  /**
+   * The apartment or suite, or {@code null} if none.
+   */
   private final String unit;
+
+  /** The city. */
   private final String city;
+
+  /** The two-letter state code. */
   private final String state;
+
+  /** The ZIP code. */
   private final String zip;
+
+  /**
+   * A note on when to use the address, such as "summer", or {@code null} if
+   * none.
+   */
   private final String note;
 
   /**
@@ -125,6 +141,12 @@ public final class ForwardingAddress {
     return Objects.hash(street, unit, city, state, zip, note);
   }
 
+  /**
+   * Trims text, treating blank text as none.
+   *
+   * @param value the text, or {@code null}
+   * @return the trimmed text, or {@code null} if it's blank
+   */
   private static String trimToNull(String value) {
     if (value == null || value.isBlank()) {
       return null;

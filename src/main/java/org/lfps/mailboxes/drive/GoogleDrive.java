@@ -56,8 +56,10 @@ public final class GoogleDrive {
   /** The name of the folder backups are uploaded to. */
   public static final String FOLDER_NAME = "Mailbox Manager Backups";
 
+  /** The permission the app asks for: access only to files it creates in the user's Google Drive. */
   static final String DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
+  /** The type Google Drive gives folders. */
   private static final String FOLDER_TYPE = "application/vnd.google-apps.folder";
 
   /** The file holding the app's Google client ID and secret; see the README. */
@@ -66,24 +68,53 @@ public final class GoogleDrive {
   /** How long to wait for the user to finish signing in before giving up. */
   private static final long SIGN_IN_MINUTES = 10;
 
+  /** How long to wait for Google to answer an ordinary request. */
   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
+  /** How long to wait for a backup to upload or download, which can take a while on a slow connection. */
   private static final Duration UPLOAD_TIMEOUT = Duration.ofMinutes(5);
 
+  /** Makes the unguessable values used while signing in. */
   private static final SecureRandom RANDOM = new SecureRandom();
 
+  /** The app's Google client ID, which tells Google which app is asking. */
   private final String clientId;
+
+  /** The app's Google client secret. For desktop apps Google doesn't treat it as secret. */
   private final String clientSecret;
+
+  /** The address of Google's sign-in page. */
   private final String authEndpoint;
+
+  /** The address that turns a sign-in into a token for using Google Drive. */
   private final String tokenEndpoint;
+
+  /** The address that cancels a sign-in. */
   private final String revokeEndpoint;
+
+  /** Where Google Drive requests are sent, apart from uploads. */
   private final String apiBase;
+
+  /** Where uploads to Google Drive are sent. */
   private final String uploadBase;
 
+  /** Sends the requests to Google. */
   private final HttpClient http = HttpClient.newBuilder()
       .connectTimeout(Duration.ofSeconds(15))
       .build();
 
+  /**
+   * Makes a client for Google's servers at the given addresses. Tests pass
+   * addresses of a fake server.
+   *
+   * @param clientId the app's Google client ID
+   * @param clientSecret the app's Google client secret
+   * @param authEndpoint the address of Google's sign-in page
+   * @param tokenEndpoint the address that issues tokens
+   * @param revokeEndpoint the address that cancels a sign-in
+   * @param apiBase where Google Drive requests are sent
+   * @param uploadBase where uploads are sent
+   */
   GoogleDrive(String clientId, String clientSecret, String authEndpoint, String tokenEndpoint,
       String revokeEndpoint, String apiBase, String uploadBase) {
     this.clientId = clientId;
@@ -146,12 +177,30 @@ public final class GoogleDrive {
    */
   final class SignIn {
 
+    /** The web server on this computer that Google sends the browser back to. */
     private final HttpServer server;
+
+    /** The address of that web server, which Google sends the browser back to. */
     private final String redirectUri;
+
+    /**
+     * A random value sent to Google and checked in its reply, so replies that
+     * aren't to this sign-in are ignored.
+     */
     private final String state = randomToken();
+
+    /** A random value proving to Google that the reply came back to the app that started the sign-in. */
     private final String verifier = randomToken();
+
+    /** Completes when the user finishes signing in, or it fails. */
     private final CompletableFuture<DriveAccount> result = new CompletableFuture<>();
 
+    /**
+     * Starts the web server, which stops itself after the sign-in finishes or
+     * after {@value GoogleDrive#SIGN_IN_MINUTES} minutes.
+     *
+     * @throws IOException if the web server can't be started
+     */
     private SignIn() throws IOException {
       server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
       redirectUri = "http://127.0.0.1:" + server.getAddress().getPort();
@@ -200,6 +249,13 @@ public final class GoogleDrive {
       result.completeExceptionally(new DriveException(Problem.CANCELLED, "Signing in was cancelled."));
     }
 
+    /**
+     * Handles the browser arriving back from Google: shows the user a page
+     * saying whether it worked, and finishes the sign-in.
+     *
+     * @param exchange the browser's request
+     * @throws IOException if the page can't be sent to the browser
+     */
     private void handle(HttpExchange exchange) throws IOException {
       var params = parseQuery(exchange.getRequestURI().getRawQuery());
       // Ignore anything but Google's reply, such as the browser asking for an icon.
@@ -345,6 +401,16 @@ public final class GoogleDrive {
     }
   }
 
+  /**
+   * Trades the one-time code Google sends back for a lasting sign-in, checking
+   * the user allowed access to Google Drive.
+   *
+   * @param code the one-time code from Google
+   * @param verifier the random value sent with the sign-in
+   * @param redirectUri the address Google sent the browser back to
+   * @return the signed-in account
+   * @throws DriveException if Google refuses, or the user didn't allow access
+   */
   private DriveAccount exchangeCode(String code, String verifier, String redirectUri) {
     var params = new LinkedHashMap<String, String>();
     params.put("grant_type", "authorization_code");
@@ -365,6 +431,14 @@ public final class GoogleDrive {
     return new DriveAccount(emailOf(reply.get("access_token")), (String) refreshToken, null);
   }
 
+  /**
+   * Gets a short-lived token for using Google Drive from the saved sign-in.
+   *
+   * @param refreshToken the saved sign-in
+   * @return the token
+   * @throws DriveException if Google refuses, for example because the sign-in
+   *     was removed
+   */
   private String accessToken(String refreshToken) {
     var params = new LinkedHashMap<String, String>();
     params.put("grant_type", "refresh_token");
@@ -376,6 +450,14 @@ public final class GoogleDrive {
     return (String) token;
   }
 
+  /**
+   * Sends a request to Google's token address, adding the app's client ID and
+   * secret.
+   *
+   * @param params the request's fields
+   * @return Google's reply
+   * @throws DriveException if Google refuses or can't be reached
+   */
   private Map<String, Object> tokenRequest(Map<String, String> params) {
     var body = new LinkedHashMap<>(params);
     body.put("client_id", clientId);
@@ -398,7 +480,13 @@ public final class GoogleDrive {
     return reply;
   }
 
-  /** Returns the id of the backups folder, or {@code null} if there isn't one. */
+  /**
+   * Returns the id of the backups folder.
+   *
+   * @param token a token for using Google Drive
+   * @return the folder's id, or {@code null} if there isn't one
+   * @throws DriveException if Google Drive can't be searched
+   */
   private String findFolder(String token) {
     var query = "name = '" + FOLDER_NAME + "' and mimeType = '" + FOLDER_TYPE
         + "' and 'root' in parents and trashed = false";
@@ -406,6 +494,13 @@ public final class GoogleDrive {
     return folders.isEmpty() ? null : folders.get(0).id;
   }
 
+  /**
+   * Returns the id of the backups folder, creating it if there isn't one.
+   *
+   * @param token a token for using Google Drive
+   * @return the folder's id
+   * @throws DriveException if the folder can't be found or created
+   */
   private String findOrCreateFolder(String token) {
     var existing = findFolder(token);
     if (existing != null) {
@@ -418,10 +513,27 @@ public final class GoogleDrive {
     return String.valueOf(created.get("id"));
   }
 
+  /**
+   * Returns the files in a folder.
+   *
+   * @param token a token for using Google Drive
+   * @param folderId the folder's id
+   * @return the files, in no particular order
+   * @throws DriveException if they can't be listed
+   */
   private List<DriveFile> listFolder(String token, String folderId) {
     return list(token, "'" + folderId.replace("'", "\\'") + "' in parents and trashed = false");
   }
 
+  /**
+   * Returns the files matching a Google Drive search, a page at a time until
+   * all are fetched.
+   *
+   * @param token a token for using Google Drive
+   * @param query the search, in Google Drive's query language
+   * @return the files
+   * @throws DriveException if the search fails
+   */
   private List<DriveFile> list(String token, String query) {
     var files = new ArrayList<DriveFile>();
     String pageToken = null;
@@ -449,6 +561,14 @@ public final class GoogleDrive {
     return files;
   }
 
+  /**
+   * Uploads a file into a folder, along with its name, in one request.
+   *
+   * @param token a token for using Google Drive
+   * @param folderId the folder's id
+   * @param file the file to upload
+   * @throws DriveException if the file can't be read or uploaded
+   */
   private void uploadFile(String token, String folderId, Path file) {
     var boundary = "mailbox-manager-" + randomToken();
     var metadata = "{\"name\":" + Json.quote(file.getFileName().toString())
@@ -470,11 +590,25 @@ public final class GoogleDrive {
         .POST(BodyPublishers.ofByteArray(body.toByteArray())), UPLOAD_TIMEOUT);
   }
 
+  /**
+   * Starts a request to Google Drive, signed in with a token.
+   *
+   * @param token a token for using Google Drive
+   * @param url the request's address
+   * @return the request, ready for its method and body
+   */
   private HttpRequest.Builder authorized(String token, String url) {
     return HttpRequest.newBuilder(URI.create(url)).header("Authorization", "Bearer " + token);
   }
 
-  /** Sends a Drive request and returns the reply, failing unless it succeeded. */
+  /**
+   * Sends a Drive request and returns the reply, failing unless it succeeded.
+   *
+   * @param request the request
+   * @param timeout how long to wait for the reply
+   * @return the reply's body
+   * @throws DriveException if the request fails, or the app is no longer signed in
+   */
   private String send(HttpRequest.Builder request, Duration timeout) {
     var response = exchange(request.timeout(timeout).build());
     var status = response.statusCode();
@@ -487,6 +621,14 @@ public final class GoogleDrive {
     return response.body();
   }
 
+  /**
+   * Sends a request and returns Google's reply, whatever its status.
+   *
+   * @param request the request
+   * @return the reply
+   * @throws DriveException if Google can't be reached, or the request was
+   *     interrupted
+   */
   private HttpResponse<String> exchange(HttpRequest request) {
     try {
       return http.send(request, BodyHandlers.ofString());
@@ -499,6 +641,14 @@ public final class GoogleDrive {
     }
   }
 
+  /**
+   * Describes a problem Google reported, using its own explanation when it
+   * gives one.
+   *
+   * @param status the reply's HTTP status
+   * @param reply the reply's fields
+   * @return the problem, to throw
+   */
   private static DriveException googleError(int status, Map<String, Object> reply) {
     var detail = "";
     var error = reply.get("error");
@@ -512,6 +662,12 @@ public final class GoogleDrive {
     return new DriveException(Problem.OTHER, "Google Drive reported a problem (error " + status + detail + ").");
   }
 
+  /**
+   * Reads a reply from Google as JSON.
+   *
+   * @param body the reply's body
+   * @return its fields, or none if it's empty or isn't JSON
+   */
   private static Map<String, Object> parseReply(String body) {
     try {
       return body == null || body.isBlank() ? Map.of() : Json.parseObject(body);
@@ -520,7 +676,12 @@ public final class GoogleDrive {
     }
   }
 
-  /** Asks Drive for the signed-in user's email address, to show which account backups go to. */
+  /**
+   * Asks Drive for the signed-in user's email address, to show which account backups go to.
+   *
+   * @param accessToken a token for using Google Drive, as it came in Google's reply
+   * @return the address, or "your Google account" if it can't be found
+   */
   private String emailOf(Object accessToken) {
     if (accessToken instanceof String) {
       try {
@@ -538,6 +699,15 @@ public final class GoogleDrive {
     return "your Google account";
   }
 
+  /**
+   * Shows a short page in the browser, such as to say signing in worked.
+   *
+   * @param exchange the browser's request
+   * @param status the HTTP status to reply with
+   * @param title the page's heading
+   * @param message the text under the heading
+   * @throws IOException if the page can't be sent
+   */
   private static void respond(HttpExchange exchange, int status, String title, String message) throws IOException {
     var html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>Mailbox Manager – " + title
         + "</title></head><body style=\"font-family: sans-serif; margin: 3em;\"><h1>" + title
@@ -550,10 +720,22 @@ public final class GoogleDrive {
     }
   }
 
+  /**
+   * Makes text safe to put in a web page.
+   *
+   * @param text the text
+   * @return the text with {@code &}, {@code <}, and {@code >} escaped
+   */
   private static String escapeHtml(String text) {
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
   }
 
+  /**
+   * Encodes fields as a web form, as in a request body or an address's query.
+   *
+   * @param params the fields
+   * @return the encoded fields, such as {@code a=1&b=2}
+   */
   private static String form(Map<String, String> params) {
     return params.entrySet().stream()
         .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "="
@@ -561,6 +743,12 @@ public final class GoogleDrive {
         .collect(Collectors.joining("&"));
   }
 
+  /**
+   * Decodes the query part of an address, such as {@code code=abc&state=xyz}.
+   *
+   * @param query the query, or {@code null}
+   * @return the fields, which are empty if there's no query
+   */
   static Map<String, String> parseQuery(String query) {
     var params = new HashMap<String, String>();
     if (query == null || query.isEmpty()) {
@@ -575,12 +763,23 @@ public final class GoogleDrive {
     return params;
   }
 
+  /**
+   * Makes a random value that can't be guessed, for use while signing in.
+   *
+   * @return the value, in a form safe for addresses
+   */
   private static String randomToken() {
     var bytes = new byte[32];
     RANDOM.nextBytes(bytes);
     return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
   }
 
+  /**
+   * Makes the value sent to Google that it later checks the verifier against.
+   *
+   * @param verifier the random verifier
+   * @return its SHA-256 hash, in a form safe for addresses
+   */
   private static String challenge(String verifier) {
     try {
       var digest = MessageDigest.getInstance("SHA-256").digest(verifier.getBytes(StandardCharsets.US_ASCII));
@@ -590,10 +789,20 @@ public final class GoogleDrive {
     }
   }
 
+  /** A file in Google Drive. */
   private static final class DriveFile {
+    /** The file's id in Google Drive. */
     private final String id;
+
+    /** The file's name. */
     private final String name;
 
+    /**
+     * Makes a file.
+     *
+     * @param id the file's id in Google Drive
+     * @param name the file's name
+     */
     DriveFile(String id, String name) {
       this.id = id;
       this.name = name;

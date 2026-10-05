@@ -6,6 +6,7 @@ package org.lfps.mailboxes.drive;
  */
 public class DriveException extends RuntimeException {
 
+  /** The version of this class's serialized form. */
   private static final long serialVersionUID = 1L;
 
   /** What kind of problem it was, which decides what the user can do about it. */
@@ -20,12 +21,26 @@ public class DriveException extends RuntimeException {
     OTHER
   }
 
+  /** What kind of problem it is. */
   private final Problem problem;
 
+  /**
+   * Makes an exception.
+   *
+   * @param problem what kind of problem it is
+   * @param message what went wrong, suitable for showing to the user
+   */
   DriveException(Problem problem, String message) {
     this(problem, message, null);
   }
 
+  /**
+   * Makes an exception caused by another.
+   *
+   * @param problem what kind of problem it is
+   * @param message what went wrong, suitable for showing to the user
+   * @param cause the exception that caused it
+   */
   DriveException(Problem problem, String message, Throwable cause) {
     super(message, cause);
     this.problem = problem;

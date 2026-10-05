@@ -34,6 +34,12 @@ final class RentalLengthButtons {
     return row;
   }
 
+  /**
+   * Returns the rental lengths set in Settings.
+   *
+   * @return the lengths in months, or the default ones if the setting can't be
+   *     read
+   */
   private static List<Integer> configuredLengths() {
     try {
       return RentalLengths.parse(new SettingsRepository().get(Setting.RENTAL_LENGTHS));
@@ -42,6 +48,7 @@ final class RentalLengthButtons {
     }
   }
 
+  /** Not used: the buttons are made with static methods. */
   private RentalLengthButtons() {
   }
 

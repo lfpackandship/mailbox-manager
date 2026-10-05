@@ -11,6 +11,7 @@ import org.lfps.mailboxes.model.Mailbox;
  */
 final class BoxLabels {
 
+  /** Not used: labels are made with static methods. */
   private BoxLabels() {
   }
 

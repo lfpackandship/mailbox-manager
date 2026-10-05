@@ -39,6 +39,10 @@ import org.lfps.mailboxes.util.SystemInfo;
  */
 public final class AppWindow {
 
+  /**
+   * Opens folders and web pages, or {@code null} before {@link
+   * #init(HostServices)}, as in tests.
+   */
   private static HostServices hostServices;
 
   /**
@@ -171,6 +175,11 @@ public final class AppWindow {
     }
   }
 
+  /**
+   * Returns the text size setting.
+   *
+   * @return the text size, or normal if the setting can't be read
+   */
   private static TextSize textSize() {
     try {
       return TextSize.fromName(new SettingsRepository().get(Setting.TEXT_SIZE));
@@ -179,6 +188,13 @@ public final class AppWindow {
     }
   }
 
+  /**
+   * Builds the File, Go, and Help menus.
+   *
+   * @param stage the main window, which the menus' screens and windows open in
+   *     or over
+   * @return the menu bar
+   */
   private static MenuBar buildMenuBar(Stage stage) {
     // "Shortcut" is Cmd on macOS and Ctrl elsewhere.
     var priceSheetItem = new MenuItem("Print Price Sheet…");
@@ -245,7 +261,12 @@ public final class AppWindow {
     return new MenuBar(fileMenu, goMenu, helpMenu);
   }
 
-  /** Opens the window for printing reminders for every box due, as listed on Renewals. */
+  /**
+   * Opens the window for printing reminders for every box due, as listed on
+   * Renewals.
+   *
+   * @param stage the main window
+   */
   private static void printReminders(Stage stage) {
     List<Mailbox> boxes;
     try {
@@ -262,6 +283,15 @@ public final class AppWindow {
     PriceSheetView.showReminders(stage, boxes);
   }
 
+  /**
+   * Makes an item for the Go menu.
+   *
+   * @param text the item's name
+   * @param shortcut its keyboard shortcut, such as "Shortcut+1", or {@code
+   *     null} for none
+   * @param show opens the screen
+   * @return the item
+   */
   private static MenuItem goItem(String text, String shortcut, Runnable show) {
     var item = new MenuItem(text);
     if (shortcut != null) {
@@ -271,7 +301,14 @@ public final class AppWindow {
     return item;
   }
 
-  /** Shows a message in a dialog, without waiting for it to be closed. */
+  /**
+   * Shows a message in a dialog, without waiting for it to be closed.
+   *
+   * @param owner the window the dialog belongs to
+   * @param type the kind of message, which picks the dialog's icon
+   * @param header the dialog's heading
+   * @param message the message
+   */
   static void inform(Stage owner, AlertType type, String header, String message) {
     var alert = new Alert(type, message);
     alert.initOwner(owner);
@@ -282,14 +319,18 @@ public final class AppWindow {
   }
 
   /**
-   * Returns the app's version, such as "1.7.0", from the jar or installer
-   * it's running from.
+   * Returns the app's version, such as "1.7.0", from the jar or installer it's
+   * running from.
+   *
+   * @return the version, or "(development version)" when not running from a jar
+   *     or installer
    */
   static String appVersion() {
     var version = AppWindow.class.getPackage() == null ? null : AppWindow.class.getPackage().getImplementationVersion();
     return version == null ? "(development version)" : version;
   }
 
+  /** Not used: windows are managed with static methods. */
   private AppWindow() {
   }
 

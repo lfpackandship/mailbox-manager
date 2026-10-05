@@ -11,6 +11,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for a mailbox's constructors, copies with changes, and names.
+ */
 class MailboxTest {
 
   private static final ForwardingAddress NAPLES =
@@ -72,10 +75,12 @@ class MailboxTest {
         () -> box.getAlternateBusinessNames().add("More"));
   }
 
+  /** Makes a box with the given names. */
   private static Mailbox named(String firstName, String lastName, String businessTitle) {
     return new Mailbox(1, firstName, lastName, businessTitle, "1", null, "5551234567", null, null, null, null);
   }
 
+  /** Checks two boxes are the same apart from their end and closing dates. */
   private static void assertSameExceptEndAndClosed(Mailbox expected, Mailbox actual) {
     assertEquals(expected.getId(), actual.getId());
     assertEquals(expected.getFullName(), actual.getFullName());

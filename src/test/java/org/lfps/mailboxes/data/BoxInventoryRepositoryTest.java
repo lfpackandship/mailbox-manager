@@ -15,6 +15,9 @@ import org.junit.jupiter.api.Test;
 
 import org.lfps.mailboxes.model.InventoryBox;
 
+/**
+ * Tests for adding, sizing, finding, and removing boxes in the box inventory.
+ */
 class BoxInventoryRepositoryTest {
 
   private final BoxInventoryRepository inventory = new BoxInventoryRepository();
@@ -90,6 +93,7 @@ class BoxInventoryRepositoryTest {
     assertEquals(List.of("Large", "Small"), inventory.sizes());
   }
 
+  /** Describes each box as its number and size, such as "12 Small". */
   private static List<String> describe(List<InventoryBox> boxes) {
     return boxes.stream().map(box -> box.getBoxNumber() + " " + box.getSize()).collect(Collectors.toList());
   }

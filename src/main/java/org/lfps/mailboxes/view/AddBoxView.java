@@ -197,6 +197,7 @@ public class AddBoxView {
     AppWindow.show(stage, layout);
   }
 
+  /** Not used: the screen is built with static methods. */
   private AddBoxView() {
   }
 

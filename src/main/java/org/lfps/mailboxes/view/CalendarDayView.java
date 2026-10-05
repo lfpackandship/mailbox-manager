@@ -134,6 +134,7 @@ final class CalendarDayView {
     }
   }
 
+  /** Not used: the window is built with static methods. */
   private CalendarDayView() {
   }
 

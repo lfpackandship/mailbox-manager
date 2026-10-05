@@ -7,6 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+/**
+ * Tests for checking email addresses, phone numbers, ZIP codes, and state
+ * codes.
+ */
 class ValidatorsTest {
 
   @ParameterizedTest
