@@ -9,6 +9,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for the small JSON reader and writer used to talk to Google.
+ */
 class JsonTest {
 
   @Test

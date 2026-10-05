@@ -152,17 +152,20 @@ class CalendarOverflowTest {
     assertEquals(5, listed);
   }
 
+  /** Adds a box ending on the test day. */
   private void addBox(String boxNumber) throws SQLException {
     mailboxes.insert(new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "5551000001", null, null, DAY,
         null));
   }
 
+  /** Returns the text of everything in the test day's cell. */
   private List<String> texts() {
     return FxTestSupport.call(() -> dayCell(DAY).getChildren().stream()
         .map(node -> ((Label) node).getText())
         .collect(Collectors.toList()));
   }
 
+  /** Returns the calendar's cell for a day, failing if there isn't one. */
   private VBox dayCell(LocalDate date) {
     Node cell = mainWindow.getScene().getRoot().lookup("#day-" + date);
     assertTrue(cell instanceof VBox, "No cell for " + date);

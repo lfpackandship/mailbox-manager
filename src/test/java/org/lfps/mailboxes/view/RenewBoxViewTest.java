@@ -240,11 +240,15 @@ class RenewBoxViewTest {
     assertEquals(List.of(), new RentalHistoryRepository().findForMailbox(boxId));
   }
 
+  /** Returns the Past Due table on Renewals. */
   @SuppressWarnings("unchecked")
   private static TableView<Mailbox> pastDueTable(Stage stage) {
     return (TableView<Mailbox>) stage.getScene().getRoot().lookup("#pastDueTable");
   }
 
+  /**
+   * Returns the open Renew Box window, or {@code null} if there isn't one.
+   */
   private static Stage renewWindow() {
     return FxTestSupport.call(() -> Window.getWindows().stream()
         .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup("#renewSaveButton") != null)
@@ -253,10 +257,12 @@ class RenewBoxViewTest {
         .orElse(null));
   }
 
+  /** Returns where the payment method is typed on the Renew Box window. */
   private static TextField comboEditor(Stage window) {
     return ((ComboBox<?>) window.getScene().lookup("#paymentMethodField")).getEditor();
   }
 
+  /** Returns the button on a window with the given text. */
   private static Button buttonLabeled(Stage window, String text) {
     return window.getScene().getRoot().lookupAll(".button").stream()
         .map(node -> (Button) node)
@@ -265,6 +271,7 @@ class RenewBoxViewTest {
         .orElseThrow();
   }
 
+  /** Returns the text of the label with the given id on a window. */
   private static String text(Stage window, String id) {
     return FxTestSupport.call(() -> ((Label) window.getScene().lookup("#" + id)).getText());
   }

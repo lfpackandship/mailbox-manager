@@ -14,21 +14,66 @@ import java.util.stream.Stream;
  */
 public final class Mailbox {
 
+  /**
+   * The database id, or {@code 0} if not yet saved.
+   */
   private final int id;
+
+  /** The holder's first name. */
   private final String firstName;
+
+  /** The holder's last name. */
   private final String lastName;
+
+  /** The holder's main business name. */
   private final String businessTitle;
+
+  /** The box number, such as 101. */
   private final String boxNumber;
+
+  /**
+   * The box's nickname, or {@code null} if it has none.
+   */
   private final String boxName;
+
+  /** The holder's phone number. */
   private final String phone;
+
+  /** The holder's email address. */
   private final String email;
+
+  /** Other business names mail for the box may come addressed to. */
   private final List<String> alternateBusinessNames;
+
+  /**
+   * The day the rental ends, or {@code null} if not set.
+   */
   private final LocalDate endDate;
+
+  /** Where the holder's mail can be forwarded. */
   private final List<ForwardingAddress> forwardingAddresses;
+
+  /**
+   * Notes about the box, or {@code null} if none were entered.
+   */
   private final String notes;
+
+  /**
+   * The day the box was closed, or {@code null} if it is open.
+   */
   private final LocalDate closedDate;
+
+  /**
+   * How many keys were given out, or {@code null} if not recorded.
+   */
   private final Integer keyCount;
+
+  /**
+   * The key deposit paid, in cents, or {@code null} if not recorded.
+   */
   private final Long keyDepositCents;
+
+  /** Whether the shop only forwards the holder's mail, with no box rented here. */
   private final boolean forwardingOnly;
 
   /**

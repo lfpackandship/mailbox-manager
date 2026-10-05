@@ -10,6 +10,9 @@ import java.time.format.FormatStyle;
 
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for how the Restore Backup window describes each backup file.
+ */
 class RestoreDescribeTest {
 
   private static final LocalDateTime AFTERNOON = LocalDateTime.of(2026, 9, 26, 14, 30, 5);

@@ -204,6 +204,7 @@ class ManageBoxesActionsTest {
     assertEquals("", rowStyle("9"));
   }
 
+  /** Makes every question the app asks get the same answer, noting each question and its details. */
   private void answer(boolean yes) {
     Dialogs.confirm = (owner, question, details) -> {
       questions.add(question + " | " + details);
@@ -211,6 +212,7 @@ class ManageBoxesActionsTest {
     };
   }
 
+  /** Selects a box in the table. */
   private void select(String boxNumber) {
     FxTestSupport.run(() -> {
       var items = table().getItems();
@@ -224,16 +226,22 @@ class ManageBoxesActionsTest {
     });
   }
 
+  /**
+   * Reads a box from the database by its id, or returns {@code null} if it's
+   * gone.
+   */
   private Mailbox find(int id) throws SQLException {
     return mailboxes.findAll().stream().filter(m -> m.getId() == id).findFirst().orElse(null);
   }
 
+  /** Returns the box numbers in the table, as shown. */
   private List<String> boxNumbersShown() {
     return FxTestSupport.call(() -> table().getItems().stream()
         .map(Mailbox::getBoxNumber)
         .collect(Collectors.toList()));
   }
 
+  /** Returns the style of a box's row in the table, such as the grey of a closed box. */
   @SuppressWarnings("unchecked")
   private String rowStyle(String boxNumber) {
     return FxTestSupport.call(() -> {
@@ -247,11 +255,13 @@ class ManageBoxesActionsTest {
     });
   }
 
+  /** Returns the table's Box Number column. */
   @SuppressWarnings("unchecked")
   private TableColumn<Mailbox, String> boxNumberColumn() {
     return (TableColumn<Mailbox, String>) table().getColumns().get(0);
   }
 
+  /** Returns the table of boxes. */
   @SuppressWarnings("unchecked")
   private TableView<Mailbox> table() {
     return (TableView<Mailbox>) mainWindow.getScene().getRoot().lookup("#boxTable");
@@ -262,14 +272,17 @@ class ManageBoxesActionsTest {
     return (ChoiceBox<ManageBoxesView.Show>) mainWindow.getScene().getRoot().lookup("#showChoice");
   }
 
+  /** Returns the search field. */
   private TextField searchField() {
     return (TextField) mainWindow.getScene().getRoot().lookup("#searchField");
   }
 
+  /** Returns the button with the given id on the main window. */
   private Button button(String id) {
     return (Button) mainWindow.getScene().getRoot().lookup("#" + id);
   }
 
+  /** Makes a box with the given names and closing date. */
   private static Mailbox box(String boxNumber, String first, String last, LocalDate closedDate) {
     return new Mailbox(0, first, last, null, boxNumber, null, "5551000001", null, null, null, null, null,
         closedDate);

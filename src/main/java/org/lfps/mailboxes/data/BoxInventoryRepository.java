@@ -18,20 +18,32 @@ import org.lfps.mailboxes.util.BoxNumbers;
  */
 public class BoxInventoryRepository {
 
+  /** Makes a repository for the app's database. */
+  public BoxInventoryRepository() {
+  }
+
+  /** Reads every box in the inventory. */
   private static final String SELECT_ALL_SQL = "SELECT box_number, size FROM box_inventory";
 
+  /** Adds a box, unless one with that number is already there. */
   private static final String INSERT_SQL = "INSERT OR IGNORE INTO box_inventory (box_number, size) VALUES (?, ?)";
 
+  /** Changes a box's size. */
   private static final String UPDATE_SIZE_SQL = "UPDATE box_inventory SET size = ? WHERE box_number = ?";
 
+  /** Removes a box. */
   private static final String DELETE_SQL = "DELETE FROM box_inventory WHERE box_number = ?";
 
+  /** Checks whether a box is in the inventory. */
   private static final String CONTAINS_SQL = "SELECT 1 FROM box_inventory WHERE box_number = ? LIMIT 1";
 
+  /** Counts the boxes in the inventory. */
   private static final String COUNT_SQL = "SELECT COUNT(*) FROM box_inventory";
 
+  /** Reads a box's size. */
   private static final String SIZE_OF_SQL = "SELECT size FROM box_inventory WHERE box_number = ?";
 
+  /** Reads the different sizes, counting sizes that differ only in letter case as one. */
   private static final String SIZES_SQL =
       "SELECT MIN(size) AS size FROM box_inventory WHERE size IS NOT NULL GROUP BY size COLLATE NOCASE";
 
@@ -170,10 +182,27 @@ public class BoxInventoryRepository {
     }
   }
 
+  /** Fills in a statement's parameters for one box. */
   private interface Binder {
+    /**
+     * Fills in the parameters.
+     *
+     * @param stmt the statement
+     * @param boxNumber the box's number
+     * @throws SQLException if a parameter can't be set
+     */
     void bind(PreparedStatement stmt, String boxNumber) throws SQLException;
   }
 
+  /**
+   * Runs a statement once for each box, all or nothing.
+   *
+   * @param sql the statement
+   * @param boxNumbers the boxes' numbers
+   * @param binder fills in the statement's parameters for each box
+   * @return how many rows were changed
+   * @throws SQLException if a statement fails; nothing is changed
+   */
   private static int inTransaction(String sql, List<String> boxNumbers, Binder binder) throws SQLException {
     try (Connection conn = Database.connect()) {
       conn.setAutoCommit(false);

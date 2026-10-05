@@ -7,11 +7,16 @@ import java.util.regex.Pattern;
  */
 public class Validators {
 
+    /**
+     * Matches an email address such as name@example.com.
+     */
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}$");
 
+    /** Matches a ZIP code, with or without the four extra digits. */
     private static final Pattern ZIP_PATTERN = Pattern.compile("^\\d{5}(-\\d{4})?$");
 
+    /** Matches a two-letter state code. */
     private static final Pattern STATE_PATTERN = Pattern.compile("^[A-Za-z]{2}$");
 
     /**
@@ -57,6 +62,10 @@ public class Validators {
      */
     public static boolean isValidState(String state) {
         return state != null && STATE_PATTERN.matcher(state.trim()).matches();
+    }
+
+    /** Not used: values are checked with static methods. */
+    private Validators() {
     }
 
 }

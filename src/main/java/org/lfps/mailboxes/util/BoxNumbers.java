@@ -23,8 +23,10 @@ public final class BoxNumbers {
    */
   public static final Comparator<String> ORDER = BoxNumbers::compare;
 
+  /** Splits a box number into runs of digits and runs of other characters, for sorting. */
   private static final Pattern CHUNK = Pattern.compile("\\d+|\\D+");
 
+  /** Matches a range of box numbers, such as 100-120. */
   private static final Pattern RANGE = Pattern.compile("(\\d+)\\s*-\\s*(\\d+)");
 
   /**
@@ -84,6 +86,14 @@ public final class BoxNumbers {
     return new ArrayList<>(numbers);
   }
 
+  /**
+   * Compares box numbers in the order of {@link #ORDER}.
+   *
+   * @param a a box number
+   * @param b another box number
+   * @return less than, equal to, or greater than zero as {@code a} comes
+   *     before, with, or after {@code b}
+   */
   private static int compare(String a, String b) {
     var left = CHUNK.matcher(key(a));
     var right = CHUNK.matcher(key(b));
@@ -117,6 +127,7 @@ public final class BoxNumbers {
     }
   }
 
+  /** Not used: box numbers are handled with static methods. */
   private BoxNumbers() {
   }
 

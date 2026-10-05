@@ -107,6 +107,7 @@ public final class PhoneNumberFormatter {
     return "(" + digits.substring(0, 3) + ") " + digits.substring(3, 6) + "-" + digits.substring(6);
   }
 
+  /** Not used: phone numbers are formatted with static methods. */
   private PhoneNumberFormatter() {
   }
 

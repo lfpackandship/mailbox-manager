@@ -254,6 +254,28 @@ length. On Add New Box the price is filled in once both the box number and the
 length are chosen. Prices apply only when you use the rental length buttons,
 not when you pick an end date yourself.
 
+### Raising prices from a later date
+
+To change prices from a day in the future, and let box holders know:
+
+1. Open the Prices window and click **Price Change…**.
+2. Choose the day the new prices start under **New prices start on**.
+3. The new prices start out as today's. Change the ones that are going up, and
+   click **Save**.
+4. Click **Print Notices…** to print a notice for each rented box. Each one
+   has the box number, the holder's name, when their rental ends, and the day
+   the new prices start, then today's prices and the new ones, with the box's
+   size circled in both. As with reminders, untick any you don't want, click a
+   box to preview its notice, and print or save them as a PDF. The message on
+   the notices can be changed on the Price Change window.
+
+Until that day, adding or renewing a box still fills in today's prices, so box
+holders can renew early to keep them. On that day, the new prices replace
+today's on their own; there's nothing else to do. The Prices window says when
+a price change is coming. To change it, open **Price Change…** again, or click
+**Cancel Price Change** to keep today's prices. Forwarding-only boxes don't
+get notices, since box prices don't apply to them.
+
 ### Forwarding addresses
 
 If a box holder wants mail forwarded, add one or more forwarding addresses on

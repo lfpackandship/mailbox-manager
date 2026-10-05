@@ -10,6 +10,10 @@ import org.junit.jupiter.api.Test;
 
 import org.lfps.mailboxes.model.Mailbox;
 
+/**
+ * Tests for which boxes Renewals lists as past due and due soon, and how it
+ * says when each is due.
+ */
 class RenewalsFilterTest {
 
   private static final LocalDate TODAY = LocalDate.of(2026, 9, 26);
@@ -56,11 +60,13 @@ class RenewalsFilterTest {
     assertEquals("In 30 days", RenewalsView.dueStatus(TODAY.plusDays(30), TODAY));
   }
 
+  /** Makes a box with the given end date. */
   private static Mailbox box(String boxNumber, LocalDate endDate) {
     return new Mailbox(0, "First", "Last", null, boxNumber, null, "(555) 000-0000", null,
         null, endDate, null);
   }
 
+  /** Returns the boxes' numbers, in the same order. */
   private static List<String> boxNumbers(List<Mailbox> mailboxes) {
     return mailboxes.stream().map(Mailbox::getBoxNumber).collect(Collectors.toList());
   }

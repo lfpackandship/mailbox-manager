@@ -60,6 +60,7 @@ final class Dialogs {
     return dialog.showAndWait();
   };
 
+  /** Not used: questions are asked with static methods. */
   private Dialogs() {
   }
 

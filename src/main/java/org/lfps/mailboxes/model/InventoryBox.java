@@ -6,7 +6,12 @@ package org.lfps.mailboxes.model;
  */
 public final class InventoryBox {
 
+  /** The box number. */
   private final String boxNumber;
+
+  /**
+   * The box's size, such as Small, or {@code null} if not recorded.
+   */
   private final String size;
 
   /**

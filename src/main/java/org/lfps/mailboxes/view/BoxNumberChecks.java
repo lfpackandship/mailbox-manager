@@ -36,6 +36,7 @@ final class BoxNumberChecks {
     }
   }
 
+  /** Not used: box numbers are checked with static methods. */
   private BoxNumberChecks() {
   }
 

@@ -101,6 +101,9 @@ final class KeyFields {
   /**
    * Returns the deposit for a number of keys at the amount per key set in
    * Settings, formatted, or an empty string if there's no deposit for it.
+   *
+   * @param countText the number of keys, as typed
+   * @return the deposit, such as "$20.00", or an empty string
    */
   private static String depositFor(String countText) {
     try {

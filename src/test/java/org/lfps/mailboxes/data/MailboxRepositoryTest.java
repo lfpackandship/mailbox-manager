@@ -17,6 +17,10 @@ import org.junit.jupiter.api.Test;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 
+/**
+ * Tests for saving, finding, and deleting mailboxes with their names and
+ * addresses.
+ */
 class MailboxRepositoryTest {
 
   private final MailboxRepository repository = new MailboxRepository();
@@ -266,11 +270,13 @@ class MailboxRepositoryTest {
         .map(Mailbox::getBoxNumber).collect(Collectors.toList()));
   }
 
+  /** Makes a box with the given forwarding addresses. */
   private static Mailbox withForwarding(String boxNumber, List<ForwardingAddress> addresses) {
     return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null,
         List.of(), null, addresses);
   }
 
+  /** Makes a box with every field filled in, and the given alternate business names and end date. */
   private static Mailbox mailbox(String boxNumber, List<String> alternateNames, LocalDate endDate) {
     return new Mailbox(0, "Ada", "Lovelace", "Engines Ltd", boxNumber, "Box",
         "(555) 123-4567", "ada@example.com", alternateNames, endDate, null);

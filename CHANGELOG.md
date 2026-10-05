@@ -3,6 +3,17 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## 1.8.0 – 2026-10-05
+
+### Added
+
+- Price changes can start on a later date: **Price Change…** on the Prices
+  window sets the day new prices start and what they'll be. Until then, adding
+  or renewing a box uses today's prices, so box holders can renew early to
+  keep them; on that day the new prices take over on their own. **Print
+  Notices…** prints a notice for each rented box with the day the prices
+  change, today's prices, and the new ones, with the box's size circled.
+
 ## 1.7.2 – 2026-10-05
 
 ### Changed

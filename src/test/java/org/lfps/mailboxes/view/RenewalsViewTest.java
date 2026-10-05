@@ -171,19 +171,23 @@ class RenewalsViewTest {
     assertFalse(FxTestSupport.call(() -> button("upcomingRenewButton").isDisabled()));
   }
 
+  /** Makes a box with the given holder and end date. */
   private static Mailbox box(String boxNumber, String lastName, LocalDate endDate) {
     return new Mailbox(0, "Ada", lastName, null, boxNumber, null, "(555) 123-4567", null, null, endDate, null);
   }
 
+  /** Returns the table with the given id, such as the Past Due table. */
   @SuppressWarnings("unchecked")
   private TableView<Mailbox> table(String id) {
     return (TableView<Mailbox>) mainWindow.getScene().getRoot().lookup("#" + id);
   }
 
+  /** Returns the button with the given id on the main window. */
   private Button button(String id) {
     return (Button) mainWindow.getScene().getRoot().lookup("#" + id);
   }
 
+  /** Returns the first row of a table, laying the table out first. */
   @SuppressWarnings("unchecked")
   private TableRow<Mailbox> firstRow(String tableId) {
     var table = table(tableId);
@@ -195,6 +199,9 @@ class RenewalsViewTest {
         .orElseThrow();
   }
 
+  /**
+   * Returns the open box details window, or {@code null} if there isn't one.
+   */
   private static Stage detailsWindow() {
     return FxTestSupport.call(() -> Window.getWindows().stream()
         .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup("#detailTitle") != null)

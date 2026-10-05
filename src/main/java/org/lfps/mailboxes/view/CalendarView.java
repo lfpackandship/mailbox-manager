@@ -128,11 +128,20 @@ public class CalendarView {
   /**
    * Returns the calendar column, from 0 to 6, that a day of the week falls in
    * when weeks start on {@code firstDay}.
+   *
+   * @param day the day of the week
+   * @param firstDay the day the week starts on
+   * @return the column, from 0 for the first day to 6
    */
   static int column(DayOfWeek day, DayOfWeek firstDay) {
     return (day.getValue() - firstDay.getValue() + 7) % 7;
   }
 
+  /**
+   * Returns the day the week starts on, from the settings.
+   *
+   * @return Sunday or Monday; Sunday if the setting can't be read
+   */
   private static DayOfWeek weekStart() {
     try {
       return DayOfWeek.valueOf(new SettingsRepository().get(Setting.WEEK_START));
@@ -141,12 +150,29 @@ public class CalendarView {
     }
   }
 
+  /**
+   * Makes the text for a box listed in a day of the calendar, in small orange
+   * type.
+   *
+   * @param text the text
+   * @return the label
+   */
   private static Label entryLabel(String text) {
     var label = new Label(text);
     label.setStyle("-fx-font-size: 0.8em; -fx-text-fill: #b34700;");
     return label;
   }
 
+  /**
+   * Builds a day of the calendar, listing the boxes ending that day. Clicking
+   * it opens the day's list.
+   *
+   * @param stage the main window
+   * @param month the month shown
+   * @param date the day
+   * @param mailboxes the boxes ending that day
+   * @return the day's cell
+   */
   private static VBox buildDayCell(Stage stage, YearMonth month, LocalDate date, List<Mailbox> mailboxes) {
     var cell = new VBox(2);
     cell.setId("day-" + date);
@@ -201,6 +227,7 @@ public class CalendarView {
     return cell;
   }
 
+  /** Not used: the screen is built with static methods. */
   private CalendarView() {
   }
 

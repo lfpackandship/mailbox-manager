@@ -78,6 +78,7 @@ public final class FakeGoogle {
   private final Map<String, String> challenges = new LinkedHashMap<>();
   private final List<String> refreshTokens = new ArrayList<>();
 
+  /** Starts the fake server on this computer, on a free port. */
   private FakeGoogle() throws IOException {
     server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
     base = "http://127.0.0.1:" + server.getAddress().getPort();
@@ -183,11 +184,13 @@ public final class FakeGoogle {
     add(name, folder.id, false, content);
   }
 
+  /** Makes a client that talks to a server at the given address instead of Google. */
   private GoogleDrive client(String url) {
     return new GoogleDrive("client-id", "client-secret", url + "/auth", url + "/token", url + "/revoke",
         url + "/drive/v3", url + "/upload/drive/v3");
   }
 
+  /** Answers a request the way Google would, from the files and sign-ins kept here. */
   private synchronized void handle(HttpExchange exchange) throws IOException {
     var path = exchange.getRequestURI().getPath();
     var method = exchange.getRequestMethod();
@@ -263,6 +266,7 @@ public final class FakeGoogle {
     reply(exchange, 404, "{}");
   }
 
+  /** Answers a request to Google's token address: trading a sign-in code, or using a saved sign-in. */
   private void token(HttpExchange exchange, Map<String, String> params) throws IOException {
     if ("authorization_code".equals(params.get("grant_type"))) {
       var challenge = challenges.remove(params.get("code"));
@@ -284,12 +288,14 @@ public final class FakeGoogle {
     reply(exchange, 200, "{\"access_token\":\"access-token\"}");
   }
 
+  /** Adds a file or folder to the fake Google Drive, giving it the next id. */
   private File add(String name, String parent, boolean folder, byte[] content) {
     var file = new File("id" + nextId++, name, parent, folder, content);
     files.put(file.id, file);
     return file;
   }
 
+  /** Replies to a request with JSON. */
   private static void reply(HttpExchange exchange, int status, String json) throws IOException {
     var bytes = json.getBytes(StandardCharsets.UTF_8);
     exchange.getResponseHeaders().set("Content-Type", "application/json");
@@ -301,6 +307,7 @@ public final class FakeGoogle {
     }
   }
 
+  /** Hashes text the way the app does for the sign-in check, to compare with what it sent. */
   private static String sha256(String text) {
     try {
       var digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.US_ASCII));

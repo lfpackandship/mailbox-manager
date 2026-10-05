@@ -138,6 +138,29 @@ class PriceSheetTest {
   }
 
   @Test
+  void aNoticeShowsTheStartDateAndBothPricesWithTheSizeCircled() {
+    var after = new PriceSheet.Content("Lake Forest Pack and Ship", "", "", "", "", "", "Renew early.",
+        List.of(3), List.of(new PriceSheet.Column("Medium", "Medium", "", Map.of(3, 11000L))));
+    var page = layOut(PriceSheet.notice(content(), after, box(LocalDate.of(2026, 10, 31)), "medium",
+        LocalDate.of(2026, 11, 1), TODAY));
+
+    assertEquals("Mailbox Price Change", FxTestSupport.call(() -> label(page, "noticeTitle").getText()));
+    assertEquals("Box 12 – Ada Lovelace", FxTestSupport.call(() -> label(page, "noticeBox").getText()));
+    assertEquals("Sunday, November 1, 2026", FxTestSupport.call(() -> label(page, "noticeStartDate").getText()));
+    assertEquals("Renew early to keep today's prices.",
+        FxTestSupport.call(() -> label(page, "noticeMessage").getText()));
+    assertEquals("$105.00", FxTestSupport.call(() -> cellText(page, "sheetPrice-3-1")));
+    assertEquals("$110.00", FxTestSupport.call(() -> cellText(page, "newPrice-3-0")));
+
+    var oldCircle = FxTestSupport.call(() -> bounds(page, page.lookup("#sizeCircle")));
+    var newCircle = FxTestSupport.call(() -> bounds(page, page.lookup("#newSizeCircle")));
+    assertTrue(oldCircle.contains(FxTestSupport.call(() -> bounds(page, page.lookup("#sheetHeader-1")))));
+    assertTrue(newCircle.contains(FxTestSupport.call(() -> bounds(page, page.lookup("#newHeader-0")))));
+    var dateCircle = FxTestSupport.call(() -> bounds(page, page.lookup("#startDateCircle")));
+    assertTrue(dateCircle.contains(FxTestSupport.call(() -> bounds(page, page.lookup("#noticeStartDate")))));
+  }
+
+  @Test
   void aBoxWithNoSizeHasNoSizeCircledWithoutDefaultPrices() {
     var page = layOut(PriceSheet.page(content(), box(LocalDate.of(2026, 10, 31)), null, TODAY));
 
@@ -201,24 +224,34 @@ class PriceSheetTest {
   private static PriceSheet.Content content() {
     return new PriceSheet.Content("Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045",
         "Mailbox Service Includes:\n- 24-Hour Access to Mailbox\n\n* requires funding", "Plus a key deposit",
-        "Please renew at the counter.", "Please renew your forwarding.", List.of(3, 6, 12), List.of(
+        "Please renew at the counter.", "Please renew your forwarding.", "Renew early to keep today's prices.",
+        List.of(3, 6, 12), List.of(
             new PriceSheet.Column("Small", "Small", "3¾\" x 5\" x 14\"", Map.of(3, 9000L, 6, 15000L, 12, 24000L)),
             new PriceSheet.Column("Medium", "Medium", "", Map.of(3, 10500L, 6, 18000L, 12, 30000L)),
             new PriceSheet.Column("Large", "Large", "", Map.of(3, 15000L, 6, 26000L, 12, 40000L))));
   }
 
+  /** Makes box 12 for Ada Lovelace with the given end date. */
   private static Mailbox box(LocalDate endDate) {
     return new Mailbox(0, "Ada", "Lovelace", null, "12", null, "", null, null, endDate, null);
   }
 
+  /** Lays out a page as it would be printed. */
   private static Region layOut(Region page) {
     return FxTestSupport.call(() -> Printing.layOut(page));
   }
 
+  /** Returns the label with the given id on a page. */
   private static Label label(Region page, String id) {
     return (Label) page.lookup("#" + id);
   }
 
+  /** Returns the text in a cell of a table of prices. */
+  private static String cellText(Region page, String id) {
+    return ((Label) ((javafx.scene.Parent) page.lookup("#" + id)).getChildrenUnmodifiable().get(0)).getText();
+  }
+
+  /** Returns where something is on a page, in the page's coordinates. */
   private static Bounds bounds(Region page, Node node) {
     if (node instanceof Rectangle) {
       var circle = (Rectangle) node;
@@ -231,10 +264,12 @@ class PriceSheetTest {
     return new javafx.geometry.Point2D(bounds.getCenterX(), bounds.getCenterY());
   }
 
+  /** Returns the headings of the columns of prices. */
   private static List<String> headings(PriceSheet.Content content) {
     return content.columns.stream().map(column -> column.heading).collect(java.util.stream.Collectors.toList());
   }
 
+  /** Deletes the prices, sizes, inventory, and settings from the test database. */
   private static void emptyDatabase() throws SQLException {
     TestSandbox.require();
     Database.prepareDataDir();
@@ -242,6 +277,7 @@ class PriceSheetTest {
     try (var conn = Database.connect(); var stmt = conn.createStatement()) {
       stmt.execute("DELETE FROM settings");
       stmt.execute("DELETE FROM prices");
+      stmt.execute("DELETE FROM scheduled_prices");
       stmt.execute("DELETE FROM box_sizes");
       stmt.execute("DELETE FROM box_inventory");
     }

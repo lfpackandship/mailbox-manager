@@ -22,15 +22,22 @@ import java.util.zip.DeflaterOutputStream;
  */
 final class Pdf implements AutoCloseable {
 
-  /** Letter paper, in points (1/72 inch). */
+  /** The width of letter paper, in points (1/72 inch). */
   private static final double PAPER_WIDTH = 612;
+
+  /** The height of letter paper, in points. */
   private static final double PAPER_HEIGHT = 792;
 
   /** The margin around each page, in points. */
   private static final double MARGIN = 36;
 
+  /** Where the finished PDF goes. */
   private final Path target;
+
+  /** Where the PDF is written until it is finished. */
   private final Path partial;
+
+  /** Writes to the partial file, counting the bytes. */
   private final Counting out;
 
   /** Where each object starts in the file, by object number less one. */
@@ -39,6 +46,7 @@ final class Pdf implements AutoCloseable {
   /** The object number of each page. */
   private final List<Integer> pageObjects = new ArrayList<>();
 
+  /** Whether the PDF has been finished, so closing it keeps the file. */
   private boolean finished;
 
   /**
@@ -146,6 +154,12 @@ final class Pdf implements AutoCloseable {
     }
   }
 
+  /**
+   * Starts a numbered object in the PDF, noting where it starts.
+   *
+   * @return the object's number
+   * @throws IOException if it can't be written
+   */
   private int startObject() throws IOException {
     offsets.add(out.count);
     var number = offsets.size();
@@ -153,6 +167,12 @@ final class Pdf implements AutoCloseable {
     return number;
   }
 
+  /**
+   * Writes text to the PDF.
+   *
+   * @param text the text, which must be plain ASCII
+   * @throws IOException if it can't be written
+   */
   private void write(String text) throws IOException {
     out.write(text.getBytes(StandardCharsets.ISO_8859_1));
   }
@@ -160,8 +180,14 @@ final class Pdf implements AutoCloseable {
   /** Counts the bytes written, for the table of where each object starts. */
   private static final class Counting extends FilterOutputStream {
 
+    /** How many bytes have been written. */
     long count;
 
+    /**
+     * Starts counting.
+     *
+     * @param out where the bytes go
+     */
     Counting(OutputStream out) {
       super(out);
     }

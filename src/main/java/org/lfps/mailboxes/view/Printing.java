@@ -51,6 +51,7 @@ final class Printing {
     CompletableFuture<Boolean> print(String jobName, List<Region> pages);
   }
 
+  /** Whether the app is running on a Mac, whose print dialog behaves differently. */
   private static final boolean MAC = System.getProperty("os.name", "").toLowerCase().contains("mac");
 
   /** How sharply pages are printed, in dots per inch. */
@@ -161,9 +162,14 @@ final class Printing {
   }
 
   /**
-   * Shows the computer's print dialog and prints. This runs on a thread of
-   * its own: the dialog waits for the user, and on a Mac it needs the JavaFX
-   * thread free to appear at all.
+   * Shows the computer's print dialog and prints. This runs on a thread of its
+   * own: the dialog waits for the user, and on a Mac it needs the JavaFX thread
+   * free to appear at all.
+   *
+   * @param jobName what the print job is called in the printer queue
+   * @param pages the pages
+   * @return completes with {@code true} once printed, {@code false} if the user
+   *     cancelled, or with the problem
    */
   private static CompletableFuture<Boolean> printWithSystemDialog(String jobName, List<Region> pages) {
     var result = new CompletableFuture<Boolean>();
@@ -200,12 +206,20 @@ final class Printing {
    */
   static final class Pages implements Printable {
 
+    /** The pages to print. */
     private final List<Region> pages;
 
     /** The page last drawn, which the printer often asks for more than once. */
     private int pictureIndex = -1;
+
+    /** A picture of that page. */
     private Picture picture;
 
+    /**
+     * Prepares to print pages.
+     *
+     * @param pages the pages, laid out
+     */
     Pages(List<Region> pages) {
       this.pages = pages;
     }
@@ -238,17 +252,35 @@ final class Printing {
   /** A picture of a page, and its size in points (1/72 inch). */
   private static final class Picture {
 
+    /** The picture. */
     final BufferedImage image;
+
+    /** The page's width, in points. */
     final double width;
+
+    /** The page's height, in points. */
     final double height;
 
+    /**
+     * Makes a picture.
+     *
+     * @param image the picture
+     * @param width the page's width, in points
+     * @param height the page's height, in points
+     */
     private Picture(BufferedImage image, double width, double height) {
       this.image = image;
       this.width = width;
       this.height = height;
     }
 
-    /** Takes a picture of a page on the JavaFX thread, waiting for it. */
+    /**
+     * Takes a picture of a page on the JavaFX thread, waiting for it.
+     *
+     * @param page the page, laid out
+     * @return the picture
+     * @throws PrinterException if the picture can't be taken
+     */
     static Picture of(Region page) throws PrinterException {
       var snapshot = new CompletableFuture<Image>();
       Platform.runLater(() -> {
@@ -280,6 +312,7 @@ final class Printing {
 
   }
 
+  /** Not used: printing is done with static methods. */
   private Printing() {
   }
 

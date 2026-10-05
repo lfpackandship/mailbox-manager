@@ -6,6 +6,10 @@ import org.junit.jupiter.api.Test;
 
 import org.lfps.mailboxes.model.Mailbox;
 
+/**
+ * Tests for the short descriptions of a box and its holder used in titles and
+ * messages.
+ */
 class BoxLabelsTest {
 
   private static final Mailbox ADA = box("Ada", "Lovelace", null);
@@ -31,6 +35,7 @@ class BoxLabelsTest {
     assertEquals("its holder", BoxLabels.holderOr(NAMELESS, "its holder"));
   }
 
+  /** Makes box 12 with the given names. */
   private static Mailbox box(String first, String last, String businessTitle) {
     return new Mailbox(0, first, last, businessTitle, "12", null, "5551000001", null, null, null, null);
   }

@@ -22,6 +22,10 @@ import org.junit.jupiter.api.Test;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
 
+/**
+ * Tests for where the database is kept, the daily backups, and upgrading
+ * databases made by older versions.
+ */
 class DatabaseTest {
 
   private static final Path BACKUP_DIR = Database.dataDir().resolve("backups");
@@ -236,6 +240,7 @@ class DatabaseTest {
     }
   }
 
+  /** Deletes a folder and everything in it, if it exists. */
   private static void deleteRecursively(Path dir) throws IOException {
     if (!Files.exists(dir)) {
       return;

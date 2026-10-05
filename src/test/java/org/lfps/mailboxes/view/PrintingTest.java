@@ -306,6 +306,7 @@ class PrintingTest {
     assertEquals("Amount\r\n$120.00\r\n", FxTestSupport.call(() -> TableOutput.csv(List.of(table))));
   }
 
+  /** Makes a table with a Box and a Name column holding the given rows. */
   private static TableView<String[]> table(List<String[]> rows) {
     var table = new TableView<String[]>(FXCollections.observableArrayList(rows));
     var box = new TableColumn<String[], String>("Box");
@@ -317,10 +318,12 @@ class PrintingTest {
     return table;
   }
 
+  /** Makes a box with the given holder and end date. */
   private static Mailbox box(String boxNumber, String lastName, LocalDate endDate) {
     return new Mailbox(0, "Ada", lastName, null, boxNumber, null, "(555) 123-4567", null, null, endDate, null);
   }
 
+  /** Returns the box each reminder page is for, as printed on it. */
   private static List<String> reminderBoxes(List<Region> pages) {
     return FxTestSupport.call(() -> {
       var boxes = new ArrayList<String>();
@@ -334,6 +337,7 @@ class PrintingTest {
     });
   }
 
+  /** Returns all the text on a page, one label per line. */
   private static String pageText(Region page) {
     return FxTestSupport.call(() -> {
       var text = new StringBuilder();
@@ -342,16 +346,19 @@ class PrintingTest {
     });
   }
 
+  /** Returns the box the preview on the print window shows, as printed on it. */
   private static String previewedBox(Stage window) {
     return FxTestSupport.call(() -> ((Label) window.getScene().lookup("#printPreview").lookup("#reminderBox"))
         .getText());
   }
 
+  /** Returns the list of boxes to tick on the print window. */
   @SuppressWarnings("unchecked")
   private static ListView<Mailbox> boxList(Stage window) {
     return (ListView<Mailbox>) window.getScene().lookup("#printBoxList");
   }
 
+  /** Returns the open print window, failing if there isn't one. */
   private static Stage printWindow() {
     var window = FxTestSupport.call(() -> Window.getWindows().stream()
         .filter(w -> w.getScene() != null && w.getScene().lookup("#printButton") != null)
@@ -362,10 +369,12 @@ class PrintingTest {
     return window;
   }
 
+  /** Returns the button with the given id on a window. */
   private static Button button(Stage window, String id) {
     return (Button) window.getScene().lookup("#" + id);
   }
 
+  /** Returns the label with the given id on a window. */
   private static Label label(Stage window, String id) {
     return (Label) window.getScene().lookup("#" + id);
   }

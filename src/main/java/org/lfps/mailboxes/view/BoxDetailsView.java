@@ -187,6 +187,14 @@ final class BoxDetailsView {
     }
   }
 
+  /**
+   * Makes a row of the details: a bold name and its value.
+   *
+   * @param name what the row shows, such as "Phone"
+   * @param id the value's id
+   * @param value the value
+   * @return the name and value labels
+   */
   private static Label[] row(String name, String id, String value) {
     var nameLabel = new Label(name + ":");
     nameLabel.setStyle("-fx-font-weight: bold;");
@@ -197,8 +205,11 @@ final class BoxDetailsView {
   }
 
   /**
-   * Describes a box's rental history, one entry per line, such as
-   * "Sep 26, 2026 – Mar 26, 2027: $60.00, Check (check #1042)".
+   * Describes a box's rental history, one entry per line, such as "Sep 26, 2026
+   * – Mar 26, 2027: $60.00, Check (check #1042)".
+   *
+   * @param periods the history, oldest first
+   * @return the description, or "None" if there's no history
    */
   static String describeHistory(List<RentalPeriod> periods) {
     if (periods.isEmpty()) {
@@ -219,18 +230,37 @@ final class BoxDetailsView {
     return String.join("\n", lines);
   }
 
+  /**
+   * Lists items, one per line.
+   *
+   * @param items the items
+   * @return the list, or "None" if it's empty
+   */
   private static String lines(List<?> items) {
     return items.isEmpty() ? NONE : items.stream().map(String::valueOf).collect(Collectors.joining("\n"));
   }
 
+  /**
+   * Returns a value, or "None" if it's blank.
+   *
+   * @param value the value, or {@code null}
+   * @return the value or "None"
+   */
   private static String orNone(String value) {
     return isBlank(value) ? NONE : value;
   }
 
+  /**
+   * Returns whether a value is missing or blank.
+   *
+   * @param value the value, or {@code null}
+   * @return {@code true} if it's {@code null} or only whitespace
+   */
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
   }
 
+  /** Not used: the window is built with static methods. */
   private BoxDetailsView() {
   }
 

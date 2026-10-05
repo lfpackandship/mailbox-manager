@@ -277,11 +277,13 @@ class ManageBoxesViewTest {
     assertTrue(FxTestSupport.call(() -> details.getScene().lookup("#detailsRenewButton").isDisabled()));
   }
 
+  /** Makes a box that was closed ten days ago. */
   private static Mailbox closedBox(String boxNumber) {
     return new Mailbox(0, "Grace", "Hopper", null, boxNumber, null, "5552000009", null, null, null, null,
         null, LocalDate.now().minusDays(10));
   }
 
+  /** Returns the box numbers in the table, as shown. */
   private List<String> boxNumbersShown() {
     return FxTestSupport.call(() -> table().getItems().stream()
         .map(Mailbox::getBoxNumber)
@@ -293,15 +295,18 @@ class ManageBoxesViewTest {
     return (ChoiceBox<ManageBoxesView.Show>) mainWindow.getScene().getRoot().lookup("#showChoice");
   }
 
+  /** Returns the table of boxes. */
   @SuppressWarnings("unchecked")
   private TableView<Mailbox> table() {
     return (TableView<Mailbox>) mainWindow.getScene().getRoot().lookup("#boxTable");
   }
 
+  /** Returns the button with the given id on the main window. */
   private Button button(String id) {
     return (Button) mainWindow.getScene().getRoot().lookup("#" + id);
   }
 
+  /** Returns a box's row in the table, laying the table out first. */
   @SuppressWarnings("unchecked")
   private TableRow<Mailbox> rowFor(String boxNumber) {
     table().layout();
@@ -312,6 +317,9 @@ class ManageBoxesViewTest {
         .orElseThrow();
   }
 
+  /**
+   * Returns the open box details window, or {@code null} if there isn't one.
+   */
   private static Stage detailsWindow() {
     return FxTestSupport.call(() -> Window.getWindows().stream()
         .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup("#detailTitle") != null)
@@ -320,6 +328,7 @@ class ManageBoxesViewTest {
         .orElse(null));
   }
 
+  /** Returns the text of the detail with the given id on a box details window. */
   private static String detail(Stage details, String id) {
     return FxTestSupport.call(() -> ((Label) details.getScene().lookup("#" + id)).getText());
   }

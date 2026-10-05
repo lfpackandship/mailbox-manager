@@ -412,8 +412,11 @@ public class SettingsView {
    * Parses a whole number typed into a settings field, ignoring surrounding
    * whitespace.
    *
-   * @return the number, or {@code null} if the text is not a whole number
-   *     from {@code min} to {@code max} inclusive
+   * @return the number, or {@code null} if the text is not a whole number from
+   *     {@code min} to {@code max} inclusive
+   * @param text the text typed, or {@code null}
+   * @param min the smallest number allowed
+   * @param max the largest number allowed
    */
   static Integer parseInRange(String text, int min, int max) {
     if (text == null) {
@@ -427,6 +430,14 @@ public class SettingsView {
     }
   }
 
+  /**
+   * Returns the saved rental lengths, tidied up, or the default ones if the
+   * saved ones can't be read.
+   *
+   * @param repository the settings
+   * @return the lengths, such as "1, 3, 6, 12"
+   * @throws SQLException if the settings can't be read
+   */
   private static String currentRentalLengths(SettingsRepository repository) throws SQLException {
     try {
       return RentalLengths.format(RentalLengths.parse(repository.get(Setting.RENTAL_LENGTHS)));
@@ -435,6 +446,14 @@ public class SettingsView {
     }
   }
 
+  /**
+   * Returns the saved key deposit, tidied up.
+   *
+   * @param repository the settings
+   * @return the deposit, such as "$10.00", or an empty string for none or one
+   *     that can't be read
+   * @throws SQLException if the settings can't be read
+   */
   private static String currentKeyDeposit(SettingsRepository repository) throws SQLException {
     try {
       var cents = Money.parse(repository.get(Setting.KEY_DEPOSIT));
@@ -444,6 +463,13 @@ public class SettingsView {
     }
   }
 
+  /**
+   * Makes a box for typing several lines, such as the price sheet's wording.
+   *
+   * @param id the box's id
+   * @param rows how many lines tall it is
+   * @return the box
+   */
   private static TextArea textArea(String id, int rows) {
     var area = new TextArea();
     area.setId(id);
@@ -453,19 +479,35 @@ public class SettingsView {
     return area;
   }
 
+  /**
+   * Shows a problem in red.
+   *
+   * @param label where to show it
+   * @param message the problem
+   */
   private static void showError(Label label, String message) {
     label.setStyle("-fx-text-fill: red;");
     label.setText(message);
   }
 
+  /**
+   * Shows that something worked, in green.
+   *
+   * @param label where to show it
+   * @param message what worked
+   */
   private static void showSuccess(Label label, String message) {
     label.setStyle("-fx-text-fill: green;");
     label.setText(message);
   }
 
   /**
-   * Makes a tab holding the given sections, which scroll if they don't fit,
-   * as happens with larger text.
+   * Makes a tab holding the given sections, which scroll if they don't fit, as
+   * happens with larger text.
+   *
+   * @param name the tab's name
+   * @param sections what's on the tab, one below another
+   * @return the tab
    */
   private static Tab tab(String name, Node... sections) {
     var content = new VBox(15, sections);
@@ -478,8 +520,11 @@ public class SettingsView {
   }
 
   /**
-   * Shows the tab a field is on, and puts the cursor in the field, so a
-   * mistake on another tab can be found.
+   * Shows the tab a field is on, and puts the cursor in the field, so a mistake
+   * on another tab can be found.
+   *
+   * @param tabs the tabs
+   * @param field the field with the mistake
    */
   private static void showField(TabPane tabs, Node field) {
     for (var tab : tabs.getTabs()) {
@@ -493,12 +538,28 @@ public class SettingsView {
     }
   }
 
+  /**
+   * Makes a section of a tab: a heading over rows of labelled settings.
+   *
+   * @param title the heading
+   * @param rows each row's label and control, as made by {@link #row(String,
+   *     Node)}
+   * @return the section
+   */
   private static VBox section(String title, Node[]... rows) {
     var header = new Label(title);
     header.setStyle("-fx-font-size: 1.1em; -fx-font-weight: bold;");
     return new VBox(8, header, grid(rows));
   }
 
+  /**
+   * Lays out rows of labelled settings, with the labels in a column on the
+   * left.
+   *
+   * @param rows each row's label and control, as made by {@link #row(String,
+   *     Node)}
+   * @return the grid
+   */
   private static GridPane grid(Node[]... rows) {
     var grid = new GridPane();
     grid.setHgap(10);
@@ -511,6 +572,13 @@ public class SettingsView {
     return grid;
   }
 
+  /**
+   * Makes a row of a section: a label and the control it describes.
+   *
+   * @param label the label, such as "Text size:", or an empty string for none
+   * @param control the setting's control
+   * @return the label and the control
+   */
   private static Node[] row(String label, Node control) {
     var text = new Label(label);
     // Never shorten a label to "…" to make room for a wide control.
@@ -518,12 +586,28 @@ public class SettingsView {
     return new Node[] { text, control };
   }
 
+  /** A setting that is a whole number in a range, such as how many backups to keep. */
   private static final class NumberField {
+    /** Where the number is typed. */
     private final TextField field;
+
+    /** What the setting is called in error messages. */
     private final String label;
+
+    /** The smallest number allowed. */
     private final int min;
+
+    /** The largest number allowed. */
     private final int max;
 
+    /**
+     * Makes a number setting.
+     *
+     * @param field where the number is typed
+     * @param label what the setting is called in error messages
+     * @param min the smallest number allowed
+     * @param max the largest number allowed
+     */
     NumberField(TextField field, String label, int min, int max) {
       this.field = field;
       this.label = label;
@@ -532,6 +616,7 @@ public class SettingsView {
     }
   }
 
+  /** Not used: the window is built with static methods. */
   private SettingsView() {
   }
 

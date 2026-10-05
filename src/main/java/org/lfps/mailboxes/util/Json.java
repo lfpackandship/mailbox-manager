@@ -12,9 +12,17 @@ import java.util.Map;
  */
 public final class Json {
 
+  /** The JSON being parsed. */
   private final String text;
+
+  /** Where parsing has got to in the text. */
   private int pos;
 
+  /**
+   * Starts parsing JSON.
+   *
+   * @param text the JSON text
+   */
   private Json(String text) {
     this.text = text;
   }
@@ -81,6 +89,12 @@ public final class Json {
     return out.append('"').toString();
   }
 
+  /**
+   * Parses the value starting here, skipping whitespace before it.
+   *
+   * @return the value, as described for {@link #parse(String)}
+   * @throws IllegalArgumentException if it isn't valid JSON
+   */
   private Object value() {
     skipWhitespace();
     if (pos >= text.length()) {
@@ -111,6 +125,12 @@ public final class Json {
     return number();
   }
 
+  /**
+   * Parses an object starting here, at its "{".
+   *
+   * @return its fields, in order
+   * @throws IllegalArgumentException if it isn't valid JSON
+   */
   private Map<String, Object> object() {
     var members = new LinkedHashMap<String, Object>();
     pos++;
@@ -138,6 +158,12 @@ public final class Json {
     }
   }
 
+  /**
+   * Parses an array starting here, at its "[".
+   *
+   * @return its items
+   * @throws IllegalArgumentException if it isn't valid JSON
+   */
   private List<Object> array() {
     var items = new ArrayList<Object>();
     pos++;
@@ -158,6 +184,12 @@ public final class Json {
     }
   }
 
+  /**
+   * Parses a string starting here, at its opening quote, decoding escapes.
+   *
+   * @return the string
+   * @throws IllegalArgumentException if it isn't valid JSON
+   */
   private String string() {
     pos++;
     var out = new StringBuilder();
@@ -199,6 +231,12 @@ public final class Json {
     throw error("Unterminated string");
   }
 
+  /**
+   * Parses a number starting here.
+   *
+   * @return the number
+   * @throws IllegalArgumentException if it isn't a number
+   */
   private Double number() {
     var start = pos;
     while (pos < text.length() && "+-0123456789.eE".indexOf(text.charAt(pos)) >= 0) {
@@ -212,16 +250,30 @@ public final class Json {
     }
   }
 
+  /** Moves past any whitespace. */
   private void skipWhitespace() {
     while (pos < text.length() && Character.isWhitespace(text.charAt(pos))) {
       pos++;
     }
   }
 
+  /**
+   * Returns whether the next character is the one given, without moving past
+   * it.
+   *
+   * @param c the character
+   * @return {@code true} if it's next
+   */
   private boolean peek(char c) {
     return pos < text.length() && text.charAt(pos) == c;
   }
 
+  /**
+   * Moves past the next character, which must be the one given.
+   *
+   * @param c the character
+   * @throws IllegalArgumentException if it isn't next
+   */
   private void expect(char c) {
     if (!peek(c)) {
       throw error("Expected '" + c + "'");
@@ -229,6 +281,12 @@ public final class Json {
     pos++;
   }
 
+  /**
+   * Makes an error saying what's wrong and where.
+   *
+   * @param message what's wrong
+   * @return the error, to throw
+   */
   private IllegalArgumentException error(String message) {
     return new IllegalArgumentException(message + " at position " + pos + " of JSON");
   }

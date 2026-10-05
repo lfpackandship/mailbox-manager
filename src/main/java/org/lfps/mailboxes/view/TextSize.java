@@ -18,9 +18,18 @@ public enum TextSize {
   /** Half again as large as normal. */
   EXTRA_LARGE("Extra large", 1.5);
 
+  /** What the size is called in Settings. */
   private final String label;
+
+  /** How much larger than normal the text is. */
   private final double scale;
 
+  /**
+   * Makes a text size.
+   *
+   * @param label what it's called in Settings
+   * @param scale how much larger than normal the text is
+   */
   TextSize(String label, double scale) {
     this.label = label;
     this.scale = scale;

@@ -200,27 +200,33 @@ class EditBoxViewTest {
     assertEquals("(555) 100-0001", find("2").getPhone());
   }
 
+  /** Opens Edit Box for a box. */
   private void edit(String boxNumber) throws SQLException {
     var mailbox = find(boxNumber);
     FxTestSupport.run(() -> EditBoxView.show(mainWindow, mailbox, () -> done = true));
   }
 
+  /** Reads a box from the database by its number. */
   private Mailbox find(String boxNumber) throws SQLException {
     return mailboxes.findAll().stream().filter(m -> m.getBoxNumber().equals(boxNumber)).findFirst().orElseThrow();
   }
 
+  /** Returns the notes field on Edit Box. */
   private TextArea notesField() {
     return (TextArea) mainWindow.getScene().getRoot().lookup("#notesField");
   }
 
+  /** Returns the box number field on Edit Box. */
   private TextField boxNumberField() {
     return textField("#boxNumberField");
   }
 
+  /** Returns the text field matching a selector on the main window. */
   private TextField textField(String selector) {
     return (TextField) mainWindow.getScene().getRoot().lookup(selector);
   }
 
+  /** Clicks Save on Edit Box. */
   private void save() {
     mainWindow.getScene().getRoot().lookupAll(".button").stream()
         .map(node -> (Button) node)
@@ -230,15 +236,18 @@ class EditBoxViewTest {
         .fire();
   }
 
+  /** Returns the message under Edit Box's Save button. */
   private String result() {
     return FxTestSupport.call(() -> ((Label) mainWindow.getScene().getRoot().lookup("#resultLabel")).getText());
   }
 
+  /** Makes a box with the given notes and closing date. */
   private static Mailbox box(String boxNumber, String notes, LocalDate closedDate) {
     return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 100-0001", null, null, null, null,
         notes, closedDate);
   }
 
+  /** Deletes all boxes and their history from the test database. */
   private static void clear() throws SQLException {
     TestSandbox.require();
     Database.prepareDataDir();

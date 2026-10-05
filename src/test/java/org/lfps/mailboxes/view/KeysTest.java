@@ -219,6 +219,7 @@ class KeysTest {
     assertNull(repository.findAll().get(0).getKeyCount());
   }
 
+  /** Makes a box with the given keys, deposit, and closing date. */
   private static Mailbox box(Integer keys, Long deposit, LocalDate closed) {
     return new Mailbox(0, "Ada", "Lovelace", null, "12", null, "", null, null, null, null, null, closed, keys,
         deposit);

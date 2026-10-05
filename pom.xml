@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.lfps.mailboxes</groupId>
     <artifactId>mailbox-manager</artifactId>
-    <version>1.7.2</version>
+    <version>1.8.0</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
@@ -36,6 +36,23 @@
                 <configuration>
                     <release>11</release>
                 </configuration>
+                <executions>
+                    <!-- Every class, field, constructor, and method in the app, private ones -->
+                    <!-- included, must have a complete Javadoc comment, or the build fails. -->
+                    <!-- Tests aren't checked. See "Documentation" in AGENTS.md. -->
+                    <execution>
+                        <id>default-compile</id>
+                        <configuration>
+                            <!-- Without this the plugin hides warnings, so -Werror never sees them. -->
+                            <showWarnings>true</showWarnings>
+                            <compilerArgs>
+                                <arg>-Xdoclint:all/private</arg>
+                                <arg>-Xdoclint:-html/private</arg>
+                                <arg>-Werror</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <!-- Tests run against a throwaway home and working directory under target/ -->

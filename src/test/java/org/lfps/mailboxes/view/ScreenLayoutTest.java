@@ -123,6 +123,10 @@ class ScreenLayoutTest {
     }
   }
 
+  /**
+   * Returns how wide the screen's contents are, and how wide the part of the
+   * window showing them is, at the default window size.
+   */
   private double[] contentAndViewportWidths() {
     return FxTestSupport.call(() -> {
       var scroll = scrollPaneSizedLikeTheDefaultWindow();

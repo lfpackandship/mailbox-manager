@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for a box in the box inventory.
+ */
 class InventoryBoxTest {
 
   @Test

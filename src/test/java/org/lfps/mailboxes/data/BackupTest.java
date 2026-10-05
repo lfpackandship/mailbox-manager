@@ -171,14 +171,17 @@ class BackupTest {
     assertTrue(error.getMessage().contains(unplugged + " can't be found"), error.getMessage());
   }
 
+  /** Makes a box with the given number and a holder. */
   private static Mailbox box(String boxNumber) {
     return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null, null, null, null);
   }
 
+  /** Returns the boxes' numbers, in the same order. */
   private static List<String> boxNumbers(List<Mailbox> list) {
     return list.stream().map(Mailbox::getBoxNumber).collect(Collectors.toList());
   }
 
+  /** Reads the box numbers saved in a database file, such as a backup, in order. */
   private static List<String> boxNumbersIn(Path databaseFile) throws SQLException {
     try (var conn = java.sql.DriverManager.getConnection("jdbc:sqlite:" + databaseFile);
         var stmt = conn.createStatement();
@@ -191,12 +194,14 @@ class BackupTest {
     }
   }
 
+  /** Returns the names of the files in a folder, in alphabetical order. */
   private static List<String> fileNames(Path folder) throws IOException {
     try (Stream<Path> files = Files.list(folder)) {
       return files.map(p -> p.getFileName().toString()).sorted().collect(Collectors.toList());
     }
   }
 
+  /** Deletes a folder and everything in it, if it exists. */
   private static void deleteRecursively(Path dir) throws IOException {
     if (!Files.exists(dir)) {
       return;

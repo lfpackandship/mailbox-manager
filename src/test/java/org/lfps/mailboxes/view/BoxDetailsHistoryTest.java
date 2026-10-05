@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Test;
 
 import org.lfps.mailboxes.model.RentalPeriod;
 
+/**
+ * Tests for how a box's rental history is described in its details.
+ */
 class BoxDetailsHistoryTest {
 
   private static final LocalDate START = LocalDate.of(2026, 1, 1);
@@ -37,6 +40,7 @@ class BoxDetailsHistoryTest {
         period + ": $60.00, Venmo (paid late)"), history);
   }
 
+  /** Makes a rental history entry with the given payment. */
   private static RentalPeriod entry(Long cents, String method, String note) {
     return new RentalPeriod(0, 1, START, START, END, cents, method, note);
   }

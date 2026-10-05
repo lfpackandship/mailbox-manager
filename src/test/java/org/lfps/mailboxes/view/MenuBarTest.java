@@ -150,10 +150,12 @@ class MenuBarTest {
     assertTrue(FxTestSupport.call(() -> !restore.isShowing()));
   }
 
+  /** Returns the main window's menu bar. */
   private MenuBar menuBar() {
     return (MenuBar) mainWindow.getScene().getRoot().lookup(".menu-bar");
   }
 
+  /** Returns the names of a menu's items, leaving out separators. */
   private List<String> items(String menu) {
     return FxTestSupport.call(() -> menuBar().getMenus().stream()
         .filter(m -> m.getText().equals(menu))
@@ -163,6 +165,7 @@ class MenuBarTest {
         .collect(Collectors.toList()));
   }
 
+  /** Returns the item with the given name in a menu. */
   private MenuItem item(String menu, String text) {
     return menuBar().getMenus().stream()
         .filter(m -> m.getText().equals(menu))
@@ -172,6 +175,10 @@ class MenuBarTest {
         .orElseThrow();
   }
 
+  /**
+   * Returns the open window containing something matching a selector, or {@code
+   * null}.
+   */
   private static Stage windowWith(String selector) {
     return Window.getWindows().stream()
         .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup(selector) != null)

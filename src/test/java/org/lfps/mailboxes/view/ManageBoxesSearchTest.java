@@ -13,6 +13,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 
+/**
+ * Tests for which boxes the search on Manage Boxes matches.
+ */
 class ManageBoxesSearchTest {
 
   private static final Mailbox RIVERA = new Mailbox(1, "Tomás", "Rivera", "Rivera Landscaping",

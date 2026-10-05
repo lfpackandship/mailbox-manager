@@ -11,15 +11,41 @@ import java.time.format.FormatStyle;
  */
 public final class RentalPeriod {
 
+  /**
+   * Formats the dates in {@link #describePeriod()}, such as Oct 5, 2026.
+   */
   private static final DateTimeFormatter DATE = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
 
+  /**
+   * The database id, or {@code 0} if not yet saved.
+   */
   private final int id;
+
+  /** The id of the box the rental is for. */
   private final int mailboxId;
+
+  /** The day the rental or renewal was recorded. */
   private final LocalDate recordedOn;
+
+  /** The first day of the rental. */
   private final LocalDate startDate;
+
+  /** The last day of the rental. */
   private final LocalDate endDate;
+
+  /**
+   * The amount paid in cents, or {@code null} if not recorded.
+   */
   private final Long amountCents;
+
+  /**
+   * How it was paid, such as Cash, or {@code null} if not recorded.
+   */
   private final String paymentMethod;
+
+  /**
+   * A note, such as a check number, or {@code null} if none.
+   */
   private final String note;
 
   /**
@@ -127,6 +153,12 @@ public final class RentalPeriod {
     return startDate.format(DATE) + " – " + endDate.format(DATE);
   }
 
+  /**
+   * Trims text, treating blank text as none.
+   *
+   * @param value the text, or {@code null}
+   * @return the trimmed text, or {@code null} if it's blank
+   */
   private static String trimToNull(String value) {
     return value == null || value.isBlank() ? null : value.trim();
   }

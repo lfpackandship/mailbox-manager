@@ -21,6 +21,7 @@ public final class Errors {
     return cause.getMessage();
   }
 
+  /** Not used: errors are described with static methods. */
   private Errors() {
   }
 

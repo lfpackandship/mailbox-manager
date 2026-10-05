@@ -22,6 +22,10 @@ import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 import org.lfps.mailboxes.view.FxTestSupport;
 
+/**
+ * Tests for starting the app: it opens normally after the daily backup, and
+ * still opens, with a warning, when a backup can't be made or copied.
+ */
 class AppStartupTest {
 
   private static final java.nio.file.Path BACKUP_DIR = Database.dataDir().resolve("backups");
@@ -95,6 +99,7 @@ class AppStartupTest {
         + unplugged + " can't be found."), warning);
   }
 
+  /** Starts the app in a new window, as when it's opened, and returns the window. */
   private static Stage startApp() {
     return FxTestSupport.call(() -> {
       var stage = new Stage();
@@ -103,6 +108,7 @@ class AppStartupTest {
     });
   }
 
+  /** Returns the titles of the open windows, including any warnings. */
   private static List<String> windowTitles() {
     return FxTestSupport.call(() -> Window.getWindows().stream()
         .filter(w -> w instanceof Stage)
@@ -110,6 +116,7 @@ class AppStartupTest {
         .collect(Collectors.toList()));
   }
 
+  /** Deletes a folder and everything in it, if it exists. */
   private static void deleteRecursively(java.nio.file.Path path) throws IOException {
     if (!Files.exists(path)) {
       return;

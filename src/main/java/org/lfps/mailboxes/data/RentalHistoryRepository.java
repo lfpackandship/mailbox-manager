@@ -17,21 +17,31 @@ import org.lfps.mailboxes.model.RentalPeriod;
  */
 public class RentalHistoryRepository {
 
+  /** Makes a repository for the app's database. */
+  public RentalHistoryRepository() {
+  }
+
+  /** Adds an entry to the rental history. */
   private static final String INSERT_SQL = "INSERT INTO rental_periods "
       + "(mailbox_id, recorded_on, start_date, end_date, amount_cents, payment_method, note) "
       + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
+  /** Starts each query that reads entries. */
   private static final String COLUMNS =
       "SELECT id, mailbox_id, recorded_on, start_date, end_date, amount_cents, payment_method, note "
       + "FROM rental_periods ";
 
+  /** Reads a box's history, oldest first. */
   private static final String SELECT_FOR_MAILBOX_SQL = COLUMNS + "WHERE mailbox_id = ? ORDER BY start_date, id";
 
+  /** Reads the entries recorded between two days, newest first, for the Payments screen. */
   private static final String SELECT_RECORDED_BETWEEN_SQL = COLUMNS
       + "WHERE recorded_on BETWEEN ? AND ? ORDER BY recorded_on DESC, id DESC";
 
+  /** Changes a box's end date. */
   private static final String UPDATE_END_DATE_SQL = "UPDATE mailboxes SET end_date = ? WHERE id = ?";
 
+  /** Deletes an entry. */
   private static final String DELETE_SQL = "DELETE FROM rental_periods WHERE id = ?";
 
   /**
@@ -111,6 +121,11 @@ public class RentalHistoryRepository {
   /**
    * Inserts an entry using an open connection, so it can be part of a larger
    * transaction.
+   *
+   * @param conn the connection, which may be in a transaction
+   * @param mailboxId the box's id
+   * @param period the entry
+   * @throws SQLException if it can't be added
    */
   static void insert(Connection conn, int mailboxId, RentalPeriod period) throws SQLException {
     try (PreparedStatement stmt = conn.prepareStatement(INSERT_SQL)) {
@@ -129,6 +144,13 @@ public class RentalHistoryRepository {
     }
   }
 
+  /**
+   * Runs a query for entries.
+   *
+   * @param stmt the query, with its parameters filled in
+   * @return the entries, in the query's order
+   * @throws SQLException if the query fails
+   */
   private static List<RentalPeriod> read(PreparedStatement stmt) throws SQLException {
     var periods = new ArrayList<RentalPeriod>();
     try (ResultSet rs = stmt.executeQuery()) {

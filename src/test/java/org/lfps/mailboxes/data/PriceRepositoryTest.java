@@ -1,9 +1,12 @@
 package org.lfps.mailboxes.data;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,6 +14,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for saving and finding prices, and for scheduled price changes.
+ */
 class PriceRepositoryTest {
 
   private final PriceRepository prices = new PriceRepository();
@@ -23,7 +29,55 @@ class PriceRepositoryTest {
     Database.initSchema();
     try (var conn = Database.connect(); var stmt = conn.createStatement()) {
       stmt.execute("DELETE FROM prices");
+      stmt.execute("DELETE FROM scheduled_prices");
     }
+  }
+
+  @Test
+  void aScheduledChangeWaitsUntilItsDate() throws SQLException {
+    var tomorrow = LocalDate.now().plusDays(1);
+    prices.save(Map.of(PriceRepository.key("Small", 3), 9000L));
+    var newPrices = new HashMap<String, Long>();
+    newPrices.put(PriceRepository.key("Small", 3), 9500L);
+    prices.scheduleChange(tomorrow, newPrices);
+
+    assertEquals(9000L, prices.priceFor("Small", 3));
+    var change = prices.findChange();
+    assertEquals(tomorrow, change.startsOn);
+    assertEquals(Map.of(PriceRepository.key("Small", 3), 9500L), change.prices);
+
+    assertFalse(prices.applyDueChange(LocalDate.now()));
+    assertTrue(prices.applyDueChange(tomorrow));
+    assertEquals(9500L, prices.priceFor("Small", 3));
+    assertNull(prices.findChange());
+  }
+
+  @Test
+  void aChangeStartingTodayIsAppliedWhenPricesAreRead() throws SQLException {
+    prices.save(Map.of(PriceRepository.key("Small", 3), 9000L, PriceRepository.key("Small", 6), 15000L,
+        PriceRepository.key("Large", 3), 15000L));
+    var newPrices = new HashMap<String, Long>();
+    newPrices.put(PriceRepository.key("Small", 3), 9500L);
+    // A blank price in the change clears it; prices not in the change stay.
+    newPrices.put(PriceRepository.key("Small", 6), null);
+    prices.scheduleChange(LocalDate.now(), newPrices);
+
+    assertEquals(Map.of(PriceRepository.key("Small", 3), 9500L, PriceRepository.key("Large", 3), 15000L),
+        prices.findAll());
+    assertNull(prices.findChange());
+  }
+
+  @Test
+  void schedulingAgainReplacesTheChangeAndItCanBeCancelled() throws SQLException {
+    prices.scheduleChange(LocalDate.now().plusDays(5), Map.of(PriceRepository.key("Small", 3), 9500L));
+    prices.scheduleChange(LocalDate.now().plusDays(9), Map.of(PriceRepository.key("Large", 3), 16000L));
+
+    var change = prices.findChange();
+    assertEquals(LocalDate.now().plusDays(9), change.startsOn);
+    assertEquals(Map.of(PriceRepository.key("Large", 3), 16000L), change.prices);
+
+    prices.cancelChange();
+    assertNull(prices.findChange());
   }
 
   @Test

@@ -154,12 +154,12 @@ public class EditBoxView {
   }
 
   /**
-   * Builds the forwarding-only check box shared by the Add and Edit Box
-   * forms, which turns off the parts of the form that only apply to a box
-   * rented here.
+   * Builds the forwarding-only check box shared by the Add and Edit Box forms,
+   * which turns off the parts of the form that only apply to a box rented here.
    *
    * @param checked whether it starts ticked
    * @param rentedOnly the controls that only apply to a box rented here
+   * @return the checkbox
    */
   static CheckBox forwardingOnlyBox(boolean checked, Node... rentedOnly) {
     var box = new CheckBox("Forwarding only: they don't rent a box here, we forward their mail. "
@@ -180,6 +180,8 @@ public class EditBoxView {
 
   /**
    * Builds the notes field shared by the Add and Edit Box forms.
+   *
+   * @return the field
    */
   static TextArea notesField() {
     var notesField = new TextArea();
@@ -192,10 +194,23 @@ public class EditBoxView {
 
   // Optional fields can be missing (null) in data from older versions; an
   // empty field keeps the form's checks from failing on them.
+  /**
+   * Returns text, or an empty string in place of {@code null}.
+   *
+   * @param value the text, or {@code null}
+   * @return the text, never {@code null}
+   */
   private static String orEmpty(String value) {
     return value == null ? "" : value;
   }
 
+  /**
+   * Sets the end date a number of months after the current one, or after today
+   * if there's none.
+   *
+   * @param endDateField the end date field
+   * @param months how many months to add
+   */
   private static void extendEndDate(DatePicker endDateField, int months) {
     var current = endDateField.getValue();
     endDateField.setValue(current == null
@@ -203,6 +218,7 @@ public class EditBoxView {
         : current.plusMonths(months));
   }
 
+  /** Not used: the form is built with static methods. */
   private EditBoxView() {
   }
 

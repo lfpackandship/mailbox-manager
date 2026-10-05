@@ -14,6 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
 
+/**
+ * Tests for recording rentals and renewals and reading the rental history.
+ */
 class RentalHistoryRepositoryTest {
 
   private static final LocalDate JAN_1 = LocalDate.of(2026, 1, 1);
@@ -115,10 +118,12 @@ class RentalHistoryRepositoryTest {
     assertEquals(1, history.findForMailbox(kept).size());
   }
 
+  /** Makes a rental history entry paid for by card. */
   private static RentalPeriod period(LocalDate recordedOn, LocalDate start, LocalDate end) {
     return new RentalPeriod(0, 0, recordedOn, start, end, 1000L, "Card", null);
   }
 
+  /** Makes a box with the given number and end date. */
   private static Mailbox box(String boxNumber, LocalDate endDate) {
     return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null,
         List.of(), endDate, null);

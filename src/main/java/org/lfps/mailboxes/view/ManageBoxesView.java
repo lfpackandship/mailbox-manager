@@ -40,19 +40,32 @@ public class ManageBoxesView {
 
   /** Which boxes the table shows. */
   enum Show {
+    /** Boxes that are open, rented or forwarding only. */
     OPEN("Open boxes"),
+    /** Open boxes that are forwarding only. */
     FORWARDING("Forwarding only"),
+    /** Boxes that have been closed. */
     CLOSED("Closed boxes"),
+    /** Every box, open or closed. */
     ALL("All boxes");
 
+    /** What the choice is called in the menu. */
     private final String label;
 
+    /**
+     * Makes a choice.
+     *
+     * @param label what the choice is called in the menu
+     */
     Show(String label) {
       this.label = label;
     }
 
     /**
      * Returns whether a box belongs in the table when this is chosen.
+     *
+     * @param mailbox the box
+     * @return {@code true} if it's shown
      */
     boolean includes(Mailbox mailbox) {
       if (this == FORWARDING) {
@@ -76,6 +89,14 @@ public class ManageBoxesView {
     show(stage, "", Show.OPEN);
   }
 
+  /**
+   * Builds and displays the list of boxes with a search already typed and a
+   * choice of boxes already made, as when coming back to the screen.
+   *
+   * @param stage the window to render the list into
+   * @param initialQuery the search, or an empty string
+   * @param initialShow which boxes to show
+   */
   private static void show(Stage stage, String initialQuery, Show initialShow) {
     var repository = new MailboxRepository();
     var statusLabel = new Label();
@@ -253,11 +274,21 @@ public class ManageBoxesView {
   /**
    * Returns the title of the printed list, such as "Open boxes matching
    * “smith”".
+   *
+   * @param show which boxes are shown
+   * @param query the search, or {@code null}
+   * @return the title
    */
   static String listTitle(Show show, String query) {
     return show + (query == null || query.isBlank() ? "" : " matching “" + query.trim() + "”");
   }
 
+  /**
+   * Makes the columns that start hidden, which can be shown from the table's
+   * menu.
+   *
+   * @return the columns
+   */
   private static List<TableColumn<Mailbox, ?>> hiddenColumns() {
     var boxNameCol = new TableColumn<Mailbox, String>("Box Name");
     boxNameCol.setCellValueFactory(new PropertyValueFactory<>("boxName"));
@@ -301,8 +332,11 @@ public class ManageBoxesView {
 
   /**
    * Reminds whoever closes a box to collect its keys and give back the key
-   * deposit, such as "Collect the 2 keys and give back the $20.00 key
-   * deposit. ", or returns an empty string if neither is recorded.
+   * deposit, such as "Collect the 2 keys and give back the $20.00 key deposit.
+   * ", or returns an empty string if neither is recorded.
+   *
+   * @param mailbox the box being closed
+   * @return the reminder
    */
   static String keysReminder(Mailbox mailbox) {
     var count = mailbox.getKeyCount();
@@ -320,9 +354,13 @@ public class ManageBoxesView {
 
   /**
    * Checks whether a mailbox matches every word of a search query. Each word
-   * may appear, case-insensitively, in any text field, alternate business
-   * name, forwarding address (including its note), or the notes; a word made
-   * of digits also matches the phone number ignoring its formatting.
+   * may appear, case-insensitively, in any text field, alternate business name,
+   * forwarding address (including its note), or the notes; a word made of
+   * digits also matches the phone number ignoring its formatting.
+   *
+   * @param mailbox the box
+   * @param query the search
+   * @return {@code true} if the box matches
    */
   static boolean matches(Mailbox mailbox, String query) {
     if (query == null || query.isBlank()) {
@@ -354,6 +392,7 @@ public class ManageBoxesView {
     return true;
   }
 
+  /** Not used: the screen is built with static methods. */
   private ManageBoxesView() {
   }
 
