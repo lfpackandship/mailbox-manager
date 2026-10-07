@@ -3,7 +3,7 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
-## Unreleased
+## 1.9.0 – 2026-10-06
 
 ### Added
 
