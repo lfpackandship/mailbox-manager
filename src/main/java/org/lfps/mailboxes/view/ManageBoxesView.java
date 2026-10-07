@@ -126,7 +126,8 @@ public class ManageBoxesView {
     businessTitleCol.setCellValueFactory(new PropertyValueFactory<>("businessTitle"));
 
     var phoneCol = new TableColumn<Mailbox, String>("Phone");
-    phoneCol.setCellValueFactory(new PropertyValueFactory<>("phone"));
+    phoneCol.setCellValueFactory(cell -> new SimpleStringProperty(
+        PhoneNumberFormatter.format(cell.getValue().getPhone())));
 
     table.getColumns().setAll(List.of(boxNumberCol, firstNameCol, lastNameCol, businessTitleCol, phoneCol));
     // Hidden, but saved in the spreadsheet so it has everything recorded.

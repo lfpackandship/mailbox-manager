@@ -237,7 +237,8 @@ public class RenewalsView {
     BoxLabels.markForwarding(boxNumberCol);
 
     var phoneCol = new TableColumn<Mailbox, String>("Phone");
-    phoneCol.setCellValueFactory(new PropertyValueFactory<>("phone"));
+    phoneCol.setCellValueFactory(cell -> new SimpleStringProperty(
+        PhoneNumberFormatter.format(cell.getValue().getPhone())));
 
     var endDateCol = new TableColumn<Mailbox, LocalDate>("End Date");
     endDateCol.setCellValueFactory(new PropertyValueFactory<>("endDate"));

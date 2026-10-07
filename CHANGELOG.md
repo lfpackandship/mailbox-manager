@@ -41,6 +41,8 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   Payments, are shown like **Oct 9, 2026** instead of **2026-10-09**, the same
   as when they're printed. Spreadsheets still get 2026-10-09, which Excel
   reads as a date.
+- Phone numbers on Manage Boxes and Renewals are always shown as
+  (555) 123-4567, even ones that were saved without the brackets and dash.
 
 ### Fixed
 
