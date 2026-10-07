@@ -105,6 +105,14 @@ public class AddBoxView {
     submitBtn.setOnAction(e -> {
       var errors = new StringBuilder();
 
+      // A name or address typed but not added with its Add button is saved
+      // too, rather than quietly left out.
+      businessNamesEditor.addTyped();
+      var forwardingProblem = forwardingEditor.addTypedBeforeSaving();
+      if (forwardingProblem != null) {
+        errors.append(forwardingProblem).append('\n');
+      }
+
       var forwardingOnly = forwardingOnlyBox.isSelected();
       if (boxNumber.getText().isBlank()) {
         errors.append("Box number is required.\n");

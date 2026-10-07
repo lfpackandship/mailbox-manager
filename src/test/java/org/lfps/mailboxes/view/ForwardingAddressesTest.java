@@ -1,6 +1,7 @@
 package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
@@ -27,7 +28,8 @@ import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 
 /**
- * UI tests for entering forwarding addresses on the Add and Edit Box forms.
+ * UI tests for entering forwarding addresses on the Add and Edit Box forms,
+ * and for names and addresses typed but not added before saving.
  */
 class ForwardingAddressesTest {
 
@@ -156,6 +158,50 @@ class ForwardingAddressesTest {
     FxTestSupport.run(() -> EditBoxView.show(mainWindow, box, () -> { }));
 
     assertTrue(FxTestSupport.call(() -> button("removeForwardingButton").isDisabled()));
+  }
+
+  @Test
+  void anAddressTypedButNotAddedIsSavedWithTheBox() throws SQLException {
+    FxTestSupport.run(() -> {
+      AddBoxView.show(mainWindow);
+      fieldWithPrompt("310").setText("205");
+      enterAddress("88 Palm Way", "Unit 3B", "Naples", "FL", "34102", "winter");
+      buttonLabeled("Submit").fire();
+    });
+
+    assertEquals(List.of(NAPLES), mailboxes.findAll().get(0).getForwardingAddresses());
+  }
+
+  @Test
+  void anUnfinishedAddressStopsTheSaveAndSaysWhatsMissing() throws SQLException {
+    mailboxes.insert(new Mailbox(0, "Tomás", "Rivera", null, "205", null, "(555) 200-0006", null,
+        null, null, List.of()));
+    var box = mailboxes.findAll().get(0);
+    var saved = new boolean[1];
+
+    FxTestSupport.run(() -> {
+      EditBoxView.show(mainWindow, box, () -> saved[0] = true);
+      enterAddress("1 Lake Rd", "", "Duluth", "", "", "");
+      buttonLabeled("Save").fire();
+    });
+
+    assertFalse(saved[0]);
+    assertEquals("Finish the forwarding address or clear its fields. "
+        + "Enter the two-letter state and ZIP code (12345 or 12345-6789).",
+        FxTestSupport.call(() -> ((Label) mainWindow.getScene().getRoot().lookup("#resultLabel")).getText()));
+    assertTrue(mailboxes.findAll().get(0).getForwardingAddresses().isEmpty());
+  }
+
+  @Test
+  void aBusinessNameTypedButNotAddedIsSavedWithTheBox() throws SQLException {
+    FxTestSupport.run(() -> {
+      AddBoxView.show(mainWindow);
+      fieldWithPrompt("310").setText("205");
+      field("businessNameField").setText("Rivera Imports");
+      buttonLabeled("Submit").fire();
+    });
+
+    assertEquals(List.of("Rivera Imports"), mailboxes.findAll().get(0).getAlternateBusinessNames());
   }
 
   /** Types an address into the forwarding address fields. */

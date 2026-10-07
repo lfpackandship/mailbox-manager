@@ -7,6 +7,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ### Fixed
 
+- On Add New Box and Edit Box, an alternate business name or forwarding
+  address that was typed but not added with its **Add** button was left out
+  when the box was saved. It's now saved too. A forwarding address that's
+  only partly filled in stops the save and says what's missing.
 - On the price sheet, renewal reminders, and price change notices, what each
   size measures could be cut short with "…" when it didn't fit on one line.
   It's now in smaller type so it fits, and a long one wraps instead.

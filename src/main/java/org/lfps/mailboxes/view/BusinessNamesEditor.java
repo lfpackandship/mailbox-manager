@@ -18,6 +18,9 @@ public class BusinessNamesEditor extends VBox {
   /** The names added so far. */
   private final ListView<String> namesList = new ListView<>();
 
+  /** Where a name is typed before it's added. */
+  private final TextField nameField = new TextField();
+
   /**
    * Builds the editor: a text field with an Add button, a list of the
    * names entered so far, and a Remove Selected button.
@@ -25,17 +28,11 @@ public class BusinessNamesEditor extends VBox {
   public BusinessNamesEditor() {
     super(5);
 
-    var nameField = new TextField();
+    nameField.setId("businessNameField");
     nameField.setPromptText("Acme Inc (optional)");
 
     var addBtn = new Button("Add");
-    addBtn.setOnAction(e -> {
-      var name = nameField.getText().trim();
-      if (!name.isEmpty()) {
-        namesList.getItems().add(name);
-        nameField.clear();
-      }
-    });
+    addBtn.setOnAction(e -> addTyped());
 
     var removeBtn = new Button("Remove Selected");
     removeBtn.setOnAction(e -> {
@@ -48,6 +45,19 @@ public class BusinessNamesEditor extends VBox {
     namesList.setStyle("-fx-pref-height: 5.5em;");
 
     getChildren().addAll(new HBox(5, nameField, addBtn), namesList, removeBtn);
+  }
+
+  /**
+   * Adds the name typed in the field to the list and clears the field. Also
+   * called just before saving, so a name typed but not added with Add isn't
+   * lost.
+   */
+  public void addTyped() {
+    var name = nameField.getText().trim();
+    if (!name.isEmpty()) {
+      namesList.getItems().add(name);
+      nameField.clear();
+    }
   }
 
   /**
