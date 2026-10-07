@@ -113,10 +113,10 @@ class PaymentsViewTest {
   void addingABoxWithAPaymentRecordsTheRental() throws SQLException {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Tomás");
-      fieldWithPrompt("Doe").setText("Rivera");
-      fieldWithPrompt("310").setText("205");
-      fieldWithPrompt("(555) 123-4567").setText("5552000006");
+      fieldWithPrompt("John (optional)").setText("Tomás");
+      fieldWithPrompt("Doe (optional)").setText("Rivera");
+      fieldWithPrompt("310 (required)").setText("205");
+      fieldWithPrompt("(555) 123-4567 (optional)").setText("5552000006");
       buttonLabeled(RentalLengths.label(6)).fire();
       ((TextField) lookup("#amountField")).setText("$75");
       ((ComboBox<?>) lookup("#paymentMethodField")).getEditor().setText("Check");
@@ -137,10 +137,10 @@ class PaymentsViewTest {
   void aPaymentNeedsAnEndDate() throws SQLException {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Tomás");
-      fieldWithPrompt("Doe").setText("Rivera");
-      fieldWithPrompt("310").setText("205");
-      fieldWithPrompt("(555) 123-4567").setText("5552000006");
+      fieldWithPrompt("John (optional)").setText("Tomás");
+      fieldWithPrompt("Doe (optional)").setText("Rivera");
+      fieldWithPrompt("310 (required)").setText("205");
+      fieldWithPrompt("(555) 123-4567 (optional)").setText("5552000006");
       ((TextField) lookup("#amountField")).setText("75");
       buttonLabeled("Save").fire();
     });
@@ -156,10 +156,10 @@ class PaymentsViewTest {
   void aBoxWithNoEndDateHasNoHistory() throws SQLException {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Tomás");
-      fieldWithPrompt("Doe").setText("Rivera");
-      fieldWithPrompt("310").setText("205");
-      fieldWithPrompt("(555) 123-4567").setText("5552000006");
+      fieldWithPrompt("John (optional)").setText("Tomás");
+      fieldWithPrompt("Doe (optional)").setText("Rivera");
+      fieldWithPrompt("310 (required)").setText("205");
+      fieldWithPrompt("(555) 123-4567 (optional)").setText("5552000006");
       buttonLabeled("Save").fire();
     });
 

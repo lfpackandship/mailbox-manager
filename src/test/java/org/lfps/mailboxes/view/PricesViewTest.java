@@ -179,7 +179,7 @@ class PricesViewTest {
   private TextField boxNumberField() {
     return mainWindow.getScene().getRoot().lookupAll(".text-field").stream()
         .map(node -> (TextField) node)
-        .filter(f -> "310".equals(f.getPromptText()))
+        .filter(f -> "310 (required)".equals(f.getPromptText()))
         .findFirst()
         .orElseThrow();
   }

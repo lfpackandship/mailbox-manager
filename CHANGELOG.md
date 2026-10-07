@@ -31,6 +31,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 - The fields on Add New Box and Edit Box are all the same width, and a bit
   wider, so longer email addresses fit. Before, some stretched across the
   window and others didn't.
+- Add New Box and Edit Box say which fields can be left blank: every field
+  shows a hint such as **(optional)** while it's empty, and the box number
+  says **(required)**. Before, the names and phone number didn't say, and
+  Edit Box showed no hints.
 
 ### Fixed
 

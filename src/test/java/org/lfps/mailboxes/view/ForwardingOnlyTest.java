@@ -93,9 +93,9 @@ class ForwardingOnlyTest {
 
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Ada");
-      fieldWithPrompt("Doe").setText("Former");
-      fieldWithPrompt("310").setText("12");
+      fieldWithPrompt("John (optional)").setText("Ada");
+      fieldWithPrompt("Doe (optional)").setText("Former");
+      fieldWithPrompt("310 (required)").setText("12");
       checkBox().setSelected(true);
       buttonLabeled("Save").fire();
     });

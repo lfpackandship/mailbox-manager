@@ -45,23 +45,18 @@ public class AddBoxView {
    */
   private static void show(Stage stage, String saved) {
     var businessTitleField = new TextField();
-    businessTitleField.setPromptText("Acme Inc (optional)");
 
     var firstNameField = new TextField();
-    firstNameField.setPromptText("John");
 
     var lastNameField = new TextField();
-    lastNameField.setPromptText("Doe");
 
     var boxNumber = new TextField();
-    boxNumber.setPromptText("310");
 
     var chooseBoxBtn = new Button("Choose…");
     chooseBoxBtn.setId("chooseBoxButton");
     chooseBoxBtn.setOnAction(e -> BoxInventoryView.chooseEmptyBox(stage, boxNumber::setText));
 
     var boxNameField = new TextField();
-    boxNameField.setPromptText("optional");
 
     var businessNamesEditor = new BusinessNamesEditor();
 
@@ -74,11 +69,9 @@ public class AddBoxView {
         forwardingEditor.entries());
 
     var phoneField = new TextField();
-    phoneField.setPromptText("(555) 123-4567");
     phoneField.setTextFormatter(PhoneNumberFormatter.create());
 
     var emailField = new TextField();
-    emailField.setPromptText("optional");
 
     var endDateField = new DatePicker();
     endDateField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
@@ -108,6 +101,8 @@ public class AddBoxView {
 
     var notesField = EditBoxView.notesField();
 
+    EditBoxView.hints(firstNameField, lastNameField, businessTitleField, boxNumber, boxNameField, phoneField,
+        emailField);
     for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
         boxNameField, phoneField, emailField }) {
       field.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");

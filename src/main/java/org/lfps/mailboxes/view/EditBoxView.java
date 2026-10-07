@@ -75,6 +75,7 @@ public class EditBoxView {
     var notesField = notesField();
     notesField.setText(orEmpty(mailbox.getNotes()));
 
+    hints(firstNameField, lastNameField, businessTitleField, boxNumberField, boxNameField, phoneField, emailField);
     for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
         boxNumberField, boxNameField, phoneField, emailField }) {
       field.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
@@ -267,6 +268,30 @@ public class EditBoxView {
         () -> entries.isEmpty() ? name : name + " (" + entries.size() + ")", entries));
     section.setExpanded(!entries.isEmpty());
     return section;
+  }
+
+  /**
+   * Gives the Add and Edit Box forms' fields the same hints, shown while a
+   * field is empty, which say which fields can be left blank. Only the box
+   * number is required.
+   *
+   * @param firstName the first name field
+   * @param lastName the last name field
+   * @param businessTitle the business title field
+   * @param boxNumber the box number field
+   * @param boxName the box name field
+   * @param phone the phone number field
+   * @param email the email field
+   */
+  static void hints(TextField firstName, TextField lastName, TextField businessTitle, TextField boxNumber,
+      TextField boxName, TextField phone, TextField email) {
+    firstName.setPromptText("John (optional)");
+    lastName.setPromptText("Doe (optional)");
+    businessTitle.setPromptText("Acme Inc (optional)");
+    boxNumber.setPromptText("310 (required)");
+    boxName.setPromptText("optional");
+    phone.setPromptText("(555) 123-4567 (optional)");
+    email.setPromptText("optional");
   }
 
   /**

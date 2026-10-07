@@ -140,10 +140,10 @@ class BoxInventoryViewTest {
     inventory.add(List.of("1", "2"), null);
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Tomás");
-      fieldWithPrompt("Doe").setText("Rivera");
-      fieldWithPrompt("310").setText("99");
-      fieldWithPrompt("(555) 123-4567").setText("5552000006");
+      fieldWithPrompt("John (optional)").setText("Tomás");
+      fieldWithPrompt("Doe (optional)").setText("Rivera");
+      fieldWithPrompt("310 (required)").setText("99");
+      fieldWithPrompt("(555) 123-4567 (optional)").setText("5552000006");
       buttonLabeled("Save").fire();
     });
 
@@ -180,7 +180,7 @@ class BoxInventoryViewTest {
       ((Button) chooser.getScene().lookup("#chooseEmptyBoxButton")).fire();
     });
 
-    assertEquals("6", FxTestSupport.call(() -> fieldWithPrompt("310").getText()));
+    assertEquals("6", FxTestSupport.call(() -> fieldWithPrompt("310 (required)").getText()));
   }
 
   @Test

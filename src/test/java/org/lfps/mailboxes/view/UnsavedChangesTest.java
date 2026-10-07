@@ -95,12 +95,12 @@ class UnsavedChangesTest {
     answer = false;
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("310").setText("12");
+      fieldWithPrompt("310 (required)").setText("12");
       buttonLabeled("Cancel").fire();
     });
 
     assertEquals(List.of("Leave without saving?"), asked);
-    assertEquals("12", FxTestSupport.call(() -> fieldWithPrompt("310").getText()));
+    assertEquals("12", FxTestSupport.call(() -> fieldWithPrompt("310 (required)").getText()));
   }
 
   @Test
@@ -108,7 +108,7 @@ class UnsavedChangesTest {
     answer = true;
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("310").setText("12");
+      fieldWithPrompt("310 (required)").setText("12");
       buttonLabeled("Cancel").fire();
     });
 
@@ -156,7 +156,7 @@ class UnsavedChangesTest {
   void savingMeansThereIsNothingToLose() {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("310").setText("12");
+      fieldWithPrompt("310 (required)").setText("12");
       buttonLabeled("Save").fire();
       buttonLabeled("Cancel").fire();
     });
@@ -168,14 +168,14 @@ class UnsavedChangesTest {
   void addingABoxEmptiesTheFormAndSaysWhichBoxWasSaved() throws SQLException {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Ada");
-      fieldWithPrompt("Doe").setText("Lovelace");
-      fieldWithPrompt("310").setText("12");
+      fieldWithPrompt("John (optional)").setText("Ada");
+      fieldWithPrompt("Doe (optional)").setText("Lovelace");
+      fieldWithPrompt("310 (required)").setText("12");
       buttonLabeled("Save").fire();
     });
 
     assertEquals(1, mailboxes.findAll().size());
-    assertEquals("", FxTestSupport.call(() -> fieldWithPrompt("310").getText()));
+    assertEquals("", FxTestSupport.call(() -> fieldWithPrompt("310 (required)").getText()));
     assertEquals("Saved Box 12 – Ada Lovelace. The form is empty again, ready for the next box.",
         FxTestSupport.call(() -> ((Label) mainWindow.getScene().lookup("#resultLabel")).getText()));
   }
@@ -185,7 +185,7 @@ class UnsavedChangesTest {
     answer = false;
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("310").setText("12");
+      fieldWithPrompt("310 (required)").setText("12");
     });
 
     assertFalse(FxTestSupport.call(AppWindow::mayLeave));
@@ -196,7 +196,7 @@ class UnsavedChangesTest {
   void aNewScreenHasNothingToAskAbout() {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("310").setText("12");
+      fieldWithPrompt("310 (required)").setText("12");
       MainMenuView.show(mainWindow);
     });
 
