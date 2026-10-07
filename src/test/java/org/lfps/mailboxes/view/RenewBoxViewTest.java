@@ -158,6 +158,11 @@ class RenewBoxViewTest {
   @Test
   void choosingALengthFillsInThePriceForTheBoxsSize() throws SQLException {
     try {
+      // Other tests can leave box 101 in the inventory with another size.
+      try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+        stmt.execute("DELETE FROM prices");
+        stmt.execute("DELETE FROM box_inventory");
+      }
       new BoxInventoryRepository().add(List.of("101"), "Large");
       new PriceRepository().save(Map.of(PriceRepository.key("Large", 12), 15000L,
           PriceRepository.key(PriceRepository.DEFAULT_SIZE, 1), 1500L));

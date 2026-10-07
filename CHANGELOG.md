@@ -3,6 +3,14 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## Unreleased
+
+### Fixed
+
+- On the price sheet, renewal reminders, and price change notices, what each
+  size measures could be cut short with "…" when it didn't fit on one line.
+  It's now in smaller type so it fits, and a long one wraps instead.
+
 ## 1.8.0 – 2026-10-05
 
 ### Added
