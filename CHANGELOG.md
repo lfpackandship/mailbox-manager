@@ -3,6 +3,78 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## 1.9.0 – 2026-10-06
+
+### Added
+
+- The window opens where it was and at the size it was when the app was last
+  closed, or maximized if it was. Before, it always opened small in the middle
+  of the screen.
+- A **Today** button on the Calendar goes back to this month after looking
+  ahead or back.
+
+### Changed
+
+- Leaving Add New Box or Edit Box with changes that haven't been saved, with
+  **Cancel**, the **Go** menu, **Exit**, or by closing the window, now asks
+  first instead of throwing them away.
+- After a box is saved on Add New Box, the form empties, ready for the next
+  box, and says which box was saved. Before, it stayed filled in, and saving
+  again said the box was already rented.
+- Edit Box no longer has the **1 Month**, **3 Months**, … buttons. They moved
+  the end date without recording a payment, so the renewal didn't show on
+  Payments or in the box's rental history. Use **Renew…** to renew a box; the
+  end date on Edit Box is still there for correcting mistakes.
+- When a box can't be saved on Add New Box or Edit Box, each field with a
+  mistake is outlined in red, and the cursor is put in the first one.
+- On Add New Box and Edit Box, **Cancel** and **Save** are at the top of the
+  window, and stay there as the form scrolls. What happened
+  when saving, or what needs fixing, is shown right under them.
+- **Alternate Business Names** and **Forwarding Addresses** on Add New Box and
+  Edit Box fold up to save room. Click the heading to open or close one. Each
+  heading says how many there are, such as **Forwarding Addresses (2)**, and a
+  section with entries starts open on Edit Box.
+- Add New Box's buttons are called **Save** and **Cancel**, like Edit Box's,
+  instead of **Submit** and **Back**.
+- The fields on Add New Box and Edit Box are all the same width, and a bit
+  wider, so longer email addresses fit. Before, some stretched across the
+  window and others didn't.
+- Add New Box and Edit Box say which fields can be left blank: every field
+  shows a hint such as **(optional)** while it's empty, and the box number
+  says **(required)**. Before, the names and phone number didn't say, and
+  Edit Box showed no hints.
+- **Box Name** on Add New Box and Edit Box says it's a nickname for the box,
+  and pointing at it explains where it's shown.
+- Dates in lists, such as the end dates on Renewals and the dates on
+  Payments, are shown like **Oct 9, 2026** instead of **2026-10-09**, the same
+  as when they're printed. Spreadsheets still get 2026-10-09, which Excel
+  reads as a date.
+- Phone numbers on Manage Boxes and Renewals are always shown as
+  (555) 123-4567, even ones that were saved without the brackets and dash.
+- Manage Boxes shows one **Name** column instead of separate first and last
+  name columns, like Renewals, leaving more room for the others. The
+  spreadsheet from **Save as Spreadsheet…** still has first and last names in
+  their own columns too.
+- Questions such as "Close box 12?" have buttons that say what they do, such
+  as **Close Box** and **Keep It Open**, instead of **Yes** and **No**.
+  Pressing Enter picks the one that leaves things as they are.
+- On Manage Boxes, **Delete** is at the far right, away from **Close Box**, so
+  one isn't clicked by mistake for the other.
+- In Settings, on the **Backups** tab, **Back Up Now…** and **Restore…** have
+  their own row, **Back up or restore**, instead of sitting under Google Drive
+  as if they were part of it. Pointing at the data folder shows its whole
+  location.
+
+### Fixed
+
+- On Add New Box and Edit Box, an alternate business name or forwarding
+  address that was typed but not added with its **Add** button was left out
+  when the box was saved. It's now saved too. A forwarding address that's
+  only partly filled in stops the save and says what's missing.
+- On the price sheet, renewal reminders, and price change notices, what each
+  size measures could be cut short with "…" when it didn't fit on one line.
+  It's now in smaller type so it fits, and a long one wraps instead.
+
 ## 1.8.0 – 2026-10-05
 
 ### Added

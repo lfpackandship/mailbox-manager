@@ -20,6 +20,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -207,6 +208,8 @@ public class SettingsView {
 
     var dataFolderField = new TextField(Database.dataDir().toString());
     dataFolderField.setEditable(false);
+    // The path is often longer than the field.
+    dataFolderField.setTooltip(new Tooltip(Database.dataDir().toString()));
     dataFolderField.setStyle("-fx-pref-width: 24em;");
 
     var openDataFolderBtn = new Button("Open");
@@ -251,11 +254,13 @@ public class SettingsView {
     var renewals = section("Renewals",
         row("Show boxes due within (days):", renewalWindowField));
 
+    // Back Up Now and Restore have their own row, above Google Drive, so they
+    // don't look like part of it.
     var backups = grid(
         row("Daily backups to keep:", backupsToKeepField),
         row("Also copy backups to:", new HBox(8, secondFolderField, chooseSecondFolderBtn, clearSecondFolderBtn)),
+        row("Back up or restore:", new HBox(8, backUpNowBtn, restoreBtn)),
         row("Google Drive:", drive),
-        row("", new HBox(8, backUpNowBtn, restoreBtn)),
         row("Data folder:", new HBox(8, dataFolderField, openDataFolderBtn)));
 
     var about = grid(

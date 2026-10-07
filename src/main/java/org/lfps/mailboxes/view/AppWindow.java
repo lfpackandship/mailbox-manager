@@ -3,9 +3,11 @@ package org.lfps.mailboxes.view;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 import javafx.application.HostServices;
 import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -19,6 +21,7 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -46,6 +49,13 @@ public final class AppWindow {
   private static HostServices hostServices;
 
   /**
+   * Asked before leaving the screen showing, such as a form with unsaved
+   * changes, or {@code null} if it can be left without asking. Each new
+   * screen starts with none.
+   */
+  private static BooleanSupplier leaveCheck;
+
+  /**
    * Gives the app access to the operating system, for opening folders in
    * Explorer or Finder. Called once at start-up.
    *
@@ -63,6 +73,20 @@ public final class AppWindow {
    * @param content the screen to display
    */
   public static void show(Stage stage, Parent content) {
+    show(stage, null, content);
+  }
+
+  /**
+   * Replaces the window's contents with a screen whose buttons, such as Back
+   * and Save on Add New Box, stay in view under the menu bar while the rest
+   * of the screen scrolls.
+   *
+   * @param stage the main window
+   * @param bar the buttons and anything else that stays in view, or {@code
+   *     null} for none
+   * @param content the rest of the screen, which scrolls if it doesn't fit
+   */
+  static void show(Stage stage, Node bar, Parent content) {
     // Fill the window when there's room, but never squeeze a screen shorter
     // than it wants to be; scroll instead.
     if (content instanceof Region) {
@@ -74,10 +98,37 @@ public final class AppWindow {
     scrollPane.getStyleClass().add("edge-to-edge");
 
     var root = new BorderPane(scrollPane);
-    root.setTop(buildMenuBar(stage));
+    root.setTop(bar == null ? buildMenuBar(stage) : new VBox(buildMenuBar(stage), bar));
     applyTextSize(root);
+    leaveCheck = null;
     stage.setScene(new Scene(root));
+    stage.setOnCloseRequest(e -> {
+      if (!mayLeave()) {
+        e.consume();
+      }
+    });
     stage.show();
+  }
+
+  /**
+   * Sets what to ask before leaving the screen just shown, such as whether to
+   * throw away unsaved changes. Call it after {@link #show(Stage, Parent)}.
+   *
+   * @param check returns {@code true} if the screen can be left
+   */
+  static void setLeaveCheck(BooleanSupplier check) {
+    leaveCheck = check;
+  }
+
+  /**
+   * Returns whether the screen showing can be left, asking first if it has
+   * something unsaved. Back, Cancel, the Go menu, and closing the window all
+   * check this.
+   *
+   * @return {@code true} to go ahead and leave
+   */
+  static boolean mayLeave() {
+    return leaveCheck == null || leaveCheck.getAsBoolean();
   }
 
   /**
@@ -224,7 +275,11 @@ public final class AppWindow {
     settingsItem.setOnAction(e -> SettingsView.show(stage));
 
     var exitItem = new MenuItem("Exit");
-    exitItem.setOnAction(e -> Platform.exit());
+    exitItem.setOnAction(e -> {
+      if (mayLeave()) {
+        Platform.exit();
+      }
+    });
 
     var fileMenu = new Menu("File");
     fileMenu.getItems().addAll(priceSheetItem, remindersItem, new SeparatorMenuItem(),
@@ -297,7 +352,11 @@ public final class AppWindow {
     if (shortcut != null) {
       item.setAccelerator(KeyCombination.keyCombination(shortcut));
     }
-    item.setOnAction(e -> show.run());
+    item.setOnAction(e -> {
+      if (mayLeave()) {
+        show.run();
+      }
+    });
     return item;
   }
 

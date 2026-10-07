@@ -80,7 +80,10 @@ The main menu has six screens:
   and notes. The rental length buttons (1, 3, 6, and 12 months unless changed
   in Settings) set the end date that far from today. If the
   [box inventory](#box-inventory) is set up, **Choose…** next to the box number
-  lists the empty boxes to pick from.
+  lists the empty boxes to pick from. **Save** and **Cancel** stay at the top
+  of the window as the form scrolls; a field with a mistake is outlined in red.
+  After saving, the form empties, ready for the next box. Leaving a form with
+  changes that haven't been saved asks first.
 - **Manage Boxes** – the open boxes in one table showing each box number,
   holder's name, business title, and phone, with a search field. Search
   matches any part of a name, business name, box number, box name, phone
@@ -101,7 +104,8 @@ The main menu has six screens:
   put in it, and **Print List…** and **Save as Spreadsheet…** print or save
   the lists.
 - **Calendar** – a month view with each open box shown on the day its rental
-  ends. Today is outlined in blue. A day with more than two boxes shows the
+  ends. Today is outlined in blue, and **Today** comes back to this month. A
+  day with more than two boxes shows the
   first and how many more, such as "+3 more". Hover over an entry for the holder's name. Click a highlighted day to
   list all the boxes ending that day, with each holder's name, business, and phone, and buttons to view or
   renew them.
@@ -282,7 +286,10 @@ If a box holder wants mail forwarded, add one or more forwarding addresses on
 Add New Box or Edit Box: fill in the street, city, two-letter state, and ZIP
 code (5 digits or ZIP+4), plus an optional apartment or suite and a note such
 as "summer" or "office", then click **Add Address**. A box can have several
-addresses; the notes help staff pick the right one.
+addresses; the notes help staff pick the right one. An address typed but not
+added is saved with the box anyway. The **Forwarding Addresses** and
+**Alternate Business Names** sections fold up to save room; click the heading
+to open one. Each heading says how many there are.
 
 ### Settings
 
@@ -295,9 +302,10 @@ tabs. If something can't be saved, Settings shows the tab it's on.
 On **General**:
 
 - **Text size** – Normal, Large, or Extra large, for the whole app. Larger
-  text applies right away; restart the app to also enlarge its window to match.
-- **Rental lengths (months)** – the quick-set buttons on Add New Box, Edit
-  Box, and Renew, such as `1, 3, 6, 12`. Up to six lengths, each from 1 to 120
+  text applies right away. If the window is then too small, make it bigger;
+  it opens at the size and place it was left in.
+- **Rental lengths (months)** – the quick-set buttons on Add New Box and
+  Renew, such as `1, 3, 6, 12`. Up to six lengths, each from 1 to 120
   months.
 - **Prices for each size** – opens the [price table](#prices).
 - **Key deposit per key** – fills in the key deposit on Add New Box and Edit
@@ -319,8 +327,10 @@ On **Backups**:
 - **Also copy backups to** – see [A second copy of your backups](#a-second-copy-of-your-backups).
 - **Google Drive** – see [Backing up to Google Drive](#backing-up-to-google-drive).
 
-The Backups tab also has **Back Up Now…**, **Restore…**, and an **Open**
-button that shows the data folder in Explorer or Finder.
+- **Back up or restore** – **Back Up Now…** and **Restore…**.
+
+The Backups tab also has an **Open** button that shows the data folder in
+Explorer or Finder.
 
 ## Your data and backups
 

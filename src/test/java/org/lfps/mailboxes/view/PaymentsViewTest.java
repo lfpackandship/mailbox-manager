@@ -113,14 +113,14 @@ class PaymentsViewTest {
   void addingABoxWithAPaymentRecordsTheRental() throws SQLException {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Tomás");
-      fieldWithPrompt("Doe").setText("Rivera");
-      fieldWithPrompt("310").setText("205");
-      fieldWithPrompt("(555) 123-4567").setText("5552000006");
+      fieldWithPrompt("John (optional)").setText("Tomás");
+      fieldWithPrompt("Doe (optional)").setText("Rivera");
+      fieldWithPrompt("310 (required)").setText("205");
+      fieldWithPrompt("(555) 123-4567 (optional)").setText("5552000006");
       buttonLabeled(RentalLengths.label(6)).fire();
       ((TextField) lookup("#amountField")).setText("$75");
       ((ComboBox<?>) lookup("#paymentMethodField")).getEditor().setText("Check");
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     var saved = mailboxes.findAll().get(0);
@@ -137,12 +137,12 @@ class PaymentsViewTest {
   void aPaymentNeedsAnEndDate() throws SQLException {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Tomás");
-      fieldWithPrompt("Doe").setText("Rivera");
-      fieldWithPrompt("310").setText("205");
-      fieldWithPrompt("(555) 123-4567").setText("5552000006");
+      fieldWithPrompt("John (optional)").setText("Tomás");
+      fieldWithPrompt("Doe (optional)").setText("Rivera");
+      fieldWithPrompt("310 (required)").setText("205");
+      fieldWithPrompt("(555) 123-4567 (optional)").setText("5552000006");
       ((TextField) lookup("#amountField")).setText("75");
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     var messages = FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookupAll(".label").stream()
@@ -156,11 +156,11 @@ class PaymentsViewTest {
   void aBoxWithNoEndDateHasNoHistory() throws SQLException {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Tomás");
-      fieldWithPrompt("Doe").setText("Rivera");
-      fieldWithPrompt("310").setText("205");
-      fieldWithPrompt("(555) 123-4567").setText("5552000006");
-      buttonLabeled("Submit").fire();
+      fieldWithPrompt("John (optional)").setText("Tomás");
+      fieldWithPrompt("Doe (optional)").setText("Rivera");
+      fieldWithPrompt("310 (required)").setText("205");
+      fieldWithPrompt("(555) 123-4567 (optional)").setText("5552000006");
+      buttonLabeled("Save").fire();
     });
 
     assertEquals(List.of(), history.findForMailbox(mailboxes.findAll().get(0).getId()));
@@ -171,7 +171,7 @@ class PaymentsViewTest {
     var id = mailboxes.insert(box("1", null));
     history.renew(id, new RentalPeriod(0, 0, TODAY, TODAY, TODAY.plusMonths(6), 6000L, null, null));
     var questions = new ArrayList<String>();
-    Dialogs.confirm = (owner, question, details) -> questions.add(question);
+    Dialogs.confirm = (owner, question, details, yes, no) -> questions.add(question);
     try {
       FxTestSupport.run(() -> PaymentsView.show(mainWindow));
       FxTestSupport.run(() -> {
@@ -192,7 +192,7 @@ class PaymentsViewTest {
   void answeringNoKeepsTheEntry() throws SQLException {
     var id = mailboxes.insert(box("1", null));
     history.renew(id, new RentalPeriod(0, 0, TODAY, TODAY, TODAY.plusMonths(6), 6000L, null, null));
-    Dialogs.confirm = (owner, question, details) -> false;
+    Dialogs.confirm = (owner, question, details, yes, no) -> false;
     try {
       FxTestSupport.run(() -> PaymentsView.show(mainWindow));
       FxTestSupport.run(() -> {

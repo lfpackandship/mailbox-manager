@@ -12,8 +12,30 @@ it before making changes. This file covers how to work in the repository.
   release, `1.6.1-features` for a patch release. If a branch for the next
   version already exists, keep working on it rather than starting another.
 - Merge into `main` only when the user asks, and push only when they ask.
+  When finishing a release, a yes to the merge also covers pushing `main`
+  (see below).
 - After a release is tagged, its branch can be deleted once `git log
   main..<branch>` is empty, locally and on GitHub.
+
+## Commits and checking in
+
+Work the way a developer on the team would: in small steps, asking along
+the way.
+
+- Make a commit for each task or each separate change, so the history is
+  easy to read and any one change can be undone on its own. Three tasks
+  means at least three commits. Each commit has passing tests, its
+  CHANGELOG.md entry, and a message saying what changed and why.
+- Before starting a list of tasks, say how you'll split it into commits and
+  ask about anything unclear. Then stop after each task: say what changed,
+  as the user would see it, and wait for a go-ahead before the next. Don't
+  work through the whole list in one go.
+- Ask rather than guess when a decision is the user's: what a field or
+  setting is for, how something should look or behave, or anything that
+  changes how the shop works day to day. Don't fill a gap with your own
+  idea and carry on.
+- Do what was asked. Suggest anything more, and wait to be asked before
+  doing it.
 
 ## Working on the code
 
@@ -90,9 +112,30 @@ Google Drive backups". Don't merge the pull request yourself unless asked.
 
 ## When finishing a release
 
-Follow the README's release steps. Then, without being asked, give the user
-release notes to paste into the GitHub release (edit the release, replace the
-generated notes). They're for the people who use the app, not developers.
+Do these in order. Steps 3 and 5 decide that the release is ready and
+publish it, so ask before each one and wait for a yes. Do the rest without
+asking.
+
+1. Update the README for anything in the release that it describes.
+2. Make the release commit, as in the README's release steps: set the
+   version in `pom.xml`, turn "Unreleased" in CHANGELOG.md into the version
+   and today's date, and commit it as `Release x.y.z`.
+3. Ask, then merge the branch into `main` with a merge commit
+   (`git merge --no-ff`) and push `main`.
+4. Wait for the tests to pass in GitHub Actions. If you can't see them, ask
+   the user to say when they have.
+5. Ask, then tag the release commit `vx.y.z` and push the tag, which builds
+   the installers and makes the GitHub release.
+6. Once the build finishes, check that its annotations don't include the
+   "GOOGLE_CLIENT_ID isn't set" warning. If they do, the installers can't
+   connect to Google Drive, so tell the user. If you can't see the build,
+   ask the user to look.
+7. Give the user release notes to paste into the GitHub release (edit the
+   release, replace the generated notes), as described below.
+8. Delete the branch, locally and on GitHub, once `git log main..<branch>`
+   is empty.
+
+The release notes are for the people who use the app, not developers.
 Write them like the earlier releases on the releases page:
 
 - **What's new** first. Each feature starts with a short bold sentence
@@ -127,6 +170,4 @@ Download the installer for your computer below and install it over the old versi
 | Linux | mailbox-manager-1.5.2-linux-x64.AppImage |
 ```
 
-Base the notes on the release's CHANGELOG.md entry. After the build
-finishes, check that its annotations don't include the "GOOGLE_CLIENT_ID
-isn't set" warning; if they do, the installers can't connect to Google Drive.
+Base the notes on the release's CHANGELOG.md entry.

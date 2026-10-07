@@ -33,38 +33,48 @@ public class AddBoxView {
    * @param stage the window to render the form into
    */
   public static void show(Stage stage) {
+    show(stage, "");
+  }
+
+  /**
+   * Builds and displays an empty Add New Box form, with a message at the top,
+   * as after saving a box.
+   *
+   * @param stage the window to render the form into
+   * @param saved says which box was just saved, or an empty string
+   */
+  private static void show(Stage stage, String saved) {
     var businessTitleField = new TextField();
-    businessTitleField.setPromptText("Acme Inc (optional)");
 
     var firstNameField = new TextField();
-    firstNameField.setPromptText("John");
 
     var lastNameField = new TextField();
-    lastNameField.setPromptText("Doe");
 
     var boxNumber = new TextField();
-    boxNumber.setPromptText("310");
 
     var chooseBoxBtn = new Button("Choose…");
     chooseBoxBtn.setId("chooseBoxButton");
     chooseBoxBtn.setOnAction(e -> BoxInventoryView.chooseEmptyBox(stage, boxNumber::setText));
 
     var boxNameField = new TextField();
-    boxNameField.setPromptText("optional");
 
     var businessNamesEditor = new BusinessNamesEditor();
 
     var forwardingEditor = new ForwardingAddressesEditor();
 
+    // Folded up to start with, as most boxes have neither.
+    var namesSection = EditBoxView.section("Alternate Business Names", businessNamesEditor,
+        businessNamesEditor.entries());
+    var forwardingSection = EditBoxView.section("Forwarding Addresses", forwardingEditor,
+        forwardingEditor.entries());
+
     var phoneField = new TextField();
-    phoneField.setPromptText("(555) 123-4567");
     phoneField.setTextFormatter(PhoneNumberFormatter.create());
 
     var emailField = new TextField();
-    emailField.setPromptText("optional");
 
     var endDateField = new DatePicker();
-    endDateField.setStyle("-fx-pref-width: 12em;");
+    endDateField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
 
     var payment = new PaymentFields();
 
@@ -91,35 +101,68 @@ public class AddBoxView {
 
     var notesField = EditBoxView.notesField();
 
+    EditBoxView.hints(firstNameField, lastNameField, businessTitleField, boxNumber, boxNameField, phoneField,
+        emailField);
     for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
         boxNameField, phoneField, emailField }) {
-      field.setStyle("-fx-pref-width: 12em;");
+      field.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
     }
     // Narrower, to leave room for the Choose button in the same column.
-    boxNumber.setStyle("-fx-pref-width: 6em;");
+    boxNumber.setStyle("-fx-pref-width: 8em; -fx-max-width: 8em;");
 
-    var submitBtn = new Button("Submit");
-    var resultLabel = new Label();
+    // Watched from here on, so the prices and deposits filled in as the form
+    // opens don't count as changes.
+    var changes = new UnsavedChanges().watch(firstNameField.textProperty(), lastNameField.textProperty(),
+        businessTitleField.textProperty(), boxNumber.textProperty(), boxNameField.textProperty(),
+        phoneField.textProperty(), emailField.textProperty(), endDateField.valueProperty(),
+        payment.amountField.textProperty(), payment.methodField.getEditor().textProperty(),
+        keys.countField.textProperty(), keys.depositField.textProperty(),
+        forwardingOnlyBox.selectedProperty(), notesField.textProperty());
+    businessNamesEditor.watchFor(changes);
+    forwardingEditor.watchFor(changes);
+
+    var saveBtn = new Button("Save");
+    var resultLabel = new Label(saved);
+    resultLabel.setId("resultLabel");
+    resultLabel.setStyle("-fx-text-fill: green;");
     var repository = new MailboxRepository();
 
-    submitBtn.setOnAction(e -> {
+    var problems = new FieldProblems();
+    saveBtn.setOnAction(e -> {
       var errors = new StringBuilder();
+      problems.clear();
+
+      // A name or address typed but not added with its Add button is saved
+      // too, rather than quietly left out.
+      businessNamesEditor.addTyped();
+      var forwardingProblem = forwardingEditor.addTypedBeforeSaving();
+      if (forwardingProblem != null) {
+        errors.append(forwardingProblem).append('\n');
+        forwardingSection.setExpanded(true);
+      }
 
       var forwardingOnly = forwardingOnlyBox.isSelected();
       if (boxNumber.getText().isBlank()) {
         errors.append("Box number is required.\n");
+        problems.mark(boxNumber);
       } else if (!forwardingOnly) {
-        errors.append(BoxNumberChecks.problem(boxNumber.getText(), 0));
+        var problem = BoxNumberChecks.problem(boxNumber.getText(), 0);
+        if (!problem.isEmpty()) {
+          errors.append(problem);
+          problems.mark(boxNumber);
+        }
       }
 
       var phone = phoneField.getText();
       if (!phone.isBlank() && !Validators.isValidPhone(phone)) {
         errors.append("Phone number is not valid.\n");
+        problems.mark(phoneField);
       }
 
       var email = emailField.getText();
       if (!email.isBlank() && !Validators.isValidEmail(email)) {
         errors.append("Email address is not valid.\n");
+        problems.mark(emailField);
       }
 
       // The rental runs from today to the end date; record it in the
@@ -132,23 +175,32 @@ public class AddBoxView {
         amount = payment.amountCents();
       } catch (IllegalArgumentException ex) {
         errors.append(ex.getMessage()).append('\n');
+        problems.mark(payment.amountField);
       }
       if ((amount != null || !payment.method().isEmpty()) && !hasRental) {
         errors.append("Set an end date after today to record a payment.\n");
+        problems.mark(endDateField);
       }
 
       Integer keyCount = null;
       Long keyDeposit = null;
       try {
         keyCount = keys.count();
+      } catch (IllegalArgumentException ex) {
+        errors.append(ex.getMessage()).append('\n');
+        problems.mark(keys.countField);
+      }
+      try {
         keyDeposit = keys.depositCents();
       } catch (IllegalArgumentException ex) {
         errors.append(ex.getMessage()).append('\n');
+        problems.mark(keys.depositField);
       }
 
       if (errors.length() > 0) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText(errors.toString().trim());
+        problems.focusFirst();
         return;
       }
 
@@ -160,16 +212,21 @@ public class AddBoxView {
 
       try {
         repository.insert(mailbox, rental);
-        resultLabel.setStyle("-fx-text-fill: green;");
-        resultLabel.setText("Saved");
+        // A fresh form, so clicking Save again can't add the box twice.
+        show(stage, "Saved " + BoxLabels.boxAndHolder(mailbox) + ". The form is empty again, ready for the "
+            + "next box.");
       } catch (SQLException ex) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText("Failed to save: " + ex.getMessage());
       }
     });
 
-    var backBtn = new Button("Back");
-    backBtn.setOnAction(e -> MainMenuView.show(stage));
+    var cancelBtn = new Button("Cancel");
+    cancelBtn.setOnAction(e -> {
+      if (AppWindow.mayLeave()) {
+        MainMenuView.show(stage);
+      }
+    });
 
     var grid = new GridPane();
     grid.setHgap(10);
@@ -184,17 +241,16 @@ public class AddBoxView {
     grid.add(rentalLengthButtons, 0, 5, 4, 1);
     grid.addRow(6, new Label("Amount Paid:"), payment.amountField, new Label("Paid By:"), payment.methodField);
     grid.addRow(7, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
-    grid.add(new Label("Alternate Business Names:"), 0, 8, 4, 1);
-    grid.add(businessNamesEditor, 0, 9, 4, 1);
-    grid.add(new Label("Forwarding Addresses:"), 0, 10, 4, 1);
-    grid.add(forwardingEditor, 0, 11, 4, 1);
-    grid.add(new Label("Notes:"), 0, 12, 4, 1);
-    grid.add(notesField, 0, 13, 4, 1);
+    grid.add(namesSection, 0, 8, 4, 1);
+    grid.add(forwardingSection, 0, 9, 4, 1);
+    grid.add(new Label("Notes:"), 0, 10, 4, 1);
+    grid.add(notesField, 0, 11, 4, 1);
 
-    var layout = new VBox(8, backBtn, grid, submitBtn, resultLabel);
+    var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));
 
-    AppWindow.show(stage, layout);
+    AppWindow.show(stage, EditBoxView.buttonBar(cancelBtn, saveBtn, resultLabel), layout);
+    AppWindow.setLeaveCheck(() -> changes.confirmLeave(stage));
   }
 
   /** Not used: the screen is built with static methods. */

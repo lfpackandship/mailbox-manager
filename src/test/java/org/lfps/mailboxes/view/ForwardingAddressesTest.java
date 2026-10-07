@@ -1,15 +1,18 @@
 package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -27,7 +30,8 @@ import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 
 /**
- * UI tests for entering forwarding addresses on the Add and Edit Box forms.
+ * UI tests for entering forwarding addresses on the Add and Edit Box forms,
+ * and for names and addresses typed but not added before saving.
  */
 class ForwardingAddressesTest {
 
@@ -76,15 +80,15 @@ class ForwardingAddressesTest {
   void addingANewBoxSavesItsForwardingAddresses() throws SQLException {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Tomás");
-      fieldWithPrompt("Doe").setText("Rivera");
-      fieldWithPrompt("310").setText("205");
-      fieldWithPrompt("(555) 123-4567").setText("5552000006");
+      fieldWithPrompt("John (optional)").setText("Tomás");
+      fieldWithPrompt("Doe (optional)").setText("Rivera");
+      fieldWithPrompt("310 (required)").setText("205");
+      fieldWithPrompt("(555) 123-4567 (optional)").setText("5552000006");
       enterAddress("88 Palm Way", "Unit 3B", "Naples", "fl", "34102", "winter");
       button("addForwardingButton").fire();
       enterAddress("1 Lake Rd", "", "Duluth", "MN", "55802-1234", "");
       button("addForwardingButton").fire();
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     var saved = mailboxes.findAll();
@@ -156,6 +160,88 @@ class ForwardingAddressesTest {
     FxTestSupport.run(() -> EditBoxView.show(mainWindow, box, () -> { }));
 
     assertTrue(FxTestSupport.call(() -> button("removeForwardingButton").isDisabled()));
+  }
+
+  @Test
+  void anAddressTypedButNotAddedIsSavedWithTheBox() throws SQLException {
+    FxTestSupport.run(() -> {
+      AddBoxView.show(mainWindow);
+      fieldWithPrompt("310 (required)").setText("205");
+      enterAddress("88 Palm Way", "Unit 3B", "Naples", "FL", "34102", "winter");
+      buttonLabeled("Save").fire();
+    });
+
+    assertEquals(List.of(NAPLES), mailboxes.findAll().get(0).getForwardingAddresses());
+  }
+
+  @Test
+  void anUnfinishedAddressStopsTheSaveAndSaysWhatsMissing() throws SQLException {
+    mailboxes.insert(new Mailbox(0, "Tomás", "Rivera", null, "205", null, "(555) 200-0006", null,
+        null, null, List.of()));
+    var box = mailboxes.findAll().get(0);
+    var saved = new boolean[1];
+
+    FxTestSupport.run(() -> {
+      EditBoxView.show(mainWindow, box, () -> saved[0] = true);
+      enterAddress("1 Lake Rd", "", "Duluth", "", "", "");
+      buttonLabeled("Save").fire();
+    });
+
+    assertFalse(saved[0]);
+    assertEquals("Finish the forwarding address or clear its fields. "
+        + "Enter the two-letter state and ZIP code (12345 or 12345-6789).",
+        FxTestSupport.call(() -> ((Label) mainWindow.getScene().getRoot().lookup("#resultLabel")).getText()));
+    assertTrue(mailboxes.findAll().get(0).getForwardingAddresses().isEmpty());
+  }
+
+  @Test
+  void aBusinessNameTypedButNotAddedIsSavedWithTheBox() throws SQLException {
+    FxTestSupport.run(() -> {
+      AddBoxView.show(mainWindow);
+      fieldWithPrompt("310 (required)").setText("205");
+      field("businessNameField").setText("Rivera Imports");
+      buttonLabeled("Save").fire();
+    });
+
+    assertEquals(List.of("Rivera Imports"), mailboxes.findAll().get(0).getAlternateBusinessNames());
+  }
+
+  @Test
+  void onAddNewBoxBothSectionsStartFoldedUp() {
+    FxTestSupport.run(() -> AddBoxView.show(mainWindow));
+
+    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses"), FxTestSupport.call(this::sectionTitles));
+    assertTrue(FxTestSupport.call(() -> sections().stream().noneMatch(TitledPane::isExpanded)));
+  }
+
+  @Test
+  void onEditBoxASectionWithEntriesStartsOpenAndCountsThem() throws SQLException {
+    mailboxes.insert(new Mailbox(0, "Tomás", "Rivera", null, "205", null, "(555) 200-0006", null,
+        null, null, List.of(NAPLES)));
+    var box = mailboxes.findAll().get(0);
+
+    FxTestSupport.run(() -> {
+      EditBoxView.show(mainWindow, box, () -> { });
+      enterAddress("1 Lake Rd", "", "Duluth", "MN", "55802", "");
+      button("addForwardingButton").fire();
+    });
+
+    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses (2)"),
+        FxTestSupport.call(this::sectionTitles));
+    assertEquals(List.of(false, true), FxTestSupport.call(() -> sections().stream()
+        .map(TitledPane::isExpanded).collect(Collectors.toList())));
+  }
+
+  /** Returns the folding sections on the main window, top first. */
+  private List<TitledPane> sections() {
+    return mainWindow.getScene().getRoot().lookupAll(".titled-pane").stream()
+        .map(node -> (TitledPane) node)
+        .collect(Collectors.toList());
+  }
+
+  /** Returns the headings of the folding sections on the main window, top first. */
+  private List<String> sectionTitles() {
+    return sections().stream().map(TitledPane::getText).collect(Collectors.toList());
   }
 
   /** Types an address into the forwarding address fields. */

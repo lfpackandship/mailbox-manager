@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.ColumnConstraints;
@@ -59,6 +60,9 @@ final class TableOutput {
   /** How many lines of a list fit on a printed page. */
   static final int LINES_PER_PAGE = 40;
 
+  /** How dates are shown in lists and printed, such as "Oct 9, 2026". */
+  private static final DateTimeFormatter DATES = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
+
   /** Where a column's own formatting is kept, for values the table formats itself. */
   private static final String FORMAT = "TableOutput.format";
 
@@ -94,6 +98,24 @@ final class TableOutput {
    */
   static <T> void formatWith(TableColumn<?, T> column, Function<T, String> format) {
     column.getProperties().put(FORMAT, format);
+  }
+
+  /**
+   * Shows a column's dates the way they're printed, such as "Oct 9, 2026",
+   * rather than as 2026-10-09. They still sort by date, and are saved in a
+   * spreadsheet as 2026-10-09, which Excel reads as a date.
+   *
+   * @param column the column of dates
+   * @param <S> the type of the table's rows
+   */
+  static <S> void showDates(TableColumn<S, LocalDate> column) {
+    column.setCellFactory(c -> new TableCell<>() {
+      @Override
+      protected void updateItem(LocalDate date, boolean empty) {
+        super.updateItem(date, empty);
+        setText(empty || date == null ? null : date.format(DATES));
+      }
+    });
   }
 
   /**
@@ -324,7 +346,7 @@ final class TableOutput {
       } else if (format != null) {
         text = format.apply(value);
       } else if (value instanceof LocalDate && forPrinting) {
-        text = ((LocalDate) value).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM));
+        text = ((LocalDate) value).format(DATES);
       } else {
         text = Objects.toString(value);
       }

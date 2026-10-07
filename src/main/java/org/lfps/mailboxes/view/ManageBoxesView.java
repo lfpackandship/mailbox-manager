@@ -27,6 +27,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -116,19 +117,27 @@ public class ManageBoxesView {
     boxNumberCol.setComparator(BoxNumbers.ORDER);
     BoxLabels.markForwarding(boxNumberCol);
 
+    var nameCol = new TableColumn<Mailbox, String>("Name");
+    nameCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getFullName()));
+
+    // Hidden, but saved in the spreadsheet so names can be sorted by last name there.
     var firstNameCol = new TableColumn<Mailbox, String>("First Name");
     firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+    firstNameCol.setVisible(false);
 
     var lastNameCol = new TableColumn<Mailbox, String>("Last Name");
     lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+    lastNameCol.setVisible(false);
 
     var businessTitleCol = new TableColumn<Mailbox, String>("Business Title");
     businessTitleCol.setCellValueFactory(new PropertyValueFactory<>("businessTitle"));
 
     var phoneCol = new TableColumn<Mailbox, String>("Phone");
-    phoneCol.setCellValueFactory(new PropertyValueFactory<>("phone"));
+    phoneCol.setCellValueFactory(cell -> new SimpleStringProperty(
+        PhoneNumberFormatter.format(cell.getValue().getPhone())));
 
-    table.getColumns().setAll(List.of(boxNumberCol, firstNameCol, lastNameCol, businessTitleCol, phoneCol));
+    table.getColumns().setAll(List.of(boxNumberCol, nameCol, firstNameCol, lastNameCol, businessTitleCol,
+        phoneCol));
     // Hidden, but saved in the spreadsheet so it has everything recorded.
     table.getColumns().addAll(hiddenColumns());
 
@@ -211,7 +220,7 @@ public class ManageBoxesView {
         } else if (Dialogs.confirm.ask(stage, "Close box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
             keysReminder(selected)
                 + "The box becomes free to rent to someone else. Everything recorded for it is kept, and you can "
-                + "find it again by showing closed boxes.")) {
+                + "find it again by showing closed boxes.", "Close Box", "Keep It Open")) {
           repository.setClosedDate(selected.getId(), LocalDate.now());
         } else {
           return;
@@ -234,7 +243,8 @@ public class ManageBoxesView {
       }
       if (!Dialogs.confirm.ask(stage, "Permanently delete box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
           "Everything recorded for it, including its rental history, will be erased. This can't be undone. "
-              + "If the holder has given up the box, close it instead to keep the record.")) {
+              + "If the holder has given up the box, close it instead to keep the record.",
+          "Delete Forever", "Cancel")) {
         return;
       }
       try {
@@ -260,11 +270,16 @@ public class ManageBoxesView {
     spreadsheetBtn.setOnAction(e -> TableOutput.run(statusLabel, () -> TableOutput.saveSpreadsheet(stage,
         "boxes-" + LocalDate.now() + ".csv", List.of(table))));
 
+    // Delete sits apart at the far right, so it isn't clicked in place of
+    // Close Box, which keeps the box's record.
+    var spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+
     var layout = new VBox(10,
         new HBox(10, backBtn, printBtn, spreadsheetBtn),
         new HBox(10, searchField, showChoice),
         table,
-        new HBox(10, viewBtn, editBtn, renewBtn, closeBtn, deleteBtn),
+        new HBox(10, viewBtn, editBtn, renewBtn, closeBtn, spacer, deleteBtn),
         statusLabel);
     layout.setPadding(new Insets(20));
 
@@ -298,6 +313,7 @@ public class ManageBoxesView {
 
     var endDateCol = new TableColumn<Mailbox, LocalDate>("End Date");
     endDateCol.setCellValueFactory(new PropertyValueFactory<>("endDate"));
+    TableOutput.showDates(endDateCol);
 
     var alternateNamesCol = new TableColumn<Mailbox, String>("Also Receives Mail As");
     alternateNamesCol.setCellValueFactory(cell -> new SimpleStringProperty(
@@ -319,6 +335,7 @@ public class ManageBoxesView {
 
     var closedCol = new TableColumn<Mailbox, LocalDate>("Closed");
     closedCol.setCellValueFactory(new PropertyValueFactory<>("closedDate"));
+    TableOutput.showDates(closedCol);
 
     var forwardingOnlyCol = new TableColumn<Mailbox, String>("Forwarding Only");
     forwardingOnlyCol.setCellValueFactory(cell -> new SimpleStringProperty(

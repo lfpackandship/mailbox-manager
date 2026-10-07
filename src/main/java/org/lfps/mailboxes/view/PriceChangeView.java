@@ -169,7 +169,7 @@ final class PriceChangeView {
     cancelChangeBtn.setOnAction(e -> {
       if (!Dialogs.confirm.ask(stage, "Cancel the price change?",
           "The new prices won't start, and today's prices stay as they are. If notices were given out, "
-              + "let box holders know.")) {
+              + "let box holders know.", "Cancel the Price Change", "Keep It")) {
         return;
       }
       try {

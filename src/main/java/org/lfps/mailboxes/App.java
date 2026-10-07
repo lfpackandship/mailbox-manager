@@ -9,7 +9,6 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
-import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.Database;
@@ -20,11 +19,15 @@ import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.view.AppWindow;
 import org.lfps.mailboxes.view.MainMenuView;
 import org.lfps.mailboxes.view.SettingsView;
+import org.lfps.mailboxes.view.WindowPlacement;
 
 /**
  * Entry point for the Mailbox Manager JavaFX application.
  */
 public class App extends Application {
+
+  /** The main window, so its place can be saved when the app closes. */
+  private Stage stage;
 
   /** Makes the app; JavaFX calls this when it starts. */
   public App() {
@@ -33,9 +36,10 @@ public class App extends Application {
   /**
    * Locates the database, initializes its schema, takes the daily backup and
    * copies it to the second backup folder if one is set, and shows the main
-   * menu, then uploads the backup to Google Drive in the background if it's
-   * connected. A backup problem doesn't stop the app from opening; it shows
-   * a warning instead, and the backup is retried on the next launch.
+   * menu where the window was when the app last closed, then uploads the
+   * backup to Google Drive in the background if it's connected. A backup
+   * problem doesn't stop the app from opening; it shows a warning instead,
+   * and the backup is retried on the next launch.
    *
    * @param stage the primary window supplied by the JavaFX runtime
    */
@@ -57,12 +61,9 @@ public class App extends Application {
       backupProblems.add("Today's backup could not be copied to your second backup folder: " + Errors.rootMessage(e));
     }
 
-    // Make the window bigger to match larger text, but no bigger than the screen.
-    var screen = Screen.getPrimary().getVisualBounds();
-    var scale = AppWindow.textScale();
     stage.setTitle("Mailbox Manager");
-    stage.setWidth(Math.min(700 * scale, screen.getWidth()));
-    stage.setHeight(Math.min(600 * scale, screen.getHeight()));
+    WindowPlacement.restore(stage);
+    this.stage = stage;
     MainMenuView.show(stage);
 
     if (!backupProblems.isEmpty()) {
@@ -74,6 +75,17 @@ public class App extends Application {
         Platform.runLater(() -> showDriveWarning(stage, DriveBackup.problem(error)));
       }
     });
+  }
+
+  /**
+   * Saves where the main window is and how big, so it opens the same way next
+   * time. JavaFX calls this when the app closes, however it's closed.
+   */
+  @Override
+  public void stop() {
+    if (stage != null) {
+      WindowPlacement.save(stage);
+    }
   }
 
   /**

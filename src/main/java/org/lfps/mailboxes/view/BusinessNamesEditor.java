@@ -3,6 +3,7 @@ package org.lfps.mailboxes.view;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.collections.ObservableList;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
@@ -18,6 +19,9 @@ public class BusinessNamesEditor extends VBox {
   /** The names added so far. */
   private final ListView<String> namesList = new ListView<>();
 
+  /** Where a name is typed before it's added. */
+  private final TextField nameField = new TextField();
+
   /**
    * Builds the editor: a text field with an Add button, a list of the
    * names entered so far, and a Remove Selected button.
@@ -25,17 +29,11 @@ public class BusinessNamesEditor extends VBox {
   public BusinessNamesEditor() {
     super(5);
 
-    var nameField = new TextField();
+    nameField.setId("businessNameField");
     nameField.setPromptText("Acme Inc (optional)");
 
     var addBtn = new Button("Add");
-    addBtn.setOnAction(e -> {
-      var name = nameField.getText().trim();
-      if (!name.isEmpty()) {
-        namesList.getItems().add(name);
-        nameField.clear();
-      }
-    });
+    addBtn.setOnAction(e -> addTyped());
 
     var removeBtn = new Button("Remove Selected");
     removeBtn.setOnAction(e -> {
@@ -48,6 +46,39 @@ public class BusinessNamesEditor extends VBox {
     namesList.setStyle("-fx-pref-height: 5.5em;");
 
     getChildren().addAll(new HBox(5, nameField, addBtn), namesList, removeBtn);
+  }
+
+  /**
+   * Adds the name typed in the field to the list and clears the field. Also
+   * called just before saving, so a name typed but not added with Add isn't
+   * lost.
+   */
+  public void addTyped() {
+    var name = nameField.getText().trim();
+    if (!name.isEmpty()) {
+      namesList.getItems().add(name);
+      nameField.clear();
+    }
+  }
+
+  /**
+   * Returns the entries added so far, live, so a section heading can show how
+   * many there are.
+   *
+   * @return the entries
+   */
+  ObservableList<?> entries() {
+    return namesList.getItems();
+  }
+
+  /**
+   * Has a form notice when anything is typed here, or an entry is added or
+   * removed, so leaving it can ask before throwing that away.
+   *
+   * @param changes the form's changes
+   */
+  void watchFor(UnsavedChanges changes) {
+    changes.watch(nameField.textProperty()).watchList(namesList.getItems());
   }
 
   /**

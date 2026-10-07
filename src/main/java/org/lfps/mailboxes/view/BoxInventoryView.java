@@ -187,6 +187,7 @@ public class BoxInventoryView {
     var endsCol = new TableColumn<Row, LocalDate>("Rental Ends");
     endsCol.setCellValueFactory(cell -> new SimpleObjectProperty<>(
         cell.getValue().holder == null ? null : cell.getValue().holder.getEndDate()));
+    TableOutput.showDates(endsCol);
 
     table.getColumns().setAll(List.of(boxNumberCol, sizeCol, statusCol, holderCol, endsCol));
 
@@ -231,7 +232,8 @@ public class BoxInventoryView {
     removeBtn.setOnAction(e -> {
       var numbers = boxNumbers(selected);
       if (!Dialogs.confirm.ask(stage, "Remove " + describe(numbers) + " from the box inventory?",
-          "Anyone renting " + (numbers.size() == 1 ? "it" : "them") + " keeps their box.")) {
+          "Anyone renting " + (numbers.size() == 1 ? "it" : "them") + " keeps their box.",
+          "Remove", "Cancel")) {
         return;
       }
       try {

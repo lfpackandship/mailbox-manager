@@ -140,11 +140,11 @@ class BoxInventoryViewTest {
     inventory.add(List.of("1", "2"), null);
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      fieldWithPrompt("John").setText("Tomás");
-      fieldWithPrompt("Doe").setText("Rivera");
-      fieldWithPrompt("310").setText("99");
-      fieldWithPrompt("(555) 123-4567").setText("5552000006");
-      buttonLabeled("Submit").fire();
+      fieldWithPrompt("John (optional)").setText("Tomás");
+      fieldWithPrompt("Doe (optional)").setText("Rivera");
+      fieldWithPrompt("310 (required)").setText("99");
+      fieldWithPrompt("(555) 123-4567 (optional)").setText("5552000006");
+      buttonLabeled("Save").fire();
     });
 
     var messages = FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookupAll(".label").stream()
@@ -180,7 +180,7 @@ class BoxInventoryViewTest {
       ((Button) chooser.getScene().lookup("#chooseEmptyBoxButton")).fire();
     });
 
-    assertEquals("6", FxTestSupport.call(() -> fieldWithPrompt("310").getText()));
+    assertEquals("6", FxTestSupport.call(() -> fieldWithPrompt("310 (required)").getText()));
   }
 
   @Test
@@ -244,7 +244,7 @@ class BoxInventoryViewTest {
   void removeAsksThenRemovesTheSelectedBoxes() throws SQLException {
     inventory.add(List.of("1", "2", "3"), null);
     var questions = new ArrayList<String>();
-    Dialogs.confirm = (owner, question, details) -> questions.add(question + " | " + details);
+    Dialogs.confirm = (owner, question, details, yes, no) -> questions.add(question + " | " + details);
     FxTestSupport.run(() -> BoxInventoryView.show(mainWindow));
     FxTestSupport.run(() -> {
       table().getSelectionModel().select(1);
@@ -260,7 +260,7 @@ class BoxInventoryViewTest {
   @Test
   void answeringNoKeepsTheBoxes() throws SQLException {
     inventory.add(List.of("1"), null);
-    Dialogs.confirm = (owner, question, details) -> false;
+    Dialogs.confirm = (owner, question, details, yes, no) -> false;
     FxTestSupport.run(() -> BoxInventoryView.show(mainWindow));
     FxTestSupport.run(() -> {
       table().getSelectionModel().select(0);

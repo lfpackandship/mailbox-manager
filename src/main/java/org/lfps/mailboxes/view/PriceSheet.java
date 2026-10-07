@@ -558,8 +558,12 @@ final class PriceSheet {
       var header = new VBox(2, heading);
       header.setAlignment(Pos.CENTER);
       if (!column.description.isBlank()) {
+        // Smaller than the body text so it fits on one line in a narrow
+        // column. A long one still wraps, and is never shortened to "…".
         var measures = new Label(column.description);
+        measures.setStyle("-fx-font-size: 11px;");
         measures.setWrapText(true);
+        measures.setMinHeight(Region.USE_PREF_SIZE);
         header.getChildren().add(measures);
       }
       var headerCell = cell(header, Pos.CENTER);

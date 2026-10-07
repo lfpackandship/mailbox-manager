@@ -19,6 +19,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -72,11 +73,15 @@ final class RestoreView {
    * Replaceable so tests can answer without a real dialog.
    */
   static Predicate<String> confirm = message -> {
-    var alert = new Alert(AlertType.CONFIRMATION, message, ButtonType.YES, ButtonType.NO);
+    var restore = new ButtonType("Restore", ButtonData.OK_DONE);
+    var alert = new Alert(AlertType.CONFIRMATION, message, restore, ButtonType.CANCEL);
     alert.setTitle("Restore Backup");
     alert.setHeaderText("Replace your current data?");
+    // Enter picks Cancel, as restoring replaces everything.
+    ((Button) alert.getDialogPane().lookupButton(restore)).setDefaultButton(false);
+    ((Button) alert.getDialogPane().lookupButton(ButtonType.CANCEL)).setDefaultButton(true);
     AppWindow.applyTextSize(alert);
-    return alert.showAndWait().filter(ButtonType.YES::equals).isPresent();
+    return alert.showAndWait().filter(restore::equals).isPresent();
   };
 
   /**

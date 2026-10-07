@@ -86,7 +86,13 @@ public class CalendarView {
         + " -fx-min-width: 10em; -fx-pref-width: 10em; -fx-max-width: 10em;");
     monthLabel.setAlignment(Pos.CENTER);
 
-    var header = new HBox(10, prevBtn, monthLabel, nextBtn);
+    // Comes back to this month after looking ahead or back.
+    var todayBtn = new Button("Today");
+    todayBtn.setId("todayButton");
+    todayBtn.setDisable(month.equals(YearMonth.now()));
+    todayBtn.setOnAction(e -> show(stage, YearMonth.now()));
+
+    var header = new HBox(10, prevBtn, monthLabel, nextBtn, todayBtn);
     header.setAlignment(Pos.CENTER);
 
     var calendarGrid = new GridPane();

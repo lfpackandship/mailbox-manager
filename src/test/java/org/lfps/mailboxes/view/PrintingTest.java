@@ -257,9 +257,9 @@ class PrintingTest {
     var file = Path.of(saved.getPath() + ".csv");
     var csv = Files.readString(file, StandardCharsets.UTF_8);
     Files.delete(file);
-    assertTrue(csv.startsWith("﻿Box Number,First Name,Last Name,Business Title,Phone,Box Name,Email,End Date,"),
+    assertTrue(csv.startsWith("﻿Box Number,Name,First Name,Last Name,Business Title,Phone,Box Name,Email,End Date,"),
         csv);
-    assertTrue(csv.contains("101,Ada,Overdue,,(555) 123-4567,,,"), csv);
+    assertTrue(csv.contains("101,Ada Overdue,Ada,Overdue,,(555) 123-4567,,,"), csv);
     assertEquals(4, csv.split("\r\n").length);
   }
 

@@ -146,6 +146,7 @@ public class PaymentsView {
 
     var dateCol = new TableColumn<Entry, LocalDate>("Date");
     dateCol.setCellValueFactory(cell -> new SimpleObjectProperty<>(cell.getValue().period.getRecordedOn()));
+    TableOutput.showDates(dateCol);
 
     var boxCol = new TableColumn<Entry, String>("Box");
     boxCol.setCellValueFactory(cell -> new SimpleStringProperty(
@@ -225,7 +226,7 @@ public class PaymentsView {
       }
       if (!Dialogs.confirm.ask(stage, "Delete this entry from the rental history?",
           "Use this for an entry recorded by mistake. The box's rental end date isn't changed; edit the box "
-              + "to change it.")) {
+              + "to change it.", "Delete Entry", "Cancel")) {
         return;
       }
       try {
