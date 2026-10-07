@@ -59,7 +59,7 @@ public class EditBoxView {
     var forwardingSection = section("Forwarding Addresses", forwardingEditor, forwardingEditor.entries());
 
     var endDateField = new DatePicker(mailbox.getEndDate());
-    endDateField.setStyle("-fx-pref-width: 12em;");
+    endDateField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
 
     // Renewing is done with Renew…, which records the payment as well. The end
     // date here is only for correcting a mistake.
@@ -77,7 +77,7 @@ public class EditBoxView {
 
     for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
         boxNumberField, boxNameField, phoneField, emailField }) {
-      field.setStyle("-fx-pref-width: 12em;");
+      field.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
     }
 
     // Watched once filled in, so only what's changed after that counts.

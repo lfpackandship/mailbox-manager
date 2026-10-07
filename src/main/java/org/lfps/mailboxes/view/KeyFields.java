@@ -38,10 +38,10 @@ final class KeyFields {
   KeyFields(Integer count, Long depositCents) {
     countField.setId("keyCountField");
     countField.setPromptText("optional");
-    countField.setStyle("-fx-pref-width: 12em;");
+    countField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
     depositField.setId("keyDepositAmountField");
     depositField.setPromptText("$0.00 (optional)");
-    depositField.setStyle("-fx-pref-width: 12em;");
+    depositField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
 
     countField.setText(count == null ? "" : String.valueOf(count));
     depositField.setText(depositCents == null ? "" : Money.format(depositCents));

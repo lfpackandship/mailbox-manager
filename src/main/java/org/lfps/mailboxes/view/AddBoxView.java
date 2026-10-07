@@ -81,7 +81,7 @@ public class AddBoxView {
     emailField.setPromptText("optional");
 
     var endDateField = new DatePicker();
-    endDateField.setStyle("-fx-pref-width: 12em;");
+    endDateField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
 
     var payment = new PaymentFields();
 
@@ -110,10 +110,10 @@ public class AddBoxView {
 
     for (var field : new TextField[] { firstNameField, lastNameField, businessTitleField,
         boxNameField, phoneField, emailField }) {
-      field.setStyle("-fx-pref-width: 12em;");
+      field.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
     }
     // Narrower, to leave room for the Choose button in the same column.
-    boxNumber.setStyle("-fx-pref-width: 6em;");
+    boxNumber.setStyle("-fx-pref-width: 8em; -fx-max-width: 8em;");
 
     // Watched from here on, so the prices and deposits filled in as the form
     // opens don't count as changes.

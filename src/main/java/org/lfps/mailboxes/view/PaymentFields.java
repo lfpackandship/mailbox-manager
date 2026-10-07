@@ -28,13 +28,13 @@ final class PaymentFields {
   PaymentFields() {
     amountField.setId("amountField");
     amountField.setPromptText("$0.00 (optional)");
-    amountField.setStyle("-fx-pref-width: 12em;");
+    amountField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
 
     methodField.setId("paymentMethodField");
     methodField.getItems().setAll(METHODS);
     methodField.setEditable(true);
     methodField.setPromptText("optional");
-    methodField.setStyle("-fx-pref-width: 12em;");
+    methodField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
   }
 
   /** The last price filled in, so a later one can replace it. */

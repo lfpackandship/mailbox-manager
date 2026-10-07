@@ -28,6 +28,9 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   section with entries starts open on Edit Box.
 - Add New Box's buttons are called **Save** and **Cancel**, like Edit Box's,
   instead of **Submit** and **Back**.
+- The fields on Add New Box and Edit Box are all the same width, and a bit
+  wider, so longer email addresses fit. Before, some stretched across the
+  window and others didn't.
 
 ### Fixed
 
