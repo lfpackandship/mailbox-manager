@@ -87,8 +87,10 @@ public class EditBoxView {
     resultLabel.setId("resultLabel");
     var repository = new MailboxRepository();
 
+    var problems = new FieldProblems();
     saveBtn.setOnAction(e -> {
       var errors = new StringBuilder();
+      problems.clear();
 
       // A name or address typed but not added with its Add button is saved
       // too, rather than quietly left out.
@@ -101,36 +103,50 @@ public class EditBoxView {
       var forwardingOnly = forwardingOnlyBox.isSelected();
       if (boxNumberField.getText().isBlank()) {
         errors.append("Box number is required.\n");
+        problems.mark(boxNumberField);
       } else if (!mailbox.isClosed() && !forwardingOnly
           && (mailbox.isForwardingOnly()
               || !BoxNumbers.key(boxNumberField.getText()).equals(BoxNumbers.key(mailbox.getBoxNumber())))) {
         // Closed and forwarding-only boxes don't hold their numbers, so only
         // check an open box whose number changed or that now holds it.
-        errors.append(BoxNumberChecks.problem(boxNumberField.getText(), mailbox.getId()));
+        var problem = BoxNumberChecks.problem(boxNumberField.getText(), mailbox.getId());
+        if (!problem.isEmpty()) {
+          errors.append(problem);
+          problems.mark(boxNumberField);
+        }
       }
 
       var phone = phoneField.getText();
       if (!phone.isBlank() && !Validators.isValidPhone(phone)) {
         errors.append("Phone number is not valid.\n");
+        problems.mark(phoneField);
       }
 
       var email = emailField.getText();
       if (!email.isBlank() && !Validators.isValidEmail(email)) {
         errors.append("Email address is not valid.\n");
+        problems.mark(emailField);
       }
 
       Integer keyCount = null;
       Long keyDeposit = null;
       try {
         keyCount = keys.count();
+      } catch (IllegalArgumentException ex) {
+        errors.append(ex.getMessage()).append('\n');
+        problems.mark(keys.countField);
+      }
+      try {
         keyDeposit = keys.depositCents();
       } catch (IllegalArgumentException ex) {
         errors.append(ex.getMessage()).append('\n');
+        problems.mark(keys.depositField);
       }
 
       if (errors.length() > 0) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText(errors.toString().trim());
+        problems.focusFirst();
         return;
       }
 

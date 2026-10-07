@@ -17,6 +17,8 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   the end date without recording a payment, so the renewal didn't show on
   Payments or in the box's rental history. Use **Renew…** to renew a box; the
   end date on Edit Box is still there for correcting mistakes.
+- When a box can't be saved on Add New Box or Edit Box, each field with a
+  mistake is outlined in red, and the cursor is put in the first one.
 
 ### Fixed
 

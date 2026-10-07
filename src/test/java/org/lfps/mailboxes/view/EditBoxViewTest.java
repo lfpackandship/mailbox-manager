@@ -1,6 +1,7 @@
 package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -209,6 +210,26 @@ class EditBoxViewTest {
         .map(node -> ((Button) node).getText())
         .noneMatch(text -> text.endsWith("Month") || text.endsWith("Months"))));
     assertNotNull(FxTestSupport.call(() -> mainWindow.getScene().lookup("#renewHint")));
+  }
+
+  @Test
+  void fieldsWithAMistakeAreOutlinedUntilTheyreFixed() throws SQLException {
+    edit("1");
+    var phone = textField("#phoneField");
+    FxTestSupport.run(() -> {
+      phone.setText("555");
+      save();
+    });
+
+    assertTrue(FxTestSupport.call(phone::getStyle).contains("#c62828"));
+    assertFalse(FxTestSupport.call(boxNumberField()::getStyle).contains("#c62828"));
+
+    FxTestSupport.run(() -> {
+      phone.setText("");
+      save();
+    });
+
+    assertFalse(FxTestSupport.call(phone::getStyle).contains("#c62828"));
   }
 
   /** Opens Edit Box for a box. */

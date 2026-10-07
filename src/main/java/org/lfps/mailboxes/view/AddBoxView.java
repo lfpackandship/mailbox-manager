@@ -126,8 +126,10 @@ public class AddBoxView {
     resultLabel.setStyle("-fx-text-fill: green;");
     var repository = new MailboxRepository();
 
+    var problems = new FieldProblems();
     submitBtn.setOnAction(e -> {
       var errors = new StringBuilder();
+      problems.clear();
 
       // A name or address typed but not added with its Add button is saved
       // too, rather than quietly left out.
@@ -140,18 +142,25 @@ public class AddBoxView {
       var forwardingOnly = forwardingOnlyBox.isSelected();
       if (boxNumber.getText().isBlank()) {
         errors.append("Box number is required.\n");
+        problems.mark(boxNumber);
       } else if (!forwardingOnly) {
-        errors.append(BoxNumberChecks.problem(boxNumber.getText(), 0));
+        var problem = BoxNumberChecks.problem(boxNumber.getText(), 0);
+        if (!problem.isEmpty()) {
+          errors.append(problem);
+          problems.mark(boxNumber);
+        }
       }
 
       var phone = phoneField.getText();
       if (!phone.isBlank() && !Validators.isValidPhone(phone)) {
         errors.append("Phone number is not valid.\n");
+        problems.mark(phoneField);
       }
 
       var email = emailField.getText();
       if (!email.isBlank() && !Validators.isValidEmail(email)) {
         errors.append("Email address is not valid.\n");
+        problems.mark(emailField);
       }
 
       // The rental runs from today to the end date; record it in the
@@ -164,23 +173,32 @@ public class AddBoxView {
         amount = payment.amountCents();
       } catch (IllegalArgumentException ex) {
         errors.append(ex.getMessage()).append('\n');
+        problems.mark(payment.amountField);
       }
       if ((amount != null || !payment.method().isEmpty()) && !hasRental) {
         errors.append("Set an end date after today to record a payment.\n");
+        problems.mark(endDateField);
       }
 
       Integer keyCount = null;
       Long keyDeposit = null;
       try {
         keyCount = keys.count();
+      } catch (IllegalArgumentException ex) {
+        errors.append(ex.getMessage()).append('\n');
+        problems.mark(keys.countField);
+      }
+      try {
         keyDeposit = keys.depositCents();
       } catch (IllegalArgumentException ex) {
         errors.append(ex.getMessage()).append('\n');
+        problems.mark(keys.depositField);
       }
 
       if (errors.length() > 0) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText(errors.toString().trim());
+        problems.focusFirst();
         return;
       }
 
