@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
@@ -25,6 +26,7 @@ import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.data.TestSandbox;
+import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.Mailbox;
 
 /**
@@ -142,6 +144,75 @@ class KeysTest {
   }
 
   @Test
+  void describesWhatHappenedToTheDeposit() {
+    assertEquals("2 keys, $20.00 deposit, given back", KeyFields.describe(2, 2000L, DepositOutcome.RETURNED));
+    assertEquals("1 key, $10.00 deposit, kept", KeyFields.describe(1, 1000L, DepositOutcome.KEPT));
+    assertEquals("Deposit kept", KeyFields.describe(null, null, DepositOutcome.KEPT));
+    assertEquals("1 key", KeyFields.describe(1, null, null));
+  }
+
+  @Test
+  void theDepositChoicesMatchTheirOutcomes() {
+    for (var outcome : new DepositOutcome[] { DepositOutcome.RETURNED, DepositOutcome.KEPT, null }) {
+      assertEquals(outcome, KeyFields.outcomeAt(KeyFields.indexOf(outcome)));
+    }
+    assertEquals("Not recorded yet", KeyFields.OUTCOME_CHOICES.get(KeyFields.NOT_RECORDED));
+  }
+
+  @Test
+  void paymentsShowsTheDepositsKeptFromBoxesClosedInTheDates() {
+    var today = LocalDate.now();
+    var boxes = List.of(
+        closed(2000L, today, DepositOutcome.KEPT),
+        closed(1000L, today.minusDays(1), DepositOutcome.KEPT),
+        closed(1000L, today.minusYears(1), DepositOutcome.KEPT),
+        closed(4000L, today, DepositOutcome.RETURNED),
+        closed(4000L, today, null));
+
+    assertEquals("Key deposits kept from boxes closed in these dates: $30.00 (not included above)",
+        PaymentsView.depositsKept(boxes, today.minusDays(7), today));
+    assertEquals("", PaymentsView.depositsKept(boxes, today.plusDays(1), today.plusDays(2)));
+  }
+
+  @Test
+  void editBoxSetsTheDepositOutcomeOnlyForAClosedBox() throws SQLException {
+    var repository = new MailboxRepository();
+    var openId = repository.insert(box(1, 1000L, null));
+    var closedId = repository.insert(box(1, 1000L, LocalDate.now()));
+    var all = repository.findAll();
+    var open = all.stream().filter(m -> m.getId() == openId).findFirst().orElseThrow();
+    var closed = all.stream().filter(m -> m.getId() == closedId).findFirst().orElseThrow();
+
+    var openStage = FxTestSupport.call(() -> {
+      var window = new Stage();
+      EditBoxView.show(window, open, () -> { });
+      return window;
+    });
+    assertNull(FxTestSupport.call(() -> openStage.getScene().lookup("#keyDepositOutcomeField")));
+
+    var stage = FxTestSupport.call(() -> {
+      var window = new Stage();
+      EditBoxView.show(window, closed, () -> { });
+      return window;
+    });
+    FxTestSupport.run(() -> {
+      @SuppressWarnings("unchecked")
+      var outcome = (ComboBox<String>) stage.getScene().lookup("#keyDepositOutcomeField");
+      assertEquals("Not recorded yet", outcome.getValue());
+      outcome.getSelectionModel().select(KeyFields.indexOf(DepositOutcome.KEPT));
+      stage.getScene().getRoot().lookupAll(".button").stream()
+          .map(node -> (Button) node)
+          .filter(b -> "Save".equals(b.getText()))
+          .findFirst()
+          .orElseThrow()
+          .fire();
+    });
+
+    assertEquals(DepositOutcome.KEPT, repository.findAll().stream().filter(m -> m.getId() == closedId)
+        .findFirst().orElseThrow().getKeyDepositOutcome());
+  }
+
+  @Test
   void closingABoxRemindsToCollectTheKeysAndGiveBackTheDeposit() {
     assertEquals("Remember to collect the 2 keys and give back the $20.00 key deposit. ",
         ManageBoxesView.keysReminder(box(2, 2000L, null)));
@@ -217,6 +288,12 @@ class KeysTest {
     assertTrue(FxTestSupport.call(() -> ((Label) stage.getScene().lookup("#resultLabel")).getText())
         .contains("Keys must be a whole number"));
     assertNull(repository.findAll().get(0).getKeyCount());
+  }
+
+  /** Makes a box with one key, closed on the given day, with what happened to its deposit. */
+  private static Mailbox closed(Long deposit, LocalDate closedOn, DepositOutcome outcome) {
+    return new Mailbox(0, "Ada", "Lovelace", null, "12", null, "", null, null, null, null, null, closedOn, 1,
+        deposit, false, outcome);
   }
 
   /** Makes a box with the given keys, deposit, and closing date. */

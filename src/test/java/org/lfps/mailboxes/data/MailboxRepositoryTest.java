@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 
@@ -216,6 +217,29 @@ class MailboxRepositoryTest {
 
     repository.setClosedDate(id, null);
     assertFalse(repository.findOpen().get(0).isClosed());
+  }
+
+  @Test
+  void closingRecordsWhatHappenedToTheKeyDepositAndReopeningForgetsIt() throws SQLException {
+    var id = repository.insert(mailbox("210", List.of(), null));
+
+    repository.setClosedDate(id, LocalDate.of(2026, 9, 1), DepositOutcome.KEPT);
+    assertEquals(DepositOutcome.KEPT, repository.findAll().get(0).getKeyDepositOutcome());
+
+    repository.setClosedDate(id, null, DepositOutcome.KEPT);
+    assertNull(repository.findAll().get(0).getKeyDepositOutcome());
+  }
+
+  @Test
+  void updateSavesTheKeyDepositOutcome() throws SQLException {
+    var id = repository.insert(mailbox("210", List.of(), null));
+    repository.setClosedDate(id, LocalDate.of(2026, 9, 1));
+    var closed = repository.findAll().get(0);
+
+    repository.update(new Mailbox(id, "Ada", "Lovelace", null, "210", null, "", null, null, null, null, null,
+        closed.getClosedDate(), 1, 1000L, false, DepositOutcome.RETURNED));
+
+    assertEquals(DepositOutcome.RETURNED, repository.findAll().get(0).getKeyDepositOutcome());
   }
 
   @Test

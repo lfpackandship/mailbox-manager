@@ -8,6 +8,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
@@ -73,6 +74,14 @@ public class EditBoxView {
     var keys = new KeyFields(mailbox.getKeyCount(), mailbox.getKeyDepositCents());
     var forwardingOnlyBox = forwardingOnlyBox(mailbox.isForwardingOnly(), keys.countField, keys.depositField);
 
+    // Only a closed box has given its deposit back or kept it. Asked when
+    // the box is closed, and set here if it wasn't then.
+    var outcomeField = new ComboBox<String>();
+    outcomeField.setId("keyDepositOutcomeField");
+    outcomeField.getItems().setAll(KeyFields.OUTCOME_CHOICES);
+    outcomeField.getSelectionModel().select(KeyFields.indexOf(mailbox.getKeyDepositOutcome()));
+    outcomeField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
+
     var notesField = notesField();
     notesField.setText(orEmpty(mailbox.getNotes()));
 
@@ -87,7 +96,7 @@ public class EditBoxView {
         businessTitleField.textProperty(), boxNumberField.textProperty(), boxNameField.textProperty(),
         phoneField.textProperty(), emailField.textProperty(), endDateField.valueProperty(),
         keys.countField.textProperty(), keys.depositField.textProperty(),
-        forwardingOnlyBox.selectedProperty(), notesField.textProperty());
+        forwardingOnlyBox.selectedProperty(), notesField.textProperty(), outcomeField.valueProperty());
     businessNamesEditor.watchFor(changes);
     forwardingEditor.watchFor(changes);
 
@@ -163,7 +172,8 @@ public class EditBoxView {
       var updated = new Mailbox(mailbox.getId(), firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumberField.getText(), boxNameField.getText(), phone, email,
           businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses(),
-          notesField.getText(), mailbox.getClosedDate(), keyCount, keyDeposit, forwardingOnly);
+          notesField.getText(), mailbox.getClosedDate(), keyCount, keyDeposit, forwardingOnly,
+          mailbox.isClosed() ? KeyFields.outcomeAt(outcomeField.getSelectionModel().getSelectedIndex()) : null);
 
       try {
         repository.update(updated);
@@ -192,10 +202,15 @@ public class EditBoxView {
     grid.addRow(4, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
     grid.add(renewHint, 0, 5, 4, 1);
     grid.addRow(6, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
-    grid.add(namesSection, 0, 7, 4, 1);
-    grid.add(forwardingSection, 0, 8, 4, 1);
-    grid.add(new Label("Notes:"), 0, 9, 4, 1);
-    grid.add(notesField, 0, 10, 4, 1);
+    var row = 7;
+    if (mailbox.isClosed()) {
+      grid.add(new Label("Key Deposit Was:"), 2, row);
+      grid.add(outcomeField, 3, row++);
+    }
+    grid.add(namesSection, 0, row++, 4, 1);
+    grid.add(forwardingSection, 0, row++, 4, 1);
+    grid.add(new Label("Notes:"), 0, row++, 4, 1);
+    grid.add(notesField, 0, row, 4, 1);
 
     var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));

@@ -90,7 +90,8 @@ final class BoxDetailsView {
         row("Box", "detailForwardingOnly", !mailbox.isForwardingOnly() ? "Rented here"
             : "Forwarding only: no box rented here, mail is forwarded"
                 + (mailbox.getForwardingAddresses().isEmpty() ? ". No forwarding address is recorded yet." : "")),
-        row("Keys", "detailKeys", orNone(KeyFields.describe(mailbox.getKeyCount(), mailbox.getKeyDepositCents()))),
+        row("Keys", "detailKeys", orNone(KeyFields.describe(mailbox.getKeyCount(), mailbox.getKeyDepositCents(),
+            mailbox.getKeyDepositOutcome()))),
         row("Forwarding addresses", "detailForwarding", lines(mailbox.getForwardingAddresses())),
         row("Notes", "detailNotes", orNone(mailbox.getNotes())),
         row("Rental history", "detailHistory", history)));

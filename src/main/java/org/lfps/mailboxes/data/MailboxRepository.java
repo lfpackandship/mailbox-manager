@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
@@ -30,26 +31,28 @@ public class MailboxRepository {
   /** Adds a mailbox. */
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
       + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date, notes, "
-      + "closed_date, key_count, key_deposit_cents, forwarding_only) "
-      + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      + "closed_date, key_count, key_deposit_cents, forwarding_only, key_deposit_outcome) "
+      + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   /** Reads every mailbox. */
   private static final String SELECT_ALL_SQL = "SELECT id, first_name, last_name, "
       + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date, key_count, "
-      + "key_deposit_cents, forwarding_only FROM mailboxes";
+      + "key_deposit_cents, forwarding_only, key_deposit_outcome FROM mailboxes";
 
   /** Replaces a mailbox's details. */
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
       + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ?, notes = ?, "
-      + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ? WHERE id = ?";
+      + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ?, key_deposit_outcome = ? "
+      + "WHERE id = ?";
 
   /** Checks whether another open, rented box has a box number. */
   private static final String BOX_NUMBER_TAKEN_SQL = "SELECT 1 FROM mailboxes "
       + "WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? AND closed_date IS NULL AND forwarding_only = 0 "
       + "LIMIT 1";
 
-  /** Closes or reopens a mailbox. */
-  private static final String SET_CLOSED_DATE_SQL = "UPDATE mailboxes SET closed_date = ? WHERE id = ?";
+  /** Closes or reopens a mailbox, and records what happened to its key deposit. */
+  private static final String SET_CLOSED_DATE_SQL =
+      "UPDATE mailboxes SET closed_date = ?, key_deposit_outcome = ? WHERE id = ?";
 
   /** Deletes a mailbox. */
   private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
@@ -172,7 +175,8 @@ public class MailboxRepository {
             date(rs.getString("closed_date")),
             rs.getObject("key_count") == null ? null : rs.getInt("key_count"),
             rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents"),
-            rs.getInt("forwarding_only") != 0));
+            rs.getInt("forwarding_only") != 0,
+            DepositOutcome.fromName(rs.getString("key_deposit_outcome"))));
       }
     }
 
@@ -193,7 +197,7 @@ public class MailboxRepository {
       try {
         try (PreparedStatement stmt = conn.prepareStatement(UPDATE_SQL)) {
           bindMailboxFields(stmt, mailbox);
-          stmt.setInt(14, mailbox.getId());
+          stmt.setInt(15, mailbox.getId());
           stmt.executeUpdate();
         }
         deleteBusinessNames(conn, mailbox.getId());
@@ -231,18 +235,34 @@ public class MailboxRepository {
   }
 
   /**
-   * Closes a box on the given day, or reopens it. Its record and history
-   * are kept.
+   * Closes a box on the given day with no key deposit outcome recorded, or
+   * reopens it. Its record and history are kept.
    *
    * @param id the id of the mailbox
    * @param closedDate the day it closed, or {@code null} to reopen it
    * @throws SQLException if the update fails
    */
   public void setClosedDate(int id, LocalDate closedDate) throws SQLException {
+    setClosedDate(id, closedDate, null);
+  }
+
+  /**
+   * Closes a box on the given day, or reopens it, and records whether its
+   * key deposit was given back or kept. Its record and history are kept.
+   * Reopening a box always forgets the outcome.
+   *
+   * @param id the id of the mailbox
+   * @param closedDate the day it closed, or {@code null} to reopen it
+   * @param keyDepositOutcome what happened to the key deposit, or
+   *     {@code null} if it isn't recorded
+   * @throws SQLException if the update fails
+   */
+  public void setClosedDate(int id, LocalDate closedDate, DepositOutcome keyDepositOutcome) throws SQLException {
     try (Connection conn = Database.connect();
         PreparedStatement stmt = conn.prepareStatement(SET_CLOSED_DATE_SQL)) {
       stmt.setString(1, closedDate == null ? null : closedDate.toString());
-      stmt.setInt(2, id);
+      stmt.setString(2, closedDate == null || keyDepositOutcome == null ? null : keyDepositOutcome.name());
+      stmt.setInt(3, id);
       stmt.executeUpdate();
     }
   }
@@ -277,7 +297,7 @@ public class MailboxRepository {
   }
 
   /**
-   * Fills in a mailbox's details as the first 13 parameters of an insert or
+   * Fills in a mailbox's details as the first 14 parameters of an insert or
    * update.
    *
    * @param stmt the insert or update
@@ -298,6 +318,7 @@ public class MailboxRepository {
     stmt.setObject(11, mailbox.getKeyCount());
     stmt.setObject(12, mailbox.getKeyDepositCents());
     stmt.setInt(13, mailbox.isForwardingOnly() ? 1 : 0);
+    stmt.setString(14, mailbox.getKeyDepositOutcome() == null ? null : mailbox.getKeyDepositOutcome().name());
   }
 
   /**

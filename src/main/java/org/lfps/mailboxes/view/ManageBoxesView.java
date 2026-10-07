@@ -217,13 +217,26 @@ public class ManageBoxesView {
             return;
           }
           repository.setClosedDate(selected.getId(), null);
-        } else if (Dialogs.confirm.ask(stage, "Close box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
-            keysReminder(selected)
-                + "The box becomes free to rent to someone else. Everything recorded for it is kept, and you can "
-                + "find it again by showing closed boxes.", "Close Box", "Keep It Open")) {
-          repository.setClosedDate(selected.getId(), LocalDate.now());
         } else {
-          return;
+          var question = "Close box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?";
+          var details = keysReminder(selected)
+              + "The box becomes free to rent to someone else. Everything recorded for it is kept, and you can "
+              + "find it again by showing closed boxes.";
+          var deposit = selected.getKeyDepositCents();
+          if (deposit != null && deposit > 0) {
+            // Optional: it can be left as not recorded, and set later on Edit Box.
+            var choice = Dialogs.confirmWithChoice.ask(stage, question, details,
+                "The " + Money.format(deposit) + " key deposit was:", KeyFields.OUTCOME_CHOICES,
+                KeyFields.NOT_RECORDED, "Close Box", "Keep It Open");
+            if (choice < 0) {
+              return;
+            }
+            repository.setClosedDate(selected.getId(), LocalDate.now(), KeyFields.outcomeAt(choice));
+          } else if (Dialogs.confirm.ask(stage, question, details, "Close Box", "Keep It Open")) {
+            repository.setClosedDate(selected.getId(), LocalDate.now());
+          } else {
+            return;
+          }
         }
         BoxDetailsView.close();
         refresh.run();
@@ -330,6 +343,10 @@ public class ManageBoxesView {
     depositCol.setCellValueFactory(new PropertyValueFactory<>("keyDepositCents"));
     TableOutput.formatWith(depositCol, Money::format);
 
+    var outcomeCol = new TableColumn<Mailbox, String>("Key Deposit Was");
+    outcomeCol.setCellValueFactory(cell -> new SimpleStringProperty(
+        cell.getValue().getKeyDepositOutcome() == null ? "" : cell.getValue().getKeyDepositOutcome().getLabel()));
+
     var notesCol = new TableColumn<Mailbox, String>("Notes");
     notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
 
@@ -342,7 +359,7 @@ public class ManageBoxesView {
         cell.getValue().isForwardingOnly() ? "Yes" : ""));
 
     var columns = List.<TableColumn<Mailbox, ?>>of(boxNameCol, emailCol, endDateCol, forwardingOnlyCol,
-        alternateNamesCol, forwardingCol, keysCol, depositCol, notesCol, closedCol);
+        alternateNamesCol, forwardingCol, keysCol, depositCol, outcomeCol, notesCol, closedCol);
     columns.forEach(column -> column.setVisible(false));
     return columns;
   }

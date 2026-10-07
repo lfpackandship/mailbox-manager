@@ -51,6 +51,15 @@ class MailboxTest {
   }
 
   @Test
+  void reopeningForgetsWhatHappenedToTheKeyDeposit() {
+    var closed = new Mailbox(1, "Ada", "Lovelace", null, "12", null, "", null, null, null, null, null,
+        LocalDate.of(2026, 9, 1), 1, 1000L, false, DepositOutcome.KEPT);
+
+    assertEquals(DepositOutcome.KEPT, closed.withEndDate(LocalDate.of(2027, 1, 1)).getKeyDepositOutcome());
+    assertNull(closed.withClosedDate(null).getKeyDepositOutcome());
+  }
+
+  @Test
   void fullNameJoinsFirstAndLast() {
     assertEquals("Ada Lovelace", box.getFullName());
   }

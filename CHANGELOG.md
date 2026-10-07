@@ -14,6 +14,12 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   deleted and the box renewed again.
 - The **About** tab in Settings shows which version of Mailbox Manager is
   running, as **Help → About Mailbox Manager** does.
+- Closing a box with a key deposit asks whether the deposit was **Given
+  back** or **Kept**, for example because the keys weren't returned. It can
+  be left as **Not recorded yet** and set later on Edit Box, which has a
+  **Key Deposit Was** choice for closed boxes. The box's details show it,
+  Payments shows the deposits kept from boxes closed in the dates shown, and
+  reopening a box clears it.
 
 ## 1.9.0 – 2026-10-06
 
