@@ -297,6 +297,7 @@ public final class AppWindow {
         new SeparatorMenuItem(),
         goItem("Add New Box", "Shortcut+N", () -> AddBoxView.show(stage)),
         goItem("Manage Boxes", "Shortcut+1", () -> ManageBoxesView.show(stage)),
+        goItem("Find a Box", "Shortcut+F", () -> ManageBoxesView.find(stage)),
         goItem("Renewals", "Shortcut+2", () -> RenewalsView.show(stage)),
         goItem("Calendar", "Shortcut+3", () -> CalendarView.show(stage)),
         goItem("Payments", "Shortcut+4", () -> PaymentsView.show(stage)),

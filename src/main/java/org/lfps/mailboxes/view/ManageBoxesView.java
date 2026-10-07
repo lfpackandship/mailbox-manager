@@ -16,6 +16,7 @@ import org.lfps.mailboxes.util.Money;
 
 import java.util.stream.Collectors;
 
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -92,6 +93,28 @@ public class ManageBoxesView {
    */
   public static void show(Stage stage) {
     show(stage, "", Show.OPEN);
+  }
+
+  /**
+   * Gets ready to search for a box, from Go → Find a Box (Ctrl+F, or Cmd+F on
+   * a Mac): opens Manage Boxes, which starts with the cursor in its search
+   * box, or if it's already showing, puts the cursor there with the search
+   * already typed selected, so typing replaces it.
+   *
+   * @param stage the main window
+   */
+  public static void find(Stage stage) {
+    var existing = stage.getScene() == null ? null : stage.getScene().getRoot().lookup("#searchField");
+    if (!(existing instanceof TextField)) {
+      show(stage);
+      return;
+    }
+    var searchField = (TextField) existing;
+    // After the menu has closed, which can take the cursor back.
+    Platform.runLater(() -> {
+      searchField.requestFocus();
+      searchField.selectAll();
+    });
   }
 
   /**
@@ -308,6 +331,12 @@ public class ManageBoxesView {
     layout.setPadding(new Insets(20));
 
     AppWindow.show(stage, layout);
+    // Start in the search box, ready to type. A new screen gives its first
+    // button the cursor once it's shown, so wait until then.
+    Platform.runLater(() -> {
+      searchField.requestFocus();
+      searchField.end();
+    });
   }
 
   /**

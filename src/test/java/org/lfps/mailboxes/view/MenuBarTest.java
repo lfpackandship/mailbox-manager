@@ -18,6 +18,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -84,8 +85,43 @@ class MenuBarTest {
         .map(menu -> menu.getText()).collect(Collectors.toList())));
     assertEquals(List.of("Print Price Sheet…", "Print Renewal Reminders…", "Forwarding", "Back Up Now…",
         "Restore a Backup…", "Settings", "Exit"), items("File"));
-    assertEquals(List.of("Main Menu", "Add New Box", "Manage Boxes", "Renewals", "Calendar", "Payments",
-        "Box Inventory", "Prices…"), items("Go"));
+    assertEquals(List.of("Main Menu", "Add New Box", "Manage Boxes", "Find a Box", "Renewals", "Calendar",
+        "Payments", "Box Inventory", "Prices…"), items("Go"));
+  }
+
+  @Test
+  void findABoxOpensManageBoxesReadyToSearch() {
+    FxTestSupport.run(() -> item("Go", "Find a Box").fire());
+    // The cursor is placed once the screen has appeared.
+    FxTestSupport.run(() -> { });
+
+    var search = FxTestSupport.call(() -> (TextField) mainWindow.getScene().getRoot().lookup("#searchField"));
+    assertTrue(FxTestSupport.call(() -> mainWindow.getScene().getFocusOwner() == search));
+    assertEquals("Shortcut+F", FxTestSupport.call(() -> item("Go", "Find a Box").getAccelerator().getName()));
+  }
+
+  @Test
+  void findABoxOnManageBoxesSelectsTheSearchSoTypingReplacesIt() {
+    FxTestSupport.run(() -> {
+      ManageBoxesView.show(mainWindow);
+      ((TextField) mainWindow.getScene().getRoot().lookup("#searchField")).setText("lovelace");
+    });
+    FxTestSupport.run(() -> { });
+    FxTestSupport.run(() -> item("Go", "Find a Box").fire());
+    FxTestSupport.run(() -> { });
+
+    var search = FxTestSupport.call(() -> (TextField) mainWindow.getScene().getRoot().lookup("#searchField"));
+    assertEquals("lovelace", FxTestSupport.call(search::getSelectedText));
+    assertTrue(FxTestSupport.call(() -> mainWindow.getScene().getFocusOwner() == search));
+  }
+
+  @Test
+  void manageBoxesStartsWithTheCursorInTheSearch() {
+    FxTestSupport.run(() -> item("Go", "Manage Boxes").fire());
+    FxTestSupport.run(() -> { });
+
+    assertTrue(FxTestSupport.call(() -> mainWindow.getScene().getFocusOwner()
+        == mainWindow.getScene().getRoot().lookup("#searchField")));
   }
 
   @Test

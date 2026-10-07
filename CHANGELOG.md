@@ -46,6 +46,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   have no date, so they're listed last.
 - The search on Manage Boxes also finds a box by the number of a forwarding
   label printed for it.
+- **Go → Find a Box**, or **Ctrl+F** (**⌘F** on a Mac) from any screen,
+  opens Manage Boxes ready to type a name or box number. On Manage Boxes, it
+  selects the search already typed, so typing replaces it.
+- Manage Boxes starts with the cursor in its search box, however it's opened.
 
 ## 1.9.0 – 2026-10-06
 
