@@ -20,6 +20,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   **Key Deposit Was** choice for closed boxes. The box's details show it,
   Payments shows the deposits kept from boxes closed in the dates shown, and
   reopening a box clears it.
+- The **Renewals** button on the main menu has small bubbles counting the
+  boxes past due, in red, and the boxes ending soon, in yellow. Pointing at
+  the button says more, such as "2 boxes are past due, and 5 end in the next
+  30 days." A bubble is left out when its count is zero.
 
 ## 1.9.0 – 2026-10-06
 
