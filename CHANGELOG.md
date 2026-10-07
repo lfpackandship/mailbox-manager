@@ -10,6 +10,8 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 - The window opens where it was and at the size it was when the app was last
   closed, or maximized if it was. Before, it always opened small in the middle
   of the screen.
+- A **Today** button on the Calendar goes back to this month after looking
+  ahead or back.
 
 ### Changed
 
