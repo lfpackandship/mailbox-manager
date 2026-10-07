@@ -29,7 +29,7 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   shop's name and address from Settings as the return address. A box with
   more than one forwarding address asks which. The label fits whatever the
   printer has loaded, such as a label printer's labels or an envelope; on
-  ordinary paper it's printed across the top of the page, like an envelope.
+  ordinary paper it's a 4 by 2 inch block in the top corner, to cut out.
 
 ## 1.9.0 – 2026-10-06
 

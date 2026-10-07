@@ -25,19 +25,35 @@ import org.lfps.mailboxes.model.Mailbox;
  * return address, and the holder's name and forwarding address where the
  * post office expects it.
  *
- * <p>It's drawn to fit whatever paper the chosen printer has, so the same
- * label works on a label printer such as a Zebra, on an envelope, or on an
- * ordinary sheet of paper, where it's laid out like an envelope across the
- * top of the page, to cut out or fold into a window envelope. Sizes here are
- * in points (1/72 inch).
+ * <p>It's drawn to fit the part of the paper the chosen printer says it can
+ * print on, so the same label works on a label printer such as a Zebra or on
+ * an envelope. On a full sheet of paper it's kept to a 4 by 2 inch block in
+ * the top corner, to cut out: that way, if a label printer's driver is left
+ * set to letter paper while it has labels loaded, the label still lands on
+ * the label rather than off its edge. Sizes here are in points (1/72 inch).
  */
 final class ForwardingLabel implements Printable {
 
-  /** Paper at least this wide is a sheet of paper rather than a label or envelope. */
-  static final double SHEET_WIDTH = 7.5 * 72;
+  /**
+   * A printable area at least this wide and {@link #SHEET_HEIGHT} tall is a
+   * full sheet of paper, such as letter, rather than a label or envelope.
+   */
+  static final double SHEET_WIDTH = 6.5 * 72;
 
-  /** How tall the label is on a sheet of paper: the height of a #10 envelope. */
-  static final double SHEET_LABEL_HEIGHT = 4.125 * 72;
+  /** See {@link #SHEET_WIDTH}. */
+  static final double SHEET_HEIGHT = 9 * 72;
+
+  /** How wide the label is on a sheet of paper: as wide as a common Zebra label. */
+  static final double SHEET_LABEL_WIDTH = 4 * 72;
+
+  /** How tall the label is on a sheet of paper, fitting the smallest common Zebra shipping label. */
+  static final double SHEET_LABEL_HEIGHT = 2 * 72;
+
+  /**
+   * Below this size, the forwarding address moves over to the left edge to
+   * make room, rather than getting smaller still.
+   */
+  static final double MOVE_LEFT_BELOW = 9;
 
   /** The largest the forwarding address is printed. */
   static final double LARGEST_ADDRESS = 16;
@@ -188,37 +204,82 @@ final class ForwardingLabel implements Printable {
   }
 
   /**
-   * Works out where everything goes on paper of a given size. On a wide
-   * label or envelope the forwarding address starts a third of the way
-   * across and below the middle, as on a letter; on a tall label it goes
-   * under the return address. Its type is as large as fits, up to
-   * {@link #LARGEST_ADDRESS}.
+   * Works out where everything goes in a printable area of a given size,
+   * measured from its top left corner. On a wide label or envelope the
+   * forwarding address starts a third of the way across and below the
+   * middle, as on a letter; on a tall label it goes under the return address.
+   * Its type is as large as fits, up to {@link #LARGEST_ADDRESS}; if it would
+   * be very small, the address moves to the left edge to make room. On a
+   * full sheet of paper, only a label-sized corner is used (see
+   * {@link #SHEET_LABEL_WIDTH}).
    *
-   * @param width the paper's width
-   * @param height the paper's height
+   * @param areaWidth the printable area's width
+   * @param areaHeight the printable area's height
    * @param measure how text is measured, from the printer or a test
    * @return the layout
    */
-  Layout layout(double width, double height, FontRenderContext measure) {
-    // On a sheet of paper, only the top is used, the size of an envelope.
-    var areaHeight = width >= SHEET_WIDTH ? Math.min(height, SHEET_LABEL_HEIGHT) : height;
-    var margin = Math.max(0.08 * 72, Math.min(width, areaHeight) * 0.05);
+  Layout layout(double areaWidth, double areaHeight, FontRenderContext measure) {
+    return layout(0, 0, areaWidth, areaHeight, measure);
+  }
 
-    var fromSize = Math.max(SMALLEST_TEXT, Math.min(LARGEST_RETURN, areaHeight * 0.06));
+  /**
+   * Works out where everything goes, like {@link #layout(double, double,
+   * FontRenderContext)}, for a printable area that starts some way into the
+   * paper. On a full sheet, the label-sized corner is measured from the
+   * paper's edge, so it still lands on a label loaded in a printer whose
+   * driver thinks it has letter paper.
+   *
+   * @param areaX how far the printable area starts from the paper's left edge
+   * @param areaY how far the printable area starts from the paper's top edge
+   * @param areaWidth the printable area's width
+   * @param areaHeight the printable area's height
+   * @param measure how text is measured, from the printer or a test
+   * @return the layout, measured from the printable area's top left corner
+   */
+  Layout layout(double areaX, double areaY, double areaWidth, double areaHeight, FontRenderContext measure) {
+    var sheet = areaWidth >= SHEET_WIDTH && areaHeight >= SHEET_HEIGHT;
+    var width = sheet ? Math.min(areaWidth, SHEET_LABEL_WIDTH - areaX) : areaWidth;
+    var height = sheet ? Math.min(areaHeight, SHEET_LABEL_HEIGHT - areaY) : areaHeight;
+    var margin = Math.max(0.08 * 72, Math.min(width, height) * 0.05);
+
+    var fromSize = Math.max(SMALLEST_TEXT, Math.min(LARGEST_RETURN, height * 0.06));
     while (fromSize > SMALLEST_TEXT && blockWidth(from, fromSize, measure) > width * 0.6) {
       fromSize -= 0.5;
     }
     var fromBottom = margin + blockHeight(from, fromSize);
 
-    var wide = width >= areaHeight * 1.3;
+    var wide = width >= height * 1.3;
     var toX = wide ? width * 0.35 : margin + width * 0.1;
-    var toY = wide ? Math.max(fromBottom + margin, areaHeight * 0.4) : fromBottom + areaHeight * 0.12;
-    var toSize = LARGEST_ADDRESS;
-    while (toSize > SMALLEST_TEXT && (blockWidth(to, toSize, measure) > width - toX - margin
-        || blockHeight(to, toSize) > areaHeight - toY - margin)) {
-      toSize -= 0.5;
+    var toY = wide ? Math.max(fromBottom + margin, height * 0.4) : fromBottom + height * 0.12;
+    var toSize = largestFitting(toX, toY, width, height, margin, measure);
+    if (toSize < MOVE_LEFT_BELOW) {
+      toX = margin;
+      toY = fromBottom + margin;
+      toSize = largestFitting(toX, toY, width, height, margin, measure);
     }
     return new Layout(fromSize, margin, margin, toSize, toX, toY);
+  }
+
+  /**
+   * Returns the largest size the forwarding address fits at from a given
+   * spot, or {@link #SMALLEST_TEXT} if it doesn't fit even then.
+   *
+   * @param x the left edge of the address
+   * @param y the top of the address
+   * @param width the label's width
+   * @param height the label's height
+   * @param margin the space to leave at the right and bottom edges
+   * @param measure how text is measured
+   * @return the type size
+   */
+  private double largestFitting(double x, double y, double width, double height, double margin,
+      FontRenderContext measure) {
+    var size = LARGEST_ADDRESS;
+    while (size > SMALLEST_TEXT && (blockWidth(to, size, measure) > width - x - margin
+        || blockHeight(to, size) > height - y - margin)) {
+      size -= 0.5;
+    }
+    return size;
   }
 
   /**
@@ -263,9 +324,10 @@ final class ForwardingLabel implements Printable {
     var g = (Graphics2D) graphics;
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
     g.setColor(java.awt.Color.BLACK);
-    // The paper's own size, not the part the computer thinks is printable,
-    // since label printers print almost to the edge.
-    var layout = layout(format.getWidth(), format.getHeight(), g.getFontRenderContext());
+    // Only where the printer says it can print, so nothing is cut off.
+    g.translate(format.getImageableX(), format.getImageableY());
+    var layout = layout(format.getImageableX(), format.getImageableY(), format.getImageableWidth(),
+        format.getImageableHeight(), g.getFontRenderContext());
     draw(g, from, layout.fromSize, layout.fromX, layout.fromY);
     draw(g, to, layout.toSize, layout.toX, layout.toY);
     return PAGE_EXISTS;

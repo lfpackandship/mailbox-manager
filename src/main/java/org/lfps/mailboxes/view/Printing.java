@@ -244,9 +244,8 @@ final class Printing {
    * Shows the computer's print dialog and prints something that draws itself
    * to fit the paper, on a thread of its own like
    * {@link #printWithSystemDialog}. It's given the whole sheet or label the
-   * printer has, less only the edges the printer itself can't reach, rather
-   * than the inch-wide margins Java assumes, which would leave nothing of a
-   * small label.
+   * printer has, less only the edges the printer itself can't reach (see
+   * {@link #fullPage}).
    *
    * @param jobName what the print job is called in the printer queue
    * @param printable what to print
@@ -267,25 +266,51 @@ final class Printing {
           result.complete(false);
           return;
         }
-        // The paper chosen in the dialog, with as much of it usable as the
-        // printer allows.
-        var format = job.defaultPage();
-        var paper = format.getPaper();
-        paper.setImageableArea(0, 0, paper.getWidth(), paper.getHeight());
-        format.setPaper(paper);
-        job.setPrintable(printable, job.validatePage(format));
+        job.setPrintable(printable, fullPage(job));
         job.print();
         result.complete(true);
       } catch (PrinterException e) {
         result.completeExceptionally(new IllegalStateException(
             "Printing didn't work. Check that the printer is on and try again. (" + e.getMessage() + ")", e));
-      } catch (RuntimeException e) {
+      } catch (IllegalStateException e) {
         result.completeExceptionally(e);
+      } catch (RuntimeException e) {
+        result.completeExceptionally(new IllegalStateException(
+            "Something went wrong while printing. Check that the printer is on and try again. ("
+                + e.getMessage() + ")", e));
       }
     }, "Printing");
     thread.setDaemon(true);
     thread.start();
     return result;
+  }
+
+  /**
+   * Returns the page chosen in the print dialog with as much of the paper
+   * usable as the printer allows, rather than the inch-wide margins Java
+   * otherwise assumes, which would leave almost nothing of a small label. If
+   * the printer's driver gives back nothing sensible, its own page is used as
+   * it is.
+   *
+   * @param job the print job, after its dialog
+   * @return the page
+   */
+  static PageFormat fullPage(PrinterJob job) {
+    var page = job.defaultPage();
+    try {
+      var full = (PageFormat) page.clone();
+      var paper = full.getPaper();
+      paper.setImageableArea(0, 0, paper.getWidth(), paper.getHeight());
+      full.setPaper(paper);
+      var checked = job.validatePage(full);
+      // Less than half an inch either way means something's wrong.
+      if (checked.getImageableWidth() >= 36 && checked.getImageableHeight() >= 36) {
+        return checked;
+      }
+    } catch (RuntimeException driverProblem) {
+      // Use the printer's own page below.
+    }
+    return page;
   }
 
   /**

@@ -1,16 +1,20 @@
 package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.awt.font.FontRenderContext;
 import java.awt.image.BufferedImage;
 import java.awt.print.PageFormat;
+import java.awt.print.Pageable;
 import java.awt.print.Paper;
 import java.awt.print.Printable;
+import java.awt.print.PrinterJob;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.UnaryOperator;
 
 import javafx.scene.control.Button;
 import javafx.stage.Stage;
@@ -112,13 +116,97 @@ class ForwardingLabelTest {
   }
 
   @Test
-  void onASheetOfPaperItsLaidOutLikeAnEnvelopeAcrossTheTop() {
-    var label = ForwardingLabel.of(box("Ada", "Lovelace", null, HOME), HOME, "Shop", "1 Main St\nTown, IL 60000");
-    var layout = label.layout(8.5 * 72, 11 * 72, MEASURE);
+  void onASheetOfPaperItStaysInALabelSizedCorner() {
+    var label = ForwardingLabel.of(box("Ada", "Lovelace", "Analytical Engines", HOME), HOME,
+        "Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045");
+    // Letter with no margins, and with the inch-wide margins Java can assume.
+    for (var area : new double[][] { { 8.5, 11 }, { 6.5, 9 } }) {
+      var layout = label.layout(area[0] * 72, area[1] * 72, MEASURE);
 
-    assertTrue(layout.toY + ForwardingLabel.blockHeight(label.to, layout.toSize)
+      assertTrue(layout.toX + ForwardingLabel.blockWidth(label.to, layout.toSize, MEASURE)
+          <= ForwardingLabel.SHEET_LABEL_WIDTH);
+      assertTrue(layout.toY + ForwardingLabel.blockHeight(label.to, layout.toSize)
+          <= ForwardingLabel.SHEET_LABEL_HEIGHT);
+    }
+  }
+
+  @Test
+  void onASheetThePrintersEdgeIsAllowedFor() {
+    var label = ForwardingLabel.of(box("Ada", "Lovelace", "Analytical Engines", HOME), HOME,
+        "Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045");
+    var edge = 0.25 * 72;
+
+    var layout = label.layout(edge, edge, 8 * 72, 10.5 * 72, MEASURE);
+
+    assertTrue(edge + layout.toX + ForwardingLabel.blockWidth(label.to, layout.toSize, MEASURE)
+        <= ForwardingLabel.SHEET_LABEL_WIDTH);
+    assertTrue(edge + layout.toY + ForwardingLabel.blockHeight(label.to, layout.toSize)
         <= ForwardingLabel.SHEET_LABEL_HEIGHT);
-    assertEquals(ForwardingLabel.LARGEST_ADDRESS, layout.toSize);
+  }
+
+  @Test
+  void aLongAddressOnASmallLabelMovesLeftRatherThanGettingTiny() {
+    var longAddress = new ForwardingAddress("12345 North Sheridan Road", "Suite 1200", "Lake Forest", "IL",
+        "60045", null);
+    var label = ForwardingLabel.of(box("Ada", "Lovelace", "Analytical Engines LLC", longAddress), longAddress,
+        "Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045");
+
+    var layout = label.layout(2.25 * 72, 1.25 * 72, MEASURE);
+
+    assertEquals(layout.fromX, layout.toX);
+    assertTrue(layout.toX + ForwardingLabel.blockWidth(label.to, layout.toSize, MEASURE) <= 2.25 * 72);
+  }
+
+  @Test
+  void staysInsideThePartThePrinterCanPrintOn() {
+    var label = ForwardingLabel.of(box("Ada", "Lovelace", null, HOME), HOME, "Shop", "1 Main St\nTown, IL 60000");
+    var paper = new Paper();
+    paper.setSize(4 * 72, 2 * 72);
+    paper.setImageableArea(18, 18, 4 * 72 - 36, 2 * 72 - 36);
+    var format = new PageFormat();
+    format.setPaper(paper);
+    var image = blank(4 * 72, 2 * 72);
+
+    label.print(image.createGraphics(), format, 0);
+
+    assertFalse(hasInk(image, 0, 0, image.getWidth(), 18));
+    assertFalse(hasInk(image, 0, 0, 18, image.getHeight()));
+    assertFalse(hasInk(image, image.getWidth() - 18, 0, 18, image.getHeight()));
+    assertFalse(hasInk(image, 0, image.getHeight() - 18, image.getWidth(), 18));
+    assertTrue(hasInk(image, 18, 18, image.getWidth() - 36, image.getHeight() - 36));
+  }
+
+  @Test
+  void usesAsMuchOfThePaperAsThePrinterAllows() {
+    var job = new FakePrinterJob(page -> {
+      var checked = (PageFormat) page.clone();
+      var paper = checked.getPaper();
+      paper.setImageableArea(9, 9, paper.getWidth() - 18, paper.getHeight() - 18);
+      checked.setPaper(paper);
+      return checked;
+    });
+
+    var page = Printing.fullPage(job);
+
+    assertEquals(9, page.getImageableX());
+    assertEquals(4 * 72 - 18, page.getImageableWidth());
+  }
+
+  @Test
+  void fallsBackToThePrintersOwnPageIfItsDriverMisbehaves() {
+    var tiny = new FakePrinterJob(page -> {
+      var checked = (PageFormat) page.clone();
+      var paper = checked.getPaper();
+      paper.setImageableArea(0, 0, 10, 10);
+      checked.setPaper(paper);
+      return checked;
+    });
+    assertEquals(36, Printing.fullPage(tiny).getImageableX());
+
+    var broken = new FakePrinterJob(page -> {
+      throw new IllegalArgumentException("bad paper");
+    });
+    assertEquals(36, Printing.fullPage(broken).getImageableX());
   }
 
   @Test
@@ -126,12 +214,11 @@ class ForwardingLabelTest {
     var label = ForwardingLabel.of(box("Ada", "Lovelace", null, HOME), HOME, "Shop", "1 Main St\nTown, IL 60000");
     var paper = new Paper();
     paper.setSize(4 * 72, 2 * 72);
+    paper.setImageableArea(0, 0, 4 * 72, 2 * 72);
     var format = new PageFormat();
     format.setPaper(paper);
-    var image = new BufferedImage(4 * 72, 2 * 72, BufferedImage.TYPE_INT_RGB);
+    var image = blank(4 * 72, 2 * 72);
     var g = image.createGraphics();
-    g.setColor(java.awt.Color.WHITE);
-    g.fillRect(0, 0, image.getWidth(), image.getHeight());
 
     assertEquals(Printable.PAGE_EXISTS, label.print(g, format, 0));
     assertEquals(Printable.NO_SUCH_PAGE, label.print(g, format, 1));
@@ -195,6 +282,110 @@ class ForwardingLabelTest {
       printed.add(new Object[] { jobName, printable });
       return CompletableFuture.completedFuture(true);
     };
+  }
+
+  /** Makes an all-white image of the given size, in points. */
+  private static BufferedImage blank(int width, int height) {
+    var image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+    var g = image.createGraphics();
+    g.setColor(java.awt.Color.WHITE);
+    g.fillRect(0, 0, width, height);
+    g.dispose();
+    return image;
+  }
+
+  /**
+   * A print job with a 4 by 2 inch label and half-inch margins as its own
+   * page, whose driver checks pages in a way each test chooses, so pages can
+   * be worked out without a printer.
+   */
+  private static final class FakePrinterJob extends PrinterJob {
+
+    /** How the pretend driver checks a page. */
+    private final UnaryOperator<PageFormat> validate;
+
+    /**
+     * Makes a job.
+     *
+     * @param validate how the pretend driver checks a page
+     */
+    FakePrinterJob(UnaryOperator<PageFormat> validate) {
+      this.validate = validate;
+    }
+
+    @Override
+    public PageFormat defaultPage(PageFormat page) {
+      var paper = new Paper();
+      paper.setSize(4 * 72, 2 * 72);
+      paper.setImageableArea(36, 36, 4 * 72 - 72, 2 * 72 - 72);
+      var format = (PageFormat) page.clone();
+      format.setPaper(paper);
+      return format;
+    }
+
+    @Override
+    public PageFormat validatePage(PageFormat page) {
+      return validate.apply(page);
+    }
+
+    @Override
+    public void setPrintable(Printable painter) {
+    }
+
+    @Override
+    public void setPrintable(Printable painter, PageFormat format) {
+    }
+
+    @Override
+    public void setPageable(Pageable document) {
+    }
+
+    @Override
+    public boolean printDialog() {
+      return true;
+    }
+
+    @Override
+    public PageFormat pageDialog(PageFormat page) {
+      return page;
+    }
+
+    @Override
+    public void print() {
+    }
+
+    @Override
+    public void setCopies(int copies) {
+    }
+
+    @Override
+    public int getCopies() {
+      return 1;
+    }
+
+    @Override
+    public String getUserName() {
+      return "";
+    }
+
+    @Override
+    public void setJobName(String jobName) {
+    }
+
+    @Override
+    public String getJobName() {
+      return "";
+    }
+
+    @Override
+    public void cancel() {
+    }
+
+    @Override
+    public boolean isCancelled() {
+      return false;
+    }
+
   }
 
   /** Checks whether any of a part of the image isn't white. */
