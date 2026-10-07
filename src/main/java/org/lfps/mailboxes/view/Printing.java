@@ -17,7 +17,6 @@ import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
@@ -25,7 +24,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
-import javafx.stage.Stage;
 import javafx.stage.Window;
 
 /**
@@ -110,24 +108,31 @@ final class Printing {
   }
 
   /**
-   * Prints something drawn to fit the paper, such as a forwarding label, and
-   * says in a message if it couldn't be printed. Nothing is shown once it's
-   * printed or if the user cancels. Must be called on the JavaFX thread.
+   * Prints something that draws itself to fit the paper, such as a
+   * forwarding label, then says how it went, like
+   * {@link #print(String, List, Label, String)}. Must be called on the
+   * JavaFX thread.
    *
    * @param jobName what the print job is called in the printer's queue
    * @param printable what to print
-   * @param owner the window the message belongs to
+   * @param status where to say how it went
+   * @param printedMessage what to say once printed
    */
-  static void printLabel(String jobName, Printable printable, Stage owner) {
+  static void printLabel(String jobName, Printable printable, Label status, String printedMessage) {
     if (printing) {
       return;
     }
     printing = true;
+    status.setText("");
     paperPrinter.print(jobName, printable).whenComplete((printed, error) -> Platform.runLater(() -> {
       printing = false;
       if (error != null) {
         var cause = error.getCause() instanceof IllegalStateException ? error.getCause() : error;
-        AppWindow.inform(owner, AlertType.ERROR, "The label couldn't be printed.", cause.getMessage());
+        status.setStyle("-fx-text-fill: red;");
+        status.setText(cause.getMessage());
+      } else if (printed) {
+        status.setStyle("-fx-text-fill: green;");
+        status.setText(printedMessage);
       }
     }));
   }

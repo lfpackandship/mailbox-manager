@@ -15,8 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.RadioButton;
+import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -31,17 +35,19 @@ import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 
 /**
- * Tests for forwarding labels: what's on them, how they're laid out on
- * different labels and paper, and printing one from a box's details.
+ * Tests for forwarding labels: what's on them, how they fit the 4 by 6.5
+ * inch label and copy paper, and the Print Forwarding Label window opened
+ * from a box's details.
  */
 class ForwardingLabelTest {
 
   private static final Printing.PaperPrinter REAL_PRINTER = Printing.paperPrinter;
 
-  private static final Dialogs.ConfirmWithChoice REAL_CONFIRM_WITH_CHOICE = Dialogs.confirmWithChoice;
-
   /** Measures text the way a printer would, without one. */
   private static final FontRenderContext MEASURE = new FontRenderContext(null, true, true);
+
+  /** A printer's usual edge on copy paper: a quarter inch. */
+  private static final double EDGE = 0.25 * 72;
 
   private static final ForwardingAddress HOME = new ForwardingAddress("1400 Elm Street", "Apt 12", "Highland Park",
       "il", "60035", "summer");
@@ -49,8 +55,8 @@ class ForwardingLabelTest {
   private static final ForwardingAddress OFFICE = new ForwardingAddress("200 Market St", null, "Chicago", "IL",
       "60606", null);
 
-  /** The labels sent to the printer, each as its job name and the label. */
-  private final List<Object[]> printed = new ArrayList<>();
+  /** The labels sent to the printer. */
+  private final List<ForwardingLabel> printed = new ArrayList<>();
 
   @BeforeAll
   static void startJavaFx() {
@@ -67,7 +73,6 @@ class ForwardingLabelTest {
   @AfterEach
   void restoreAndCloseAllWindows() {
     Printing.paperPrinter = REAL_PRINTER;
-    Dialogs.confirmWithChoice = REAL_CONFIRM_WITH_CHOICE;
     FxTestSupport.run(() -> {
       for (var window : List.copyOf(Window.getWindows())) {
         window.hide();
@@ -92,87 +97,72 @@ class ForwardingLabelTest {
   }
 
   @Test
-  void fitsOnEveryCommonSizeOfLabelEnvelopeAndPaper() {
-    var label = ForwardingLabel.of(box("Ada", "Lovelace", "Analytical Engines", HOME), HOME,
-        "Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045");
-    // Width and height in inches: Zebra shipping labels both ways round,
-    // smaller Zebra labels, a #10 envelope, and letter paper.
-    double[][] sizes = { { 4, 6 }, { 6, 4 }, { 4, 2 }, { 2.25, 1.25 }, { 9.5, 4.125 }, { 8.5, 11 } };
-    for (var size : sizes) {
-      var width = size[0] * 72;
-      var height = size[1] * 72;
-      var layout = label.layout(width, height, MEASURE);
-      var what = size[0] + " x " + size[1];
+  void fitsTheLabelWithTheAddressLarge() {
+    var label = label(HOME, ForwardingLabel.Stock.LABEL);
+    var layout = label.layout(MEASURE);
 
-      var fromRight = layout.fromX + ForwardingLabel.blockWidth(label.from, layout.fromSize, MEASURE);
-      var fromBottom = layout.fromY + ForwardingLabel.blockHeight(label.from, layout.fromSize);
-      var toRight = layout.toX + ForwardingLabel.blockWidth(label.to, layout.toSize, MEASURE);
-      var toBottom = layout.toY + ForwardingLabel.blockHeight(label.to, layout.toSize);
-      assertTrue(fromRight <= width && fromBottom <= height, what + ": return address off the paper");
-      assertTrue(toRight <= width && toBottom <= height, what + ": forwarding address off the paper");
-      assertTrue(layout.toY >= fromBottom, what + ": the addresses overlap");
-      assertTrue(layout.toSize >= layout.fromSize, what + ": the forwarding address is smaller");
-    }
+    assertEquals(ForwardingLabel.LARGEST_ADDRESS, layout.toSize);
+    assertFits(label, layout);
+    assertTrue(layout.toY >= ForwardingLabel.MARGIN + ForwardingLabel.blockHeight(label.from, layout.fromSize));
   }
 
   @Test
-  void onASheetOfPaperItStaysInALabelSizedCorner() {
-    var label = ForwardingLabel.of(box("Ada", "Lovelace", "Analytical Engines", HOME), HOME,
-        "Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045");
-    // Letter with no margins, and with the inch-wide margins Java can assume.
-    for (var area : new double[][] { { 8.5, 11 }, { 6.5, 9 } }) {
-      var layout = label.layout(area[0] * 72, area[1] * 72, MEASURE);
-
-      assertTrue(layout.toX + ForwardingLabel.blockWidth(label.to, layout.toSize, MEASURE)
-          <= ForwardingLabel.SHEET_LABEL_WIDTH);
-      assertTrue(layout.toY + ForwardingLabel.blockHeight(label.to, layout.toSize)
-          <= ForwardingLabel.SHEET_LABEL_HEIGHT);
-    }
-  }
-
-  @Test
-  void onASheetThePrintersEdgeIsAllowedFor() {
-    var label = ForwardingLabel.of(box("Ada", "Lovelace", "Analytical Engines", HOME), HOME,
-        "Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045");
-    var edge = 0.25 * 72;
-
-    var layout = label.layout(edge, edge, 8 * 72, 10.5 * 72, MEASURE);
-
-    assertTrue(edge + layout.toX + ForwardingLabel.blockWidth(label.to, layout.toSize, MEASURE)
-        <= ForwardingLabel.SHEET_LABEL_WIDTH);
-    assertTrue(edge + layout.toY + ForwardingLabel.blockHeight(label.to, layout.toSize)
-        <= ForwardingLabel.SHEET_LABEL_HEIGHT);
-  }
-
-  @Test
-  void aLongAddressOnASmallLabelMovesLeftRatherThanGettingTiny() {
+  void aLongAddressGetsSmallerToFit() {
     var longAddress = new ForwardingAddress("12345 North Sheridan Road", "Suite 1200", "Lake Forest", "IL",
         "60045", null);
-    var label = ForwardingLabel.of(box("Ada", "Lovelace", "Analytical Engines LLC", longAddress), longAddress,
-        "Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045");
+    var label = label(longAddress, ForwardingLabel.Stock.LABEL);
+    var layout = label.layout(MEASURE);
 
-    var layout = label.layout(2.25 * 72, 1.25 * 72, MEASURE);
+    assertTrue(layout.toSize < ForwardingLabel.LARGEST_ADDRESS);
+    assertFits(label, layout);
+  }
 
-    assertEquals(layout.fromX, layout.toX);
-    assertTrue(layout.toX + ForwardingLabel.blockWidth(label.to, layout.toSize, MEASURE) <= 2.25 * 72);
+  @Test
+  void onALabelItIsFullSize() {
+    var label = label(HOME, ForwardingLabel.Stock.LABEL);
+
+    assertEquals(1, label.scale(ForwardingLabelView.previewPage(ForwardingLabel.Stock.LABEL)));
+  }
+
+  @Test
+  void onALabelPrinterSetToLetterPaperItStillFitsTheLabel() {
+    var label = label(HOME, ForwardingLabel.Stock.LABEL);
+    var letter = ForwardingLabelView.previewPage(ForwardingLabel.Stock.COPY_PAPER);
+
+    var scale = label.scale(letter);
+
+    assertTrue(EDGE + ForwardingLabel.WIDTH * scale <= ForwardingLabel.WIDTH + 0.001);
+    assertTrue(EDGE + ForwardingLabel.HEIGHT * scale <= ForwardingLabel.HEIGHT + 0.001);
+  }
+
+  @Test
+  void onCopyPaperItIsFullSizeWithALineToCutAlong() {
+    var paper = label(HOME, ForwardingLabel.Stock.COPY_PAPER);
+    var page = ForwardingLabelView.previewPage(ForwardingLabel.Stock.COPY_PAPER);
+    assertEquals(1, paper.scale(page));
+
+    var withLine = draw(paper, page);
+    var withoutLine = draw(label(HOME, ForwardingLabel.Stock.LABEL), page);
+    // Down the label's left edge, below the return address.
+    assertTrue(hasInk(withLine, EDGE - 2, 300, 4, 100));
+    assertFalse(hasInk(withoutLine, EDGE - 2, 300, 4, 100));
   }
 
   @Test
   void staysInsideThePartThePrinterCanPrintOn() {
-    var label = ForwardingLabel.of(box("Ada", "Lovelace", null, HOME), HOME, "Shop", "1 Main St\nTown, IL 60000");
+    var label = label(HOME, ForwardingLabel.Stock.COPY_PAPER);
     var paper = new Paper();
-    paper.setSize(4 * 72, 2 * 72);
-    paper.setImageableArea(18, 18, 4 * 72 - 36, 2 * 72 - 36);
+    paper.setSize(ForwardingLabel.WIDTH, ForwardingLabel.HEIGHT);
+    paper.setImageableArea(18, 18, ForwardingLabel.WIDTH - 36, ForwardingLabel.HEIGHT - 36);
     var format = new PageFormat();
     format.setPaper(paper);
-    var image = blank(4 * 72, 2 * 72);
 
-    label.print(image.createGraphics(), format, 0);
+    var image = draw(label, format);
 
-    assertFalse(hasInk(image, 0, 0, image.getWidth(), 18));
-    assertFalse(hasInk(image, 0, 0, 18, image.getHeight()));
-    assertFalse(hasInk(image, image.getWidth() - 18, 0, 18, image.getHeight()));
-    assertFalse(hasInk(image, 0, image.getHeight() - 18, image.getWidth(), 18));
+    assertFalse(hasInk(image, 0, 0, image.getWidth(), 17));
+    assertFalse(hasInk(image, 0, 0, 17, image.getHeight()));
+    assertFalse(hasInk(image, image.getWidth() - 17, 0, 17, image.getHeight()));
+    assertFalse(hasInk(image, 0, image.getHeight() - 17, image.getWidth(), 17));
     assertTrue(hasInk(image, 18, 18, image.getWidth() - 36, image.getHeight() - 36));
   }
 
@@ -210,95 +200,142 @@ class ForwardingLabelTest {
   }
 
   @Test
-  void drawsTheAddressesOntoThePaper() {
-    var label = ForwardingLabel.of(box("Ada", "Lovelace", null, HOME), HOME, "Shop", "1 Main St\nTown, IL 60000");
-    var paper = new Paper();
-    paper.setSize(4 * 72, 2 * 72);
-    paper.setImageableArea(0, 0, 4 * 72, 2 * 72);
-    var format = new PageFormat();
-    format.setPaper(paper);
-    var image = blank(4 * 72, 2 * 72);
-    var g = image.createGraphics();
-
-    assertEquals(Printable.PAGE_EXISTS, label.print(g, format, 0));
-    assertEquals(Printable.NO_SUCH_PAGE, label.print(g, format, 1));
-    var layout = label.layout(format.getWidth(), format.getHeight(), g.getFontRenderContext());
-    assertTrue(hasInk(image, layout.fromX, layout.fromY, ForwardingLabel.blockWidth(label.from, layout.fromSize,
-        g.getFontRenderContext()), ForwardingLabel.blockHeight(label.from, layout.fromSize)));
-    assertTrue(hasInk(image, layout.toX, layout.toY, ForwardingLabel.blockWidth(label.to, layout.toSize,
-        g.getFontRenderContext()), ForwardingLabel.blockHeight(label.to, layout.toSize)));
-  }
-
-  @Test
   void printLabelIsOnlyOfferedForABoxWithAForwardingAddress() {
     assertTrue(FxTestSupport.call(() -> labelButton(showDetails(box("Ada", "Lovelace", null))).isDisabled()));
   }
 
   @Test
-  void aBoxWithOneAddressPrintsItsLabelWithoutAsking() {
+  void theWindowPrintsALabelForTheOnlyAddress() {
     catchPrinting();
-    Dialogs.confirmWithChoice = (owner, question, details, choiceQuestion, choices, initial, yes, no) -> {
-      throw new AssertionError("Asked which address");
-    };
-    var details = FxTestSupport.call(() -> showDetails(box("Ada", "Lovelace", null, HOME)));
+    var window = openLabelWindow(box("Ada", "Lovelace", null, HOME));
 
-    FxTestSupport.run(() -> labelButton(details).fire());
+    assertEquals(List.of("Label (4 × 6.5 inches)", "Copy paper, to cut out"),
+        FxTestSupport.call(() -> radioTexts(window)));
+    FxTestSupport.run(() -> ((Button) window.getScene().lookup("#labelPrintButton")).fire());
 
     assertEquals(1, printed.size());
-    assertEquals("Forwarding label, box 12", printed.get(0)[0]);
-    assertEquals("1400 Elm Street Apt 12", ((ForwardingLabel) printed.get(0)[1]).to.get(1));
+    assertEquals(ForwardingLabel.Stock.LABEL, printed.get(0).stock);
+    assertEquals("1400 Elm Street Apt 12", printed.get(0).to.get(1));
+    assertEquals("Printed", FxTestSupport.call(() -> ((Label) window.getScene()
+        .lookup("#labelResultLabel")).getText()));
   }
 
   @Test
-  void aBoxWithSeveralAddressesAsksWhichOne() {
+  void theAddressAndPaperCanBeChosenAndThePreviewFollows() {
     catchPrinting();
-    var offered = new ArrayList<String>();
-    Dialogs.confirmWithChoice = (owner, question, details, choiceQuestion, choices, initial, yes, no) -> {
-      offered.addAll(choices);
-      return 1;
-    };
-    var details = FxTestSupport.call(() -> showDetails(box("Ada", "Lovelace", null, HOME, OFFICE)));
+    var window = openLabelWindow(box("Ada", "Lovelace", null, HOME, OFFICE));
+    var preview = FxTestSupport.call(() -> (ImageView) window.getScene().lookup("#labelPreview"));
+    var labelShape = FxTestSupport.call(() -> preview.getImage().getWidth() / preview.getImage().getHeight());
 
-    FxTestSupport.run(() -> labelButton(details).fire());
+    FxTestSupport.run(() -> {
+      radio(window, OFFICE.toString()).fire();
+      ((RadioButton) window.getScene().lookup("#labelStockPaper")).fire();
+    });
+    var paperShape = FxTestSupport.call(() -> preview.getImage().getWidth() / preview.getImage().getHeight());
+    FxTestSupport.run(() -> ((Button) window.getScene().lookup("#labelPrintButton")).fire());
 
-    assertEquals(List.of(HOME.toString(), OFFICE.toString()), offered);
-    assertEquals("200 Market St", ((ForwardingLabel) printed.get(0)[1]).to.get(1));
+    assertEquals(4 / 6.5, labelShape, 0.01);
+    assertEquals(8.5 / 11, paperShape, 0.01);
+    assertEquals(ForwardingLabel.Stock.COPY_PAPER, printed.get(0).stock);
+    assertEquals("200 Market St", printed.get(0).to.get(1));
   }
 
-  @Test
-  void cancellingTheQuestionPrintsNothing() {
-    catchPrinting();
-    Dialogs.confirmWithChoice = (owner, question, details, choiceQuestion, choices, initial, yes, no) -> -1;
-    var details = FxTestSupport.call(() -> showDetails(box("Ada", "Lovelace", null, HOME, OFFICE)));
+  /** Makes a label for Ada Lovelace's box with the shop's usual return address. */
+  private static ForwardingLabel label(ForwardingAddress address, ForwardingLabel.Stock stock) {
+    return ForwardingLabel.of(box("Ada", "Lovelace", "Analytical Engines LLC", address), address,
+        "Lake Forest Pack and Ship", "736 N. Western Ave\nLake Forest, IL 60045", stock);
+  }
 
-    FxTestSupport.run(() -> labelButton(details).fire());
-
-    assertEquals(List.of(), printed);
+  /** Checks that both addresses fit inside the label's margins. */
+  private static void assertFits(ForwardingLabel label, ForwardingLabel.Layout layout) {
+    var inside = ForwardingLabel.WIDTH - 2 * ForwardingLabel.MARGIN;
+    assertTrue(ForwardingLabel.blockWidth(label.from, layout.fromSize, MEASURE) <= inside);
+    assertTrue(ForwardingLabel.blockWidth(label.to, layout.toSize, MEASURE) <= inside);
+    assertTrue(layout.toY + ForwardingLabel.blockHeight(label.to, layout.toSize)
+        <= ForwardingLabel.HEIGHT - ForwardingLabel.MARGIN);
   }
 
   /** Makes printing note each label instead of printing it, as if it printed. */
   private void catchPrinting() {
     Printing.paperPrinter = (jobName, printable) -> {
-      printed.add(new Object[] { jobName, printable });
+      printed.add((ForwardingLabel) printable);
       return CompletableFuture.completedFuture(true);
     };
   }
 
-  /** Makes an all-white image of the given size, in points. */
-  private static BufferedImage blank(int width, int height) {
-    var image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+  /** Draws a label on a white page the size of the given paper, one pixel per point. */
+  private static BufferedImage draw(ForwardingLabel label, PageFormat format) {
+    var image = new BufferedImage((int) format.getWidth(), (int) format.getHeight(), BufferedImage.TYPE_INT_RGB);
     var g = image.createGraphics();
     g.setColor(java.awt.Color.WHITE);
-    g.fillRect(0, 0, width, height);
+    g.fillRect(0, 0, image.getWidth(), image.getHeight());
+    label.print(g, format, 0);
     g.dispose();
     return image;
   }
 
-  /**
-   * A print job with a 4 by 2 inch label and half-inch margins as its own
-   * page, whose driver checks pages in a way each test chooses, so pages can
-   * be worked out without a printer.
-   */
+  /** Checks whether any of a part of the image isn't white. */
+  private static boolean hasInk(BufferedImage image, double x, double y, double width, double height) {
+    for (var row = (int) y; row < Math.min(image.getHeight(), y + height); row++) {
+      for (var column = (int) x; column < Math.min(image.getWidth(), x + width); column++) {
+        if ((image.getRGB(column, row) & 0xFFFFFF) != 0xFFFFFF) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Opens a box's details window and returns it. Must be called on the JavaFX thread. */
+  private static Stage showDetails(Mailbox mailbox) {
+    var owner = new Stage();
+    BoxDetailsView.show(owner, mailbox, () -> { }, () -> { });
+    return findWindow("#detailTitle");
+  }
+
+  /** Opens the Print Forwarding Label window from a box's details and returns it. */
+  private static Stage openLabelWindow(Mailbox mailbox) {
+    return FxTestSupport.call(() -> {
+      labelButton(showDetails(mailbox)).fire();
+      return findWindow("#labelPreview");
+    });
+  }
+
+  /** Returns the open window containing the given node. Must be called on the JavaFX thread. */
+  private static Stage findWindow(String selector) {
+    return Window.getWindows().stream()
+        .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup(selector) != null)
+        .map(w -> (Stage) w)
+        .findFirst()
+        .orElseThrow();
+  }
+
+  /** Returns the text of every choice on a window. */
+  private static List<String> radioTexts(Stage window) {
+    return window.getScene().getRoot().lookupAll(".radio-button").stream()
+        .map(node -> ((RadioButton) node).getText())
+        .collect(Collectors.toList());
+  }
+
+  /** Returns the choice on a window with the given text. */
+  private static RadioButton radio(Stage window, String text) {
+    return window.getScene().getRoot().lookupAll(".radio-button").stream()
+        .map(node -> (RadioButton) node)
+        .filter(radio -> text.equals(radio.getText()))
+        .findFirst()
+        .orElseThrow();
+  }
+
+  /** Returns the Print Label button on a box's details window. */
+  private static Button labelButton(Stage details) {
+    return (Button) details.getScene().lookup("#detailsLabelButton");
+  }
+
+  /** Makes box 12 with the given holder and forwarding addresses. */
+  private static Mailbox box(String first, String last, String business, ForwardingAddress... addresses) {
+    return new Mailbox(1, first, last, business, "12", null, "", null, null, null, List.of(addresses));
+  }
+
   private static final class FakePrinterJob extends PrinterJob {
 
     /** How the pretend driver checks a page. */
@@ -386,39 +423,6 @@ class ForwardingLabelTest {
       return false;
     }
 
-  }
-
-  /** Checks whether any of a part of the image isn't white. */
-  private static boolean hasInk(BufferedImage image, double x, double y, double width, double height) {
-    for (var row = (int) y; row < Math.min(image.getHeight(), y + height); row++) {
-      for (var column = (int) x; column < Math.min(image.getWidth(), x + width); column++) {
-        if ((image.getRGB(column, row) & 0xFFFFFF) != 0xFFFFFF) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /** Opens a box's details window and returns it. Must be called on the JavaFX thread. */
-  private static Stage showDetails(Mailbox mailbox) {
-    var owner = new Stage();
-    BoxDetailsView.show(owner, mailbox, () -> { }, () -> { });
-    return Window.getWindows().stream()
-        .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup("#detailTitle") != null)
-        .map(w -> (Stage) w)
-        .findFirst()
-        .orElseThrow();
-  }
-
-  /** Returns the Print Label button on a box's details window. */
-  private static Button labelButton(Stage details) {
-    return (Button) details.getScene().lookup("#detailsLabelButton");
-  }
-
-  /** Makes box 12 with the given holder and forwarding addresses. */
-  private static Mailbox box(String first, String last, String business, ForwardingAddress... addresses) {
-    return new Mailbox(1, first, last, business, "12", null, "", null, null, null, List.of(addresses));
   }
 
 }

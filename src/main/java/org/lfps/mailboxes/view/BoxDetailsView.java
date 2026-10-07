@@ -127,7 +127,7 @@ final class BoxDetailsView {
     labelBtn.setId("detailsLabelButton");
     labelBtn.setDisable(mailbox.getForwardingAddresses().isEmpty());
     labelBtn.setTooltip(new Tooltip("Prints a mailing label for forwarding this holder's mail."));
-    labelBtn.setOnAction(e -> ForwardingLabel.print(stage, mailbox));
+    labelBtn.setOnAction(e -> ForwardingLabelView.show(owner, mailbox));
 
     var closeBtn = new Button("Close");
     closeBtn.setId("detailsCloseButton");

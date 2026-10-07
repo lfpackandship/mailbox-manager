@@ -24,12 +24,12 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   boxes past due, in red, and the boxes ending soon, in yellow. Pointing at
   the button says more, such as "2 boxes are past due, and 5 end in the next
   30 days." A bubble is left out when its count is zero.
-- **Print Label…** on a box's details prints a mailing label for forwarding
-  the holder's mail: their name, business, and forwarding address, with the
-  shop's name and address from Settings as the return address. A box with
-  more than one forwarding address asks which. The label fits whatever the
-  printer has loaded, such as a label printer's labels or an envelope; on
-  ordinary paper it's a 4 by 2 inch block in the top corner, to cut out.
+- **Print Label…** on a box's details prints a 4 by 6.5 inch mailing label
+  for forwarding the holder's mail: their name, business, and forwarding
+  address, with the shop's name and address from Settings as the return
+  address. The window it opens shows a preview, asks which forwarding
+  address to use if there's more than one, and prints on a **Label** or on
+  **Copy paper**, where the label has a dashed line around it to cut out.
 
 ## 1.9.0 – 2026-10-06
 
