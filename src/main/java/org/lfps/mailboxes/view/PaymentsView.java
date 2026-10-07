@@ -146,6 +146,7 @@ public class PaymentsView {
 
     var dateCol = new TableColumn<Entry, LocalDate>("Date");
     dateCol.setCellValueFactory(cell -> new SimpleObjectProperty<>(cell.getValue().period.getRecordedOn()));
+    TableOutput.showDates(dateCol);
 
     var boxCol = new TableColumn<Entry, String>("Box");
     boxCol.setCellValueFactory(cell -> new SimpleStringProperty(

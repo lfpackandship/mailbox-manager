@@ -298,6 +298,7 @@ public class ManageBoxesView {
 
     var endDateCol = new TableColumn<Mailbox, LocalDate>("End Date");
     endDateCol.setCellValueFactory(new PropertyValueFactory<>("endDate"));
+    TableOutput.showDates(endDateCol);
 
     var alternateNamesCol = new TableColumn<Mailbox, String>("Also Receives Mail As");
     alternateNamesCol.setCellValueFactory(cell -> new SimpleStringProperty(
@@ -319,6 +320,7 @@ public class ManageBoxesView {
 
     var closedCol = new TableColumn<Mailbox, LocalDate>("Closed");
     closedCol.setCellValueFactory(new PropertyValueFactory<>("closedDate"));
+    TableOutput.showDates(closedCol);
 
     var forwardingOnlyCol = new TableColumn<Mailbox, String>("Forwarding Only");
     forwardingOnlyCol.setCellValueFactory(cell -> new SimpleStringProperty(

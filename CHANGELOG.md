@@ -37,6 +37,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   Edit Box showed no hints.
 - **Box Name** on Add New Box and Edit Box says it's a nickname for the box,
   and pointing at it explains where it's shown.
+- Dates in lists, such as the end dates on Renewals and the dates on
+  Payments, are shown like **Oct 9, 2026** instead of **2026-10-09**, the same
+  as when they're printed. Spreadsheets still get 2026-10-09, which Excel
+  reads as a date.
 
 ### Fixed
 

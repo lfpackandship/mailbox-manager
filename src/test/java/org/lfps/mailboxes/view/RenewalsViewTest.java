@@ -8,12 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import javafx.event.Event;
 import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.input.KeyCode;
@@ -75,6 +78,17 @@ class RenewalsViewTest {
         window.hide();
       }
     });
+  }
+
+  @Test
+  void endDatesAreShownAsTheyArePrinted() {
+    var shown = LocalDate.now().plusDays(5).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM));
+
+    var cells = FxTestSupport.call(() -> firstRow("upcomingTable").lookupAll(".table-cell").stream()
+        .map(node -> ((TableCell<?, ?>) node).getText())
+        .collect(Collectors.toList()));
+
+    assertTrue(cells.contains(shown), cells.toString());
   }
 
   @Test

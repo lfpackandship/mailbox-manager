@@ -187,6 +187,7 @@ public class BoxInventoryView {
     var endsCol = new TableColumn<Row, LocalDate>("Rental Ends");
     endsCol.setCellValueFactory(cell -> new SimpleObjectProperty<>(
         cell.getValue().holder == null ? null : cell.getValue().holder.getEndDate()));
+    TableOutput.showDates(endsCol);
 
     table.getColumns().setAll(List.of(boxNumberCol, sizeCol, statusCol, holderCol, endsCol));
 

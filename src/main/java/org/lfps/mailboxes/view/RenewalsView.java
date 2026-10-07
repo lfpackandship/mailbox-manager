@@ -241,6 +241,7 @@ public class RenewalsView {
 
     var endDateCol = new TableColumn<Mailbox, LocalDate>("End Date");
     endDateCol.setCellValueFactory(new PropertyValueFactory<>("endDate"));
+    TableOutput.showDates(endDateCol);
 
     var statusCol = new TableColumn<Mailbox, String>("Status");
     statusCol.setCellValueFactory(cellData ->
