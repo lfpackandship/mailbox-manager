@@ -7,6 +7,7 @@ import java.util.function.BooleanSupplier;
 
 import javafx.application.HostServices;
 import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -20,6 +21,7 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -71,6 +73,20 @@ public final class AppWindow {
    * @param content the screen to display
    */
   public static void show(Stage stage, Parent content) {
+    show(stage, null, content);
+  }
+
+  /**
+   * Replaces the window's contents with a screen whose buttons, such as Back
+   * and Save on Add New Box, stay in view under the menu bar while the rest
+   * of the screen scrolls.
+   *
+   * @param stage the main window
+   * @param bar the buttons and anything else that stays in view, or {@code
+   *     null} for none
+   * @param content the rest of the screen, which scrolls if it doesn't fit
+   */
+  static void show(Stage stage, Node bar, Parent content) {
     // Fill the window when there's room, but never squeeze a screen shorter
     // than it wants to be; scroll instead.
     if (content instanceof Region) {
@@ -82,7 +98,7 @@ public final class AppWindow {
     scrollPane.getStyleClass().add("edge-to-edge");
 
     var root = new BorderPane(scrollPane);
-    root.setTop(buildMenuBar(stage));
+    root.setTop(bar == null ? buildMenuBar(stage) : new VBox(buildMenuBar(stage), bar));
     applyTextSize(root);
     leaveCheck = null;
     stage.setScene(new Scene(root));

@@ -11,6 +11,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -189,10 +190,10 @@ public class EditBoxView {
     grid.add(new Label("Notes:"), 0, 11, 4, 1);
     grid.add(notesField, 0, 12, 4, 1);
 
-    var layout = new VBox(8, cancelBtn, grid, saveBtn, resultLabel);
+    var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));
 
-    AppWindow.show(stage, layout);
+    AppWindow.show(stage, buttonBar(cancelBtn, saveBtn, resultLabel), layout);
     AppWindow.setLeaveCheck(() -> changes.confirmLeave(stage));
   }
 
@@ -219,6 +220,27 @@ public class EditBoxView {
       node.setDisable(checked);
     }
     return box;
+  }
+
+  /**
+   * Builds the bar shared by the Add and Edit Box forms that stays in view
+   * above the form as it scrolls: the button that leaves the form, the Save
+   * button, and under them what happened when saving, which is hidden while
+   * there's nothing to say.
+   *
+   * @param leave the button that leaves the form
+   * @param save the button that saves it
+   * @param result where saving says what happened
+   * @return the bar
+   */
+  static VBox buttonBar(Button leave, Button save, Label result) {
+    result.setWrapText(true);
+    result.managedProperty().bind(result.textProperty().isNotEmpty());
+    result.visibleProperty().bind(result.textProperty().isNotEmpty());
+    var bar = new VBox(8, new HBox(10, leave, save), result);
+    bar.setPadding(new Insets(10, 15, 10, 15));
+    bar.setStyle("-fx-border-color: transparent transparent lightgray transparent;");
+    return bar;
   }
 
   /**

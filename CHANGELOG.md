@@ -19,6 +19,9 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   end date on Edit Box is still there for correcting mistakes.
 - When a box can't be saved on Add New Box or Edit Box, each field with a
   mistake is outlined in red, and the cursor is put in the first one.
+- On Add New Box and Edit Box, **Back** or **Cancel** and the save button are
+  at the top of the window, and stay there as the form scrolls. What happened
+  when saving, or what needs fixing, is shown right under them.
 
 ### Fixed
 

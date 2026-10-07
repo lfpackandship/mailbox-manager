@@ -246,10 +246,10 @@ public class AddBoxView {
     grid.add(new Label("Notes:"), 0, 12, 4, 1);
     grid.add(notesField, 0, 13, 4, 1);
 
-    var layout = new VBox(8, backBtn, grid, submitBtn, resultLabel);
+    var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));
 
-    AppWindow.show(stage, layout);
+    AppWindow.show(stage, EditBoxView.buttonBar(backBtn, submitBtn, resultLabel), layout);
     AppWindow.setLeaveCheck(() -> changes.confirmLeave(stage));
   }
 
