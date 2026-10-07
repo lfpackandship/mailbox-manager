@@ -60,6 +60,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   Pressing Enter picks the one that leaves things as they are.
 - On Manage Boxes, **Delete** is at the far right, away from **Close Box**, so
   one isn't clicked by mistake for the other.
+- In Settings, on the **Backups** tab, **Back Up Now…** and **Restore…** have
+  their own row, **Back up or restore**, instead of sitting under Google Drive
+  as if they were part of it. Pointing at the data folder shows its whole
+  location.
 
 ### Fixed
 
