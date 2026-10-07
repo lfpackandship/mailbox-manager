@@ -96,7 +96,7 @@ class ManageBoxesViewTest {
         .map(column -> column.getText())
         .collect(Collectors.toList()));
 
-    assertEquals(List.of("Box Number", "First Name", "Last Name", "Business Title", "Phone"), headers);
+    assertEquals(List.of("Box Number", "Name", "Business Title", "Phone"), headers);
   }
 
   @Test

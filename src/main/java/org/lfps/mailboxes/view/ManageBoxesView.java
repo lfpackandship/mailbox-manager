@@ -116,11 +116,17 @@ public class ManageBoxesView {
     boxNumberCol.setComparator(BoxNumbers.ORDER);
     BoxLabels.markForwarding(boxNumberCol);
 
+    var nameCol = new TableColumn<Mailbox, String>("Name");
+    nameCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getFullName()));
+
+    // Hidden, but saved in the spreadsheet so names can be sorted by last name there.
     var firstNameCol = new TableColumn<Mailbox, String>("First Name");
     firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+    firstNameCol.setVisible(false);
 
     var lastNameCol = new TableColumn<Mailbox, String>("Last Name");
     lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+    lastNameCol.setVisible(false);
 
     var businessTitleCol = new TableColumn<Mailbox, String>("Business Title");
     businessTitleCol.setCellValueFactory(new PropertyValueFactory<>("businessTitle"));
@@ -129,7 +135,8 @@ public class ManageBoxesView {
     phoneCol.setCellValueFactory(cell -> new SimpleStringProperty(
         PhoneNumberFormatter.format(cell.getValue().getPhone())));
 
-    table.getColumns().setAll(List.of(boxNumberCol, firstNameCol, lastNameCol, businessTitleCol, phoneCol));
+    table.getColumns().setAll(List.of(boxNumberCol, nameCol, firstNameCol, lastNameCol, businessTitleCol,
+        phoneCol));
     // Hidden, but saved in the spreadsheet so it has everything recorded.
     table.getColumns().addAll(hiddenColumns());
 

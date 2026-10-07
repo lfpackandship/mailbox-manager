@@ -43,6 +43,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   reads as a date.
 - Phone numbers on Manage Boxes and Renewals are always shown as
   (555) 123-4567, even ones that were saved without the brackets and dash.
+- Manage Boxes shows one **Name** column instead of separate first and last
+  name columns, like Renewals, leaving more room for the others. The
+  spreadsheet from **Save as Spreadsheet…** still has first and last names in
+  their own columns too.
 
 ### Fixed
 
