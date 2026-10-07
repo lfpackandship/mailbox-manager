@@ -16,6 +16,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.GridPane;
@@ -121,13 +122,20 @@ final class BoxDetailsView {
     reminderBtn.setDisable(mailbox.isClosed() || mailbox.getEndDate() == null);
     reminderBtn.setOnAction(e -> PriceSheetView.showReminders(owner, List.of(mailbox)));
 
+    // Forwarding often goes on after a box is closed, so closed boxes can too.
+    var labelBtn = new Button("Print Label…");
+    labelBtn.setId("detailsLabelButton");
+    labelBtn.setDisable(mailbox.getForwardingAddresses().isEmpty());
+    labelBtn.setTooltip(new Tooltip("Prints a mailing label for forwarding this holder's mail."));
+    labelBtn.setOnAction(e -> ForwardingLabel.print(stage, mailbox));
+
     var closeBtn = new Button("Close");
     closeBtn.setId("detailsCloseButton");
     closeBtn.setCancelButton(true);
     closeBtn.setDefaultButton(true);
     closeBtn.setOnAction(e -> stage.close());
 
-    var content = new VBox(15, title, grid, new HBox(10, editBtn, renewBtn, reminderBtn, closeBtn));
+    var content = new VBox(15, title, grid, new HBox(10, editBtn, renewBtn, reminderBtn, labelBtn, closeBtn));
     content.setPadding(new Insets(20));
 
     var scrollPane = new ScrollPane(content);

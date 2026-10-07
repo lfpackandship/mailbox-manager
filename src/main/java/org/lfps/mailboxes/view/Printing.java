@@ -17,6 +17,7 @@ import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
@@ -24,6 +25,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 
 /**
@@ -51,6 +53,18 @@ final class Printing {
     CompletableFuture<Boolean> print(String jobName, List<Region> pages);
   }
 
+  /** Prints something that draws itself to fit the paper, such as a label. */
+  interface PaperPrinter {
+    /**
+     * Asks which printer to use, then prints.
+     *
+     * @param jobName what the print job is called in the printer's queue
+     * @param printable what to print, drawn to fit the paper the printer has
+     * @return completes like {@link Printer#print}
+     */
+    CompletableFuture<Boolean> print(String jobName, Printable printable);
+  }
+
   /** Whether the app is running on a Mac, whose print dialog behaves differently. */
   private static final boolean MAC = System.getProperty("os.name", "").toLowerCase().contains("mac");
 
@@ -59,6 +73,9 @@ final class Printing {
 
   /** Prints pages after showing the computer's print dialog. */
   static Printer printer = Printing::printWithSystemDialog;
+
+  /** Prints labels after showing the computer's print dialog. */
+  static PaperPrinter paperPrinter = Printing::printToPaperWithSystemDialog;
 
   /** Whether a print dialog is open, so a second click on Print doesn't open another. */
   private static boolean printing;
@@ -88,6 +105,29 @@ final class Printing {
       } else if (printed) {
         status.setStyle("-fx-text-fill: green;");
         status.setText(printedMessage);
+      }
+    }));
+  }
+
+  /**
+   * Prints something drawn to fit the paper, such as a forwarding label, and
+   * says in a message if it couldn't be printed. Nothing is shown once it's
+   * printed or if the user cancels. Must be called on the JavaFX thread.
+   *
+   * @param jobName what the print job is called in the printer's queue
+   * @param printable what to print
+   * @param owner the window the message belongs to
+   */
+  static void printLabel(String jobName, Printable printable, Stage owner) {
+    if (printing) {
+      return;
+    }
+    printing = true;
+    paperPrinter.print(jobName, printable).whenComplete((printed, error) -> Platform.runLater(() -> {
+      printing = false;
+      if (error != null) {
+        var cause = error.getCause() instanceof IllegalStateException ? error.getCause() : error;
+        AppWindow.inform(owner, AlertType.ERROR, "The label couldn't be printed.", cause.getMessage());
       }
     }));
   }
@@ -186,6 +226,54 @@ final class Printing {
           result.complete(false);
           return;
         }
+        job.print();
+        result.complete(true);
+      } catch (PrinterException e) {
+        result.completeExceptionally(new IllegalStateException(
+            "Printing didn't work. Check that the printer is on and try again. (" + e.getMessage() + ")", e));
+      } catch (RuntimeException e) {
+        result.completeExceptionally(e);
+      }
+    }, "Printing");
+    thread.setDaemon(true);
+    thread.start();
+    return result;
+  }
+
+  /**
+   * Shows the computer's print dialog and prints something that draws itself
+   * to fit the paper, on a thread of its own like
+   * {@link #printWithSystemDialog}. It's given the whole sheet or label the
+   * printer has, less only the edges the printer itself can't reach, rather
+   * than the inch-wide margins Java assumes, which would leave nothing of a
+   * small label.
+   *
+   * @param jobName what the print job is called in the printer queue
+   * @param printable what to print
+   * @return completes with {@code true} once printed, {@code false} if the user
+   *     cancelled, or with the problem
+   */
+  private static CompletableFuture<Boolean> printToPaperWithSystemDialog(String jobName, Printable printable) {
+    var result = new CompletableFuture<Boolean>();
+    var thread = new Thread(() -> {
+      try {
+        var job = PrinterJob.getPrinterJob();
+        if (job.getPrintService() == null && !MAC) {
+          throw new IllegalStateException("No printer is set up on this computer.");
+        }
+        job.setJobName(jobName);
+        job.setPrintable(printable);
+        if (!job.printDialog()) {
+          result.complete(false);
+          return;
+        }
+        // The paper chosen in the dialog, with as much of it usable as the
+        // printer allows.
+        var format = job.defaultPage();
+        var paper = format.getPaper();
+        paper.setImageableArea(0, 0, paper.getWidth(), paper.getHeight());
+        format.setPaper(paper);
+        job.setPrintable(printable, job.validatePage(format));
         job.print();
         result.complete(true);
       } catch (PrinterException e) {
