@@ -35,6 +35,8 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   shows a hint such as **(optional)** while it's empty, and the box number
   says **(required)**. Before, the names and phone number didn't say, and
   Edit Box showed no hints.
+- **Box Name** on Add New Box and Edit Box says it's a nickname for the box,
+  and pointing at it explains where it's shown.
 
 ### Fixed
 

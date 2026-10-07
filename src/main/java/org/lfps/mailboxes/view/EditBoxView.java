@@ -13,6 +13,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -273,7 +274,8 @@ public class EditBoxView {
   /**
    * Gives the Add and Edit Box forms' fields the same hints, shown while a
    * field is empty, which say which fields can be left blank. Only the box
-   * number is required.
+   * number is required. The box name, a nickname few boxes have, also
+   * explains itself when pointed at.
    *
    * @param firstName the first name field
    * @param lastName the last name field
@@ -289,7 +291,9 @@ public class EditBoxView {
     lastName.setPromptText("Doe (optional)");
     businessTitle.setPromptText("Acme Inc (optional)");
     boxNumber.setPromptText("310 (required)");
-    boxName.setPromptText("optional");
+    boxName.setPromptText("nickname (optional)");
+    boxName.setTooltip(new Tooltip("A nickname for the box, if it helps to tell it apart. It's shown in the "
+        + "box's details and found by searching on Manage Boxes. Most boxes don't need one."));
     phone.setPromptText("(555) 123-4567 (optional)");
     email.setPromptText("optional");
   }
