@@ -5,6 +5,12 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ## Unreleased
 
+### Added
+
+- The window opens where it was and at the size it was when the app was last
+  closed, or maximized if it was. Before, it always opened small in the middle
+  of the screen.
+
 ### Changed
 
 - Leaving Add New Box or Edit Box with changes that haven't been saved, with

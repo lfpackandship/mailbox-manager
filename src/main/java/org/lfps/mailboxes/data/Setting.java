@@ -67,6 +67,13 @@ public enum Setting {
   FORWARDING_REMINDER_MESSAGE("forwarding_reminder_message",
       "To keep your mail forwarded, please renew. Call us or stop by the counter."),
 
+  /**
+   * Where the main window was and how big, when the app last closed, so it
+   * opens the same way: "x,y,width,height,maximized" in screen pixels, such
+   * as "100,80,900,700,false". Empty until the app has closed once.
+   */
+  WINDOW_PLACEMENT("window_placement", ""),
+
   /** The message on a price change notice, under the date the new prices start. */
   PRICE_CHANGE_MESSAGE("price_change_message",
       "Renew before then to keep today's prices. Today's prices and the new ones are below, "
