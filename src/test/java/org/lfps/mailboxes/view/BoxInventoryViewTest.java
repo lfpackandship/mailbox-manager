@@ -144,7 +144,7 @@ class BoxInventoryViewTest {
       fieldWithPrompt("Doe").setText("Rivera");
       fieldWithPrompt("310").setText("99");
       fieldWithPrompt("(555) 123-4567").setText("5552000006");
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     var messages = FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookupAll(".label").stream()

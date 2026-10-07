@@ -8,24 +8,26 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 ### Changed
 
 - Leaving Add New Box or Edit Box with changes that haven't been saved, with
-  **Back**, **Cancel**, the **Go** menu, **Exit**, or by closing the window,
-  now asks first instead of throwing them away.
+  **Cancel**, the **Go** menu, **Exit**, or by closing the window, now asks
+  first instead of throwing them away.
 - After a box is saved on Add New Box, the form empties, ready for the next
-  box, and says which box was saved. Before, it stayed filled in, and
-  clicking **Submit** again said the box was already rented.
+  box, and says which box was saved. Before, it stayed filled in, and saving
+  again said the box was already rented.
 - Edit Box no longer has the **1 Month**, **3 Months**, … buttons. They moved
   the end date without recording a payment, so the renewal didn't show on
   Payments or in the box's rental history. Use **Renew…** to renew a box; the
   end date on Edit Box is still there for correcting mistakes.
 - When a box can't be saved on Add New Box or Edit Box, each field with a
   mistake is outlined in red, and the cursor is put in the first one.
-- On Add New Box and Edit Box, **Back** or **Cancel** and the save button are
-  at the top of the window, and stay there as the form scrolls. What happened
+- On Add New Box and Edit Box, **Cancel** and **Save** are at the top of the
+  window, and stay there as the form scrolls. What happened
   when saving, or what needs fixing, is shown right under them.
 - **Alternate Business Names** and **Forwarding Addresses** on Add New Box and
   Edit Box fold up to save room. Click the heading to open or close one. Each
   heading says how many there are, such as **Forwarding Addresses (2)**, and a
   section with entries starts open on Edit Box.
+- Add New Box's buttons are called **Save** and **Cancel**, like Edit Box's,
+  instead of **Submit** and **Back**.
 
 ### Fixed
 

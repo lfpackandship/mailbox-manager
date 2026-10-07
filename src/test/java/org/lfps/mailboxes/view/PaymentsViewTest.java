@@ -120,7 +120,7 @@ class PaymentsViewTest {
       buttonLabeled(RentalLengths.label(6)).fire();
       ((TextField) lookup("#amountField")).setText("$75");
       ((ComboBox<?>) lookup("#paymentMethodField")).getEditor().setText("Check");
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     var saved = mailboxes.findAll().get(0);
@@ -142,7 +142,7 @@ class PaymentsViewTest {
       fieldWithPrompt("310").setText("205");
       fieldWithPrompt("(555) 123-4567").setText("5552000006");
       ((TextField) lookup("#amountField")).setText("75");
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     var messages = FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookupAll(".label").stream()
@@ -160,7 +160,7 @@ class PaymentsViewTest {
       fieldWithPrompt("Doe").setText("Rivera");
       fieldWithPrompt("310").setText("205");
       fieldWithPrompt("(555) 123-4567").setText("5552000006");
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     assertEquals(List.of(), history.findForMailbox(mailboxes.findAll().get(0).getId()));

@@ -80,10 +80,10 @@ class UnsavedChangesTest {
   }
 
   @Test
-  void backOnAnUntouchedFormLeavesWithoutAsking() {
+  void cancelOnAnUntouchedFormLeavesWithoutAsking() {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
-      buttonLabeled("Back").fire();
+      buttonLabeled("Cancel").fire();
     });
 
     assertTrue(asked.isEmpty());
@@ -91,12 +91,12 @@ class UnsavedChangesTest {
   }
 
   @Test
-  void backAfterTypingAsksAndStaysIfTheAnswerIsNo() {
+  void cancelAfterTypingAsksAndStaysIfTheAnswerIsNo() {
     answer = false;
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
       fieldWithPrompt("310").setText("12");
-      buttonLabeled("Back").fire();
+      buttonLabeled("Cancel").fire();
     });
 
     assertEquals(List.of("Leave without saving?"), asked);
@@ -104,12 +104,12 @@ class UnsavedChangesTest {
   }
 
   @Test
-  void backAfterTypingLeavesIfTheAnswerIsYes() {
+  void cancelAfterTypingLeavesIfTheAnswerIsYes() {
     answer = true;
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
       fieldWithPrompt("310").setText("12");
-      buttonLabeled("Back").fire();
+      buttonLabeled("Cancel").fire();
     });
 
     assertEquals(List.of("Leave without saving?"), asked);
@@ -157,8 +157,8 @@ class UnsavedChangesTest {
     FxTestSupport.run(() -> {
       AddBoxView.show(mainWindow);
       fieldWithPrompt("310").setText("12");
-      buttonLabeled("Submit").fire();
-      buttonLabeled("Back").fire();
+      buttonLabeled("Save").fire();
+      buttonLabeled("Cancel").fire();
     });
 
     assertTrue(asked.isEmpty());
@@ -171,7 +171,7 @@ class UnsavedChangesTest {
       fieldWithPrompt("John").setText("Ada");
       fieldWithPrompt("Doe").setText("Lovelace");
       fieldWithPrompt("310").setText("12");
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     assertEquals(1, mailboxes.findAll().size());

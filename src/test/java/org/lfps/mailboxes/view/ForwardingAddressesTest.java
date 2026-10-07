@@ -88,7 +88,7 @@ class ForwardingAddressesTest {
       button("addForwardingButton").fire();
       enterAddress("1 Lake Rd", "", "Duluth", "MN", "55802-1234", "");
       button("addForwardingButton").fire();
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     var saved = mailboxes.findAll();
@@ -168,7 +168,7 @@ class ForwardingAddressesTest {
       AddBoxView.show(mainWindow);
       fieldWithPrompt("310").setText("205");
       enterAddress("88 Palm Way", "Unit 3B", "Naples", "FL", "34102", "winter");
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     assertEquals(List.of(NAPLES), mailboxes.findAll().get(0).getForwardingAddresses());
@@ -200,7 +200,7 @@ class ForwardingAddressesTest {
       AddBoxView.show(mainWindow);
       fieldWithPrompt("310").setText("205");
       field("businessNameField").setText("Rivera Imports");
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     assertEquals(List.of("Rivera Imports"), mailboxes.findAll().get(0).getAlternateBusinessNames());

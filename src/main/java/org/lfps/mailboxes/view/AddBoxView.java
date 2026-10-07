@@ -126,14 +126,14 @@ public class AddBoxView {
     businessNamesEditor.watchFor(changes);
     forwardingEditor.watchFor(changes);
 
-    var submitBtn = new Button("Submit");
+    var saveBtn = new Button("Save");
     var resultLabel = new Label(saved);
     resultLabel.setId("resultLabel");
     resultLabel.setStyle("-fx-text-fill: green;");
     var repository = new MailboxRepository();
 
     var problems = new FieldProblems();
-    submitBtn.setOnAction(e -> {
+    saveBtn.setOnAction(e -> {
       var errors = new StringBuilder();
       problems.clear();
 
@@ -217,7 +217,7 @@ public class AddBoxView {
 
       try {
         repository.insert(mailbox, rental);
-        // A fresh form, so clicking Submit again can't add the box twice.
+        // A fresh form, so clicking Save again can't add the box twice.
         show(stage, "Saved " + BoxLabels.boxAndHolder(mailbox) + ". The form is empty again, ready for the "
             + "next box.");
       } catch (SQLException ex) {
@@ -226,8 +226,8 @@ public class AddBoxView {
       }
     });
 
-    var backBtn = new Button("Back");
-    backBtn.setOnAction(e -> {
+    var cancelBtn = new Button("Cancel");
+    cancelBtn.setOnAction(e -> {
       if (AppWindow.mayLeave()) {
         MainMenuView.show(stage);
       }
@@ -254,7 +254,7 @@ public class AddBoxView {
     var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));
 
-    AppWindow.show(stage, EditBoxView.buttonBar(backBtn, submitBtn, resultLabel), layout);
+    AppWindow.show(stage, EditBoxView.buttonBar(cancelBtn, saveBtn, resultLabel), layout);
     AppWindow.setLeaveCheck(() -> changes.confirmLeave(stage));
   }
 

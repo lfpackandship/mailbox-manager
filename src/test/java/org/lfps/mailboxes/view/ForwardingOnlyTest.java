@@ -97,7 +97,7 @@ class ForwardingOnlyTest {
       fieldWithPrompt("Doe").setText("Former");
       fieldWithPrompt("310").setText("12");
       checkBox().setSelected(true);
-      buttonLabeled("Submit").fire();
+      buttonLabeled("Save").fire();
     });
 
     var saved = mailboxes.findAll().stream().filter(Mailbox::isForwardingOnly).collect(Collectors.toList());
