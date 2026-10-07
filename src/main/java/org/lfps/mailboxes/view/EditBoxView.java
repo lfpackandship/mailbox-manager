@@ -2,6 +2,8 @@ package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
 
+import javafx.beans.binding.Bindings;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -10,6 +12,7 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -51,6 +54,9 @@ public class EditBoxView {
 
     var forwardingEditor = new ForwardingAddressesEditor();
     forwardingEditor.setAddresses(mailbox.getForwardingAddresses());
+
+    var namesSection = section("Alternate Business Names", businessNamesEditor, businessNamesEditor.entries());
+    var forwardingSection = section("Forwarding Addresses", forwardingEditor, forwardingEditor.entries());
 
     var endDateField = new DatePicker(mailbox.getEndDate());
     endDateField.setStyle("-fx-pref-width: 12em;");
@@ -99,6 +105,7 @@ public class EditBoxView {
       var forwardingProblem = forwardingEditor.addTypedBeforeSaving();
       if (forwardingProblem != null) {
         errors.append(forwardingProblem).append('\n');
+        forwardingSection.setExpanded(true);
       }
 
       var forwardingOnly = forwardingOnlyBox.isSelected();
@@ -183,12 +190,10 @@ public class EditBoxView {
     grid.addRow(4, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
     grid.add(renewHint, 0, 5, 4, 1);
     grid.addRow(6, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
-    grid.add(new Label("Alternate Business Names:"), 0, 7, 4, 1);
-    grid.add(businessNamesEditor, 0, 8, 4, 1);
-    grid.add(new Label("Forwarding Addresses:"), 0, 9, 4, 1);
-    grid.add(forwardingEditor, 0, 10, 4, 1);
-    grid.add(new Label("Notes:"), 0, 11, 4, 1);
-    grid.add(notesField, 0, 12, 4, 1);
+    grid.add(namesSection, 0, 7, 4, 1);
+    grid.add(forwardingSection, 0, 8, 4, 1);
+    grid.add(new Label("Notes:"), 0, 9, 4, 1);
+    grid.add(notesField, 0, 10, 4, 1);
 
     var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));
@@ -241,6 +246,27 @@ public class EditBoxView {
     bar.setPadding(new Insets(10, 15, 10, 15));
     bar.setStyle("-fx-border-color: transparent transparent lightgray transparent;");
     return bar;
+  }
+
+  /**
+   * Puts a list's editor, such as the forwarding addresses, in a section that
+   * can be folded up to save room, headed with how many entries it has, such
+   * as "Forwarding Addresses (2)". Shared by the Add and Edit Box forms.
+   *
+   * @param name the section's name
+   * @param editor the editor
+   * @param entries the editor's entries, which the heading counts
+   * @return the section, open if there are entries already and folded if not
+   */
+  static TitledPane section(String name, Node editor, ObservableList<?> entries) {
+    var body = new VBox(editor);
+    body.setPadding(new Insets(8));
+    var section = new TitledPane("", body);
+    section.setAnimated(false);
+    section.textProperty().bind(Bindings.createStringBinding(
+        () -> entries.isEmpty() ? name : name + " (" + entries.size() + ")", entries));
+    section.setExpanded(!entries.isEmpty());
+    return section;
   }
 
   /**

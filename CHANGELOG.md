@@ -22,6 +22,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 - On Add New Box and Edit Box, **Back** or **Cancel** and the save button are
   at the top of the window, and stay there as the form scrolls. What happened
   when saving, or what needs fixing, is shown right under them.
+- **Alternate Business Names** and **Forwarding Addresses** on Add New Box and
+  Edit Box fold up to save room. Click the heading to open or close one. Each
+  heading says how many there are, such as **Forwarding Addresses (2)**, and a
+  section with entries starts open on Edit Box.
 
 ### Fixed
 

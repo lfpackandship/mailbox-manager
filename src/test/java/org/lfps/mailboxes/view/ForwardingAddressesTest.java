@@ -6,11 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -202,6 +204,44 @@ class ForwardingAddressesTest {
     });
 
     assertEquals(List.of("Rivera Imports"), mailboxes.findAll().get(0).getAlternateBusinessNames());
+  }
+
+  @Test
+  void onAddNewBoxBothSectionsStartFoldedUp() {
+    FxTestSupport.run(() -> AddBoxView.show(mainWindow));
+
+    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses"), FxTestSupport.call(this::sectionTitles));
+    assertTrue(FxTestSupport.call(() -> sections().stream().noneMatch(TitledPane::isExpanded)));
+  }
+
+  @Test
+  void onEditBoxASectionWithEntriesStartsOpenAndCountsThem() throws SQLException {
+    mailboxes.insert(new Mailbox(0, "Tomás", "Rivera", null, "205", null, "(555) 200-0006", null,
+        null, null, List.of(NAPLES)));
+    var box = mailboxes.findAll().get(0);
+
+    FxTestSupport.run(() -> {
+      EditBoxView.show(mainWindow, box, () -> { });
+      enterAddress("1 Lake Rd", "", "Duluth", "MN", "55802", "");
+      button("addForwardingButton").fire();
+    });
+
+    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses (2)"),
+        FxTestSupport.call(this::sectionTitles));
+    assertEquals(List.of(false, true), FxTestSupport.call(() -> sections().stream()
+        .map(TitledPane::isExpanded).collect(Collectors.toList())));
+  }
+
+  /** Returns the folding sections on the main window, top first. */
+  private List<TitledPane> sections() {
+    return mainWindow.getScene().getRoot().lookupAll(".titled-pane").stream()
+        .map(node -> (TitledPane) node)
+        .collect(Collectors.toList());
+  }
+
+  /** Returns the headings of the folding sections on the main window, top first. */
+  private List<String> sectionTitles() {
+    return sections().stream().map(TitledPane::getText).collect(Collectors.toList());
   }
 
   /** Types an address into the forwarding address fields. */

@@ -67,6 +67,12 @@ public class AddBoxView {
 
     var forwardingEditor = new ForwardingAddressesEditor();
 
+    // Folded up to start with, as most boxes have neither.
+    var namesSection = EditBoxView.section("Alternate Business Names", businessNamesEditor,
+        businessNamesEditor.entries());
+    var forwardingSection = EditBoxView.section("Forwarding Addresses", forwardingEditor,
+        forwardingEditor.entries());
+
     var phoneField = new TextField();
     phoneField.setPromptText("(555) 123-4567");
     phoneField.setTextFormatter(PhoneNumberFormatter.create());
@@ -137,6 +143,7 @@ public class AddBoxView {
       var forwardingProblem = forwardingEditor.addTypedBeforeSaving();
       if (forwardingProblem != null) {
         errors.append(forwardingProblem).append('\n');
+        forwardingSection.setExpanded(true);
       }
 
       var forwardingOnly = forwardingOnlyBox.isSelected();
@@ -239,12 +246,10 @@ public class AddBoxView {
     grid.add(rentalLengthButtons, 0, 5, 4, 1);
     grid.addRow(6, new Label("Amount Paid:"), payment.amountField, new Label("Paid By:"), payment.methodField);
     grid.addRow(7, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
-    grid.add(new Label("Alternate Business Names:"), 0, 8, 4, 1);
-    grid.add(businessNamesEditor, 0, 9, 4, 1);
-    grid.add(new Label("Forwarding Addresses:"), 0, 10, 4, 1);
-    grid.add(forwardingEditor, 0, 11, 4, 1);
-    grid.add(new Label("Notes:"), 0, 12, 4, 1);
-    grid.add(notesField, 0, 13, 4, 1);
+    grid.add(namesSection, 0, 8, 4, 1);
+    grid.add(forwardingSection, 0, 9, 4, 1);
+    grid.add(new Label("Notes:"), 0, 10, 4, 1);
+    grid.add(notesField, 0, 11, 4, 1);
 
     var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));

@@ -3,6 +3,7 @@ package org.lfps.mailboxes.view;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.collections.ObservableList;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
@@ -58,6 +59,16 @@ public class BusinessNamesEditor extends VBox {
       namesList.getItems().add(name);
       nameField.clear();
     }
+  }
+
+  /**
+   * Returns the entries added so far, live, so a section heading can show how
+   * many there are.
+   *
+   * @return the entries
+   */
+  ObservableList<?> entries() {
+    return namesList.getItems();
   }
 
   /**

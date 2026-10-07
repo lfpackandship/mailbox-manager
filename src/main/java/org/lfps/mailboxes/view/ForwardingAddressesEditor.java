@@ -3,6 +3,7 @@ package org.lfps.mailboxes.view;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.collections.ObservableList;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -54,6 +55,9 @@ public class ForwardingAddressesEditor extends VBox {
 
     errorLabel.setId("forwardingErrorLabel");
     errorLabel.setStyle("-fx-text-fill: red;");
+    // Takes no room until there's something to say.
+    errorLabel.managedProperty().bind(errorLabel.textProperty().isNotEmpty());
+    errorLabel.visibleProperty().bind(errorLabel.textProperty().isNotEmpty());
 
     var addBtn = new Button("Add Address");
     addBtn.setId("addForwardingButton");
@@ -125,6 +129,16 @@ public class ForwardingAddressesEditor extends VBox {
     }
     errorLabel.setText("");
     return true;
+  }
+
+  /**
+   * Returns the entries added so far, live, so a section heading can show how
+   * many there are.
+   *
+   * @return the entries
+   */
+  ObservableList<?> entries() {
+    return addressList.getItems();
   }
 
   /**
