@@ -68,6 +68,15 @@ public class EditBoxView {
       field.setStyle("-fx-pref-width: 12em;");
     }
 
+    // Watched once filled in, so only what's changed after that counts.
+    var changes = new UnsavedChanges().watch(firstNameField.textProperty(), lastNameField.textProperty(),
+        businessTitleField.textProperty(), boxNumberField.textProperty(), boxNameField.textProperty(),
+        phoneField.textProperty(), emailField.textProperty(), endDateField.valueProperty(),
+        keys.countField.textProperty(), keys.depositField.textProperty(),
+        forwardingOnlyBox.selectedProperty(), notesField.textProperty());
+    businessNamesEditor.watchFor(changes);
+    forwardingEditor.watchFor(changes);
+
     var saveBtn = new Button("Save");
     var resultLabel = new Label();
     resultLabel.setId("resultLabel");
@@ -135,7 +144,11 @@ public class EditBoxView {
     });
 
     var cancelBtn = new Button("Cancel");
-    cancelBtn.setOnAction(e -> onDone.run());
+    cancelBtn.setOnAction(e -> {
+      if (AppWindow.mayLeave()) {
+        onDone.run();
+      }
+    });
 
     var grid = new GridPane();
     grid.setHgap(10);
@@ -159,6 +172,7 @@ public class EditBoxView {
     layout.setPadding(new Insets(15));
 
     AppWindow.show(stage, layout);
+    AppWindow.setLeaveCheck(() -> changes.confirmLeave(stage));
   }
 
   /**

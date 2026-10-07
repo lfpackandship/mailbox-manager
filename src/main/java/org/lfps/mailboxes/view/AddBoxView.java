@@ -98,6 +98,17 @@ public class AddBoxView {
     // Narrower, to leave room for the Choose button in the same column.
     boxNumber.setStyle("-fx-pref-width: 6em;");
 
+    // Watched from here on, so the prices and deposits filled in as the form
+    // opens don't count as changes.
+    var changes = new UnsavedChanges().watch(firstNameField.textProperty(), lastNameField.textProperty(),
+        businessTitleField.textProperty(), boxNumber.textProperty(), boxNameField.textProperty(),
+        phoneField.textProperty(), emailField.textProperty(), endDateField.valueProperty(),
+        payment.amountField.textProperty(), payment.methodField.getEditor().textProperty(),
+        keys.countField.textProperty(), keys.depositField.textProperty(),
+        forwardingOnlyBox.selectedProperty(), notesField.textProperty());
+    businessNamesEditor.watchFor(changes);
+    forwardingEditor.watchFor(changes);
+
     var submitBtn = new Button("Submit");
     var resultLabel = new Label();
     var repository = new MailboxRepository();
@@ -168,6 +179,7 @@ public class AddBoxView {
 
       try {
         repository.insert(mailbox, rental);
+        changes.saved();
         resultLabel.setStyle("-fx-text-fill: green;");
         resultLabel.setText("Saved");
       } catch (SQLException ex) {
@@ -177,7 +189,11 @@ public class AddBoxView {
     });
 
     var backBtn = new Button("Back");
-    backBtn.setOnAction(e -> MainMenuView.show(stage));
+    backBtn.setOnAction(e -> {
+      if (AppWindow.mayLeave()) {
+        MainMenuView.show(stage);
+      }
+    });
 
     var grid = new GridPane();
     grid.setHgap(10);
@@ -203,6 +219,7 @@ public class AddBoxView {
     layout.setPadding(new Insets(15));
 
     AppWindow.show(stage, layout);
+    AppWindow.setLeaveCheck(() -> changes.confirmLeave(stage));
   }
 
   /** Not used: the screen is built with static methods. */

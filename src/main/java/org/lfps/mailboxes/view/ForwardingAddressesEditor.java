@@ -128,6 +128,17 @@ public class ForwardingAddressesEditor extends VBox {
   }
 
   /**
+   * Has a form notice when anything is typed here, or an entry is added or
+   * removed, so leaving it can ask before throwing that away.
+   *
+   * @param changes the form's changes
+   */
+  void watchFor(UnsavedChanges changes) {
+    changes.watch(streetField.textProperty(), unitField.textProperty(), cityField.textProperty(),
+        stateField.textProperty(), zipField.textProperty(), noteField.textProperty()).watchList(addressList.getItems());
+  }
+
+  /**
    * Returns a snapshot of the addresses currently entered.
    *
    * @return the addresses entered so far

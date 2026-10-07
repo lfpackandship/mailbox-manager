@@ -5,6 +5,12 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ## Unreleased
 
+### Changed
+
+- Leaving Add New Box or Edit Box with changes that haven't been saved, with
+  **Back**, **Cancel**, the **Go** menu, **Exit**, or by closing the window,
+  now asks first instead of throwing them away.
+
 ### Fixed
 
 - On Add New Box and Edit Box, an alternate business name or forwarding

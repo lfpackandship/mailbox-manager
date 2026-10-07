@@ -61,6 +61,16 @@ public class BusinessNamesEditor extends VBox {
   }
 
   /**
+   * Has a form notice when anything is typed here, or an entry is added or
+   * removed, so leaving it can ask before throwing that away.
+   *
+   * @param changes the form's changes
+   */
+  void watchFor(UnsavedChanges changes) {
+    changes.watch(nameField.textProperty()).watchList(namesList.getItems());
+  }
+
+  /**
    * Returns a snapshot of the names currently entered.
    *
    * @return the names entered so far

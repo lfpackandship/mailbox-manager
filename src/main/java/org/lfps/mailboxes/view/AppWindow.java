@@ -3,6 +3,7 @@ package org.lfps.mailboxes.view;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 import javafx.application.HostServices;
 import javafx.application.Platform;
@@ -46,6 +47,13 @@ public final class AppWindow {
   private static HostServices hostServices;
 
   /**
+   * Asked before leaving the screen showing, such as a form with unsaved
+   * changes, or {@code null} if it can be left without asking. Each new
+   * screen starts with none.
+   */
+  private static BooleanSupplier leaveCheck;
+
+  /**
    * Gives the app access to the operating system, for opening folders in
    * Explorer or Finder. Called once at start-up.
    *
@@ -76,8 +84,35 @@ public final class AppWindow {
     var root = new BorderPane(scrollPane);
     root.setTop(buildMenuBar(stage));
     applyTextSize(root);
+    leaveCheck = null;
     stage.setScene(new Scene(root));
+    stage.setOnCloseRequest(e -> {
+      if (!mayLeave()) {
+        e.consume();
+      }
+    });
     stage.show();
+  }
+
+  /**
+   * Sets what to ask before leaving the screen just shown, such as whether to
+   * throw away unsaved changes. Call it after {@link #show(Stage, Parent)}.
+   *
+   * @param check returns {@code true} if the screen can be left
+   */
+  static void setLeaveCheck(BooleanSupplier check) {
+    leaveCheck = check;
+  }
+
+  /**
+   * Returns whether the screen showing can be left, asking first if it has
+   * something unsaved. Back, Cancel, the Go menu, and closing the window all
+   * check this.
+   *
+   * @return {@code true} to go ahead and leave
+   */
+  static boolean mayLeave() {
+    return leaveCheck == null || leaveCheck.getAsBoolean();
   }
 
   /**
@@ -224,7 +259,11 @@ public final class AppWindow {
     settingsItem.setOnAction(e -> SettingsView.show(stage));
 
     var exitItem = new MenuItem("Exit");
-    exitItem.setOnAction(e -> Platform.exit());
+    exitItem.setOnAction(e -> {
+      if (mayLeave()) {
+        Platform.exit();
+      }
+    });
 
     var fileMenu = new Menu("File");
     fileMenu.getItems().addAll(priceSheetItem, remindersItem, new SeparatorMenuItem(),
@@ -297,7 +336,11 @@ public final class AppWindow {
     if (shortcut != null) {
       item.setAccelerator(KeyCombination.keyCombination(shortcut));
     }
-    item.setOnAction(e -> show.run());
+    item.setOnAction(e -> {
+      if (mayLeave()) {
+        show.run();
+      }
+    });
     return item;
   }
 
