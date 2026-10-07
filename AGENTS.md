@@ -110,9 +110,28 @@ Google Drive backups". Don't merge the pull request yourself unless asked.
 
 ## When finishing a release
 
-Follow the README's release steps. Then, without being asked, give the user
-release notes to paste into the GitHub release (edit the release, replace the
-generated notes). They're for the people who use the app, not developers.
+Do these in order. Steps 1, 2, and 6 to 8 are yours to do without asking.
+Steps 3 to 5 publish the release, so ask before each one and wait for a yes.
+
+1. Update the README for anything in the release that it describes.
+2. Make the release commit, as in the README's release steps: set the
+   version in `pom.xml`, turn "Unreleased" in CHANGELOG.md into the version
+   and today's date, and commit it as `Release x.y.z`.
+3. Ask, then merge the branch into `main` with a merge commit
+   (`git merge --no-ff`).
+4. Ask, then push `main` and wait for the tests to pass in GitHub Actions.
+5. Ask, then tag the release commit `vx.y.z` and push the tag, which builds
+   the installers and makes the GitHub release.
+6. Once the build finishes, check that its annotations don't include the
+   "GOOGLE_CLIENT_ID isn't set" warning. If they do, the installers can't
+   connect to Google Drive, so tell the user. If you can't see the build,
+   ask the user to look.
+7. Give the user release notes to paste into the GitHub release (edit the
+   release, replace the generated notes), as described below.
+8. Delete the branch, locally and on GitHub, once `git log main..<branch>`
+   is empty.
+
+The release notes are for the people who use the app, not developers.
 Write them like the earlier releases on the releases page:
 
 - **What's new** first. Each feature starts with a short bold sentence
@@ -147,6 +166,4 @@ Download the installer for your computer below and install it over the old versi
 | Linux | mailbox-manager-1.5.2-linux-x64.AppImage |
 ```
 
-Base the notes on the release's CHANGELOG.md entry. After the build
-finishes, check that its annotations don't include the "GOOGLE_CLIENT_ID
-isn't set" warning; if they do, the installers can't connect to Google Drive.
+Base the notes on the release's CHANGELOG.md entry.
