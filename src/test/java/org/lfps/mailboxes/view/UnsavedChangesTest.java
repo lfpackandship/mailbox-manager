@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -161,6 +162,22 @@ class UnsavedChangesTest {
     });
 
     assertTrue(asked.isEmpty());
+  }
+
+  @Test
+  void addingABoxEmptiesTheFormAndSaysWhichBoxWasSaved() throws SQLException {
+    FxTestSupport.run(() -> {
+      AddBoxView.show(mainWindow);
+      fieldWithPrompt("John").setText("Ada");
+      fieldWithPrompt("Doe").setText("Lovelace");
+      fieldWithPrompt("310").setText("12");
+      buttonLabeled("Submit").fire();
+    });
+
+    assertEquals(1, mailboxes.findAll().size());
+    assertEquals("", FxTestSupport.call(() -> fieldWithPrompt("310").getText()));
+    assertEquals("Saved Box 12 – Ada Lovelace. The form is empty again, ready for the next box.",
+        FxTestSupport.call(() -> ((Label) mainWindow.getScene().lookup("#resultLabel")).getText()));
   }
 
   @Test

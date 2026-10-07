@@ -14,7 +14,7 @@ import javafx.stage.Window;
  */
 final class UnsavedChanges {
 
-  /** Whether anything has been changed since the form opened or was last saved. */
+  /** Whether anything has been changed since the form opened. */
   private boolean changed;
 
   /** Starts with nothing changed and nothing watched. */
@@ -44,21 +44,6 @@ final class UnsavedChanges {
   UnsavedChanges watchList(ObservableList<?> list) {
     list.addListener((ListChangeListener<Object>) change -> changed = true);
     return this;
-  }
-
-  /**
-   * Returns whether anything has been changed since the form opened or was
-   * last saved.
-   *
-   * @return {@code true} if there's something unsaved
-   */
-  boolean isChanged() {
-    return changed;
-  }
-
-  /** Records that the form has been saved, so there's nothing to lose. */
-  void saved() {
-    changed = false;
   }
 
   /**

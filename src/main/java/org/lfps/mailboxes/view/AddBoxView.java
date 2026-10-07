@@ -33,6 +33,17 @@ public class AddBoxView {
    * @param stage the window to render the form into
    */
   public static void show(Stage stage) {
+    show(stage, "");
+  }
+
+  /**
+   * Builds and displays an empty Add New Box form, with a message at the top,
+   * as after saving a box.
+   *
+   * @param stage the window to render the form into
+   * @param saved says which box was just saved, or an empty string
+   */
+  private static void show(Stage stage, String saved) {
     var businessTitleField = new TextField();
     businessTitleField.setPromptText("Acme Inc (optional)");
 
@@ -110,7 +121,9 @@ public class AddBoxView {
     forwardingEditor.watchFor(changes);
 
     var submitBtn = new Button("Submit");
-    var resultLabel = new Label();
+    var resultLabel = new Label(saved);
+    resultLabel.setId("resultLabel");
+    resultLabel.setStyle("-fx-text-fill: green;");
     var repository = new MailboxRepository();
 
     submitBtn.setOnAction(e -> {
@@ -179,9 +192,9 @@ public class AddBoxView {
 
       try {
         repository.insert(mailbox, rental);
-        changes.saved();
-        resultLabel.setStyle("-fx-text-fill: green;");
-        resultLabel.setText("Saved");
+        // A fresh form, so clicking Submit again can't add the box twice.
+        show(stage, "Saved " + BoxLabels.boxAndHolder(mailbox) + ". The form is empty again, ready for the "
+            + "next box.");
       } catch (SQLException ex) {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText("Failed to save: " + ex.getMessage());

@@ -10,6 +10,9 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 - Leaving Add New Box or Edit Box with changes that haven't been saved, with
   **Back**, **Cancel**, the **Go** menu, **Exit**, or by closing the window,
   now asks first instead of throwing them away.
+- After a box is saved on Add New Box, the form empties, ready for the next
+  box, and says which box was saved. Before, it stayed filled in, and
+  clicking **Submit** again said the box was already rented.
 
 ### Fixed
 
