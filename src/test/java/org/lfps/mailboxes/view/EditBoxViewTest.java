@@ -1,6 +1,7 @@
 package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -198,6 +199,16 @@ class EditBoxViewTest {
 
     assertEquals("Phone number is not valid.", result());
     assertEquals("(555) 100-0001", find("2").getPhone());
+  }
+
+  @Test
+  void theEndDateCantBeExtendedWithoutRecordingAPayment() throws SQLException {
+    edit("1");
+
+    assertTrue(FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookupAll(".button").stream()
+        .map(node -> ((Button) node).getText())
+        .noneMatch(text -> text.endsWith("Month") || text.endsWith("Months"))));
+    assertNotNull(FxTestSupport.call(() -> mainWindow.getScene().lookup("#renewHint")));
   }
 
   /** Opens Edit Box for a box. */

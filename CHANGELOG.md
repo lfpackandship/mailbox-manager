@@ -13,6 +13,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 - After a box is saved on Add New Box, the form empties, ready for the next
   box, and says which box was saved. Before, it stayed filled in, and
   clicking **Submit** again said the box was already rented.
+- Edit Box no longer has the **1 Month**, **3 Months**, … buttons. They moved
+  the end date without recording a payment, so the renewal didn't show on
+  Payments or in the box's rental history. Use **Renew…** to renew a box; the
+  end date on Edit Box is still there for correcting mistakes.
 
 ### Fixed
 

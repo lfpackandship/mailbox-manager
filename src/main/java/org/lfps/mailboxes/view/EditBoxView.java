@@ -1,7 +1,6 @@
 package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
-import java.time.LocalDate;
 
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -55,7 +54,13 @@ public class EditBoxView {
     var endDateField = new DatePicker(mailbox.getEndDate());
     endDateField.setStyle("-fx-pref-width: 12em;");
 
-    var rentalLengthButtons = RentalLengthButtons.create(months -> extendEndDate(endDateField, months));
+    // Renewing is done with Renew…, which records the payment as well. The end
+    // date here is only for correcting a mistake.
+    var renewHint = new Label("To renew, use Renew… on Manage Boxes, Renewals, or the box's details, so the "
+        + "payment is recorded too. Change the end date here only to correct a mistake.");
+    renewHint.setId("renewHint");
+    renewHint.setWrapText(true);
+    renewHint.setStyle("-fx-font-size: 0.9em; -fx-text-fill: #555555;");
 
     var keys = new KeyFields(mailbox.getKeyCount(), mailbox.getKeyDepositCents());
     var forwardingOnlyBox = forwardingOnlyBox(mailbox.isForwardingOnly(), keys.countField, keys.depositField);
@@ -159,7 +164,7 @@ public class EditBoxView {
     grid.add(forwardingOnlyBox, 0, 2, 4, 1);
     grid.addRow(3, new Label("Box Name:"), boxNameField, new Label("Phone Number:"), phoneField);
     grid.addRow(4, new Label("Email:"), emailField, new Label("End Date:"), endDateField);
-    grid.add(rentalLengthButtons, 0, 5, 4, 1);
+    grid.add(renewHint, 0, 5, 4, 1);
     grid.addRow(6, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
     grid.add(new Label("Alternate Business Names:"), 0, 7, 4, 1);
     grid.add(businessNamesEditor, 0, 8, 4, 1);
@@ -224,20 +229,6 @@ public class EditBoxView {
    */
   private static String orEmpty(String value) {
     return value == null ? "" : value;
-  }
-
-  /**
-   * Sets the end date a number of months after the current one, or after today
-   * if there's none.
-   *
-   * @param endDateField the end date field
-   * @param months how many months to add
-   */
-  private static void extendEndDate(DatePicker endDateField, int months) {
-    var current = endDateField.getValue();
-    endDateField.setValue(current == null
-        ? LocalDate.now().plusMonths(months)
-        : current.plusMonths(months));
   }
 
   /** Not used: the form is built with static methods. */
