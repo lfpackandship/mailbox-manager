@@ -4,6 +4,8 @@ import java.awt.image.BufferedImage;
 import java.awt.print.PageFormat;
 import java.awt.print.Paper;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -22,17 +24,21 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import org.lfps.mailboxes.data.LabelRepository;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.model.PrintedLabel;
 
 /**
  * The Print Forwarding Label window, opened with "Print Label…" on a box's
  * details: choose which forwarding address to use, if the box has more than
  * one, and whether to print on a label or on copy paper, see a preview of
  * exactly what will print, and print it. Laid out like the window for
- * printing renewal reminders.
+ * printing renewal reminders. Each label printed gets the next label number
+ * and is recorded (see {@link LabelRepository}); one that's cancelled or
+ * fails to print isn't.
  */
 final class ForwardingLabelView {
 
@@ -117,10 +123,18 @@ final class ForwardingLabelView {
     preview.setPrefWidth(PREVIEW_HEIGHT * 8.5 / 11 + 20);
     HBox.setHgrow(preview, Priority.ALWAYS);
 
+    var labels = new LabelRepository();
     Runnable showPreview = () -> {
       var label = ForwardingLabel.of(mailbox, (ForwardingAddress) addressGroup.getSelectedToggle().getUserData(),
           name, details, (ForwardingLabel.Stock) stockGroup.getSelectedToggle().getUserData());
-      previewImage.setImage(preview(label));
+      // The number it will most likely get; it's only handed out when printed.
+      String next;
+      try {
+        next = labels.peekNextNumber(LocalDate.now());
+      } catch (SQLException ex) {
+        next = "";
+      }
+      previewImage.setImage(preview(label.numbered(next)));
     };
     addressGroup.selectedToggleProperty().addListener((obs, was, now) -> {
       if (now == null) {
@@ -160,7 +174,25 @@ final class ForwardingLabelView {
     printBtn.setOnAction(e -> {
       var label = ForwardingLabel.of(mailbox, (ForwardingAddress) addressGroup.getSelectedToggle().getUserData(),
           name, details, (ForwardingLabel.Stock) stockGroup.getSelectedToggle().getUserData());
-      Printing.printLabel("Forwarding label, box " + mailbox.getBoxNumber(), label, resultLabel, "Printed");
+      PrintedLabel record;
+      try {
+        record = labels.record(mailbox.getId(), label.to, LocalDateTime.now());
+      } catch (SQLException ex) {
+        resultLabel.setStyle("-fx-text-fill: red;");
+        resultLabel.setText("Couldn't give the label a number, so it wasn't printed: " + ex.getMessage());
+        return;
+      }
+      Printing.printLabel("Forwarding label " + record.getNumber() + ", box " + mailbox.getBoxNumber(),
+          label.numbered(record.getNumber()), resultLabel, "Printed label " + record.getNumber(), printed -> {
+            if (!printed) {
+              try {
+                labels.delete(record.getNumber());
+              } catch (SQLException ex) {
+                // The record stays; its number simply isn't on a label.
+              }
+            }
+            showPreview.run();
+          });
     });
 
     var closeBtn = new Button("Close");

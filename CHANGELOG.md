@@ -30,6 +30,12 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   address. The window it opens shows a preview, asks which forwarding
   address to use if there's more than one, and prints on a **Label** or on
   **Copy paper**, where the label has a dashed line around it to cut out.
+- Each forwarding label printed has a number in small type in its bottom
+  corner, such as **261007-03** for the third label printed on October 7,
+  2026, and the app keeps a record of it: the box, when it was printed, and
+  the name and address on it. No two labels get the same number, even after
+  restoring an older backup. A label that's cancelled in the Print window
+  isn't recorded.
 
 ## 1.9.0 – 2026-10-06
 

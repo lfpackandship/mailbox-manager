@@ -11,6 +11,11 @@ import java.awt.print.Pageable;
 import java.awt.print.Paper;
 import java.awt.print.Printable;
 import java.awt.print.PrinterJob;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -30,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.lfps.mailboxes.data.Database;
+import org.lfps.mailboxes.data.LabelRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
@@ -64,10 +70,14 @@ class ForwardingLabelTest {
   }
 
   @BeforeEach
-  void prepareDatabase() {
+  void prepareDatabase() throws SQLException, IOException {
     TestSandbox.require();
     Database.prepareDataDir();
     Database.initSchema();
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("DELETE FROM labels");
+    }
+    Files.deleteIfExists(Database.dataDir().resolve("last-label-number.txt"));
   }
 
   @AfterEach
@@ -205,7 +215,7 @@ class ForwardingLabelTest {
   }
 
   @Test
-  void theWindowPrintsALabelForTheOnlyAddress() {
+  void theWindowPrintsALabelForTheOnlyAddress() throws SQLException {
     catchPrinting();
     var window = openLabelWindow(box("Ada", "Lovelace", null, HOME));
 
@@ -213,11 +223,42 @@ class ForwardingLabelTest {
         FxTestSupport.call(() -> radioTexts(window)));
     FxTestSupport.run(() -> ((Button) window.getScene().lookup("#labelPrintButton")).fire());
 
+    var number = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd")) + "-01";
     assertEquals(1, printed.size());
     assertEquals(ForwardingLabel.Stock.LABEL, printed.get(0).stock);
     assertEquals("1400 Elm Street Apt 12", printed.get(0).to.get(1));
-    assertEquals("Printed", FxTestSupport.call(() -> ((Label) window.getScene()
+    assertEquals(number, printed.get(0).number);
+    assertEquals("Printed label " + number, FxTestSupport.call(() -> ((Label) window.getScene()
         .lookup("#labelResultLabel")).getText()));
+    var records = new LabelRepository().findAll();
+    assertEquals(1, records.size());
+    assertEquals(number, records.get(0).getNumber());
+    assertEquals("Ada Lovelace\n1400 Elm Street Apt 12\nHighland Park, IL 60035", records.get(0).getAddress());
+  }
+
+  @Test
+  void aLabelThatIsntPrintedIsntRecorded() throws SQLException {
+    Printing.paperPrinter = (jobName, printable) -> CompletableFuture.completedFuture(false);
+    var window = openLabelWindow(box("Ada", "Lovelace", null, HOME));
+
+    FxTestSupport.run(() -> ((Button) window.getScene().lookup("#labelPrintButton")).fire());
+    // Printing reports back on the JavaFX thread; let that happen first.
+    FxTestSupport.run(() -> { });
+
+    assertEquals(List.of(), new LabelRepository().findAll());
+  }
+
+  @Test
+  void theNumberIsPrintedSmallInTheBottomCornerClearOfTheAddress() {
+    var label = label(HOME, ForwardingLabel.Stock.LABEL);
+    var page = ForwardingLabelView.previewPage(ForwardingLabel.Stock.LABEL);
+    var corner = ForwardingLabel.HEIGHT - ForwardingLabel.MARGIN - ForwardingLabel.NUMBER_SIZE * 1.5;
+
+    assertFalse(hasInk(draw(label, page), ForwardingLabel.WIDTH / 2, corner, ForwardingLabel.WIDTH / 2, 20));
+    assertTrue(hasInk(draw(label.numbered("261007-03"), page), ForwardingLabel.WIDTH / 2, corner,
+        ForwardingLabel.WIDTH / 2, 20));
+    var layout = label.layout(MEASURE);
+    assertTrue(layout.toY + ForwardingLabel.blockHeight(label.to, layout.toSize) <= corner);
   }
 
   @Test

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -117,15 +118,21 @@ final class Printing {
    * @param printable what to print
    * @param status where to say how it went
    * @param printedMessage what to say once printed
+   * @param done called on the JavaFX thread afterwards with {@code true} if
+   *     it was printed, or {@code false} if it was cancelled, couldn't be
+   *     printed, or another print was already under way
    */
-  static void printLabel(String jobName, Printable printable, Label status, String printedMessage) {
+  static void printLabel(String jobName, Printable printable, Label status, String printedMessage,
+      Consumer<Boolean> done) {
     if (printing) {
+      done.accept(false);
       return;
     }
     printing = true;
     status.setText("");
     paperPrinter.print(jobName, printable).whenComplete((printed, error) -> Platform.runLater(() -> {
       printing = false;
+      done.accept(error == null && printed);
       if (error != null) {
         var cause = error.getCause() instanceof IllegalStateException ? error.getCause() : error;
         status.setStyle("-fx-text-fill: red;");

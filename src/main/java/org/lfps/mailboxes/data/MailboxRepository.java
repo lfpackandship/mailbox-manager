@@ -60,6 +60,9 @@ public class MailboxRepository {
   /** Deletes a mailbox's rental history. */
   private static final String DELETE_RENTAL_PERIODS_SQL = "DELETE FROM rental_periods WHERE mailbox_id = ?";
 
+  /** Deletes the records of a mailbox's printed forwarding labels. */
+  private static final String DELETE_LABELS_SQL = "DELETE FROM labels WHERE mailbox_id = ?";
+
   /** Adds an alternate business name to a mailbox. */
   private static final String INSERT_BUSINESS_NAME_SQL =
       "INSERT INTO business_names (mailbox_id, name) VALUES (?, ?)";
@@ -269,7 +272,8 @@ public class MailboxRepository {
 
   /**
    * Permanently deletes a mailbox with its alternate business names,
-   * forwarding addresses, and rental history.
+   * forwarding addresses, rental history, and the records of its printed
+   * forwarding labels.
    *
    * @param id the id of the mailbox to delete
    * @throws SQLException if the delete fails
@@ -281,6 +285,10 @@ public class MailboxRepository {
         deleteBusinessNames(conn, id);
         deleteForwardingAddresses(conn, id);
         try (PreparedStatement stmt = conn.prepareStatement(DELETE_RENTAL_PERIODS_SQL)) {
+          stmt.setInt(1, id);
+          stmt.executeUpdate();
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(DELETE_LABELS_SQL)) {
           stmt.setInt(1, id);
           stmt.executeUpdate();
         }

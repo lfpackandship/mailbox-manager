@@ -238,7 +238,8 @@ public class Database {
   /**
    * Creates the {@code mailboxes}, {@code business_names},
    * {@code forwarding_addresses}, {@code rental_periods},
-   * {@code box_inventory}, {@code prices}, {@code box_sizes}, and {@code settings} tables if
+   * {@code box_inventory}, {@code prices}, {@code box_sizes}, {@code settings}, and
+   * {@code labels} tables if
    * they don't already exist, and migrates older databases that predate the
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
    * {@code key_count}, {@code key_deposit_cents}, {@code forwarding_only},
@@ -323,6 +324,15 @@ public class Database {
         + "key TEXT PRIMARY KEY, "
         + "value TEXT NOT NULL)";
 
+    // Forwarding labels printed; see LabelRepository.
+    var createLabels = "CREATE TABLE IF NOT EXISTS labels ("
+        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        + "number TEXT NOT NULL UNIQUE, "
+        + "mailbox_id INTEGER NOT NULL, "
+        + "printed_at TEXT NOT NULL, "
+        + "address TEXT NOT NULL, "
+        + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
+
     try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
       stmt.execute(createMailboxes);
       stmt.execute(createBusinessNames);
@@ -333,6 +343,7 @@ public class Database {
       stmt.execute(createScheduledPrices);
       stmt.execute(createBoxSizes);
       stmt.execute(createSettings);
+      stmt.execute(createLabels);
 
       for (var column : List.of("box_name TEXT", "end_date TEXT", "notes TEXT", "closed_date TEXT",
           "key_count INTEGER", "key_deposit_cents INTEGER", "forwarding_only INTEGER NOT NULL DEFAULT 0",

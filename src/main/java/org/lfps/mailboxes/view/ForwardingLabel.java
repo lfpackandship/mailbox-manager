@@ -28,8 +28,9 @@ import org.lfps.mailboxes.model.Mailbox;
  * the printer can print on. Printed on a label, it fills the label; if the
  * label printer's driver is set to a bigger paper size by mistake, the label
  * still lands on the label rather than off its edge. Printed on copy paper,
- * it has a dashed line around it to cut along. Sizes here are in points (1/72
- * inch).
+ * it has a dashed line around it to cut along. The label's number, from
+ * {@link org.lfps.mailboxes.data.LabelRepository}, is printed small in the
+ * bottom corner for the shop's records. Sizes here are in points (1/72 inch).
  */
 final class ForwardingLabel implements Printable {
 
@@ -85,6 +86,9 @@ final class ForwardingLabel implements Printable {
   /** The space from one line to the next, as a multiple of the type size. */
   static final double LINE_SPACING = 1.2;
 
+  /** The size the label's number is printed: small, but readable. */
+  static final double NUMBER_SIZE = 7;
+
   /** The return address, one line each, such as the shop's name, street, and town. */
   final List<String> from;
 
@@ -94,17 +98,32 @@ final class ForwardingLabel implements Printable {
   /** What the label is printed on. */
   final Stock stock;
 
+  /** The label's number, such as "261007-03", or an empty string for none. */
+  final String number;
+
   /**
    * Makes a label.
    *
    * @param from the return address, one line each
    * @param to the holder's name and forwarding address, one line each
    * @param stock what it's printed on
+   * @param number the label's number, or an empty string for none
    */
-  ForwardingLabel(List<String> from, List<String> to, Stock stock) {
+  ForwardingLabel(List<String> from, List<String> to, Stock stock, String number) {
     this.from = List.copyOf(from);
     this.to = List.copyOf(to);
     this.stock = stock;
+    this.number = number == null ? "" : number;
+  }
+
+  /**
+   * Returns the same label with a number.
+   *
+   * @param newNumber the number, such as "261007-03"
+   * @return the numbered label
+   */
+  ForwardingLabel numbered(String newNumber) {
+    return new ForwardingLabel(from, to, stock, newNumber);
   }
 
   /**
@@ -116,11 +135,11 @@ final class ForwardingLabel implements Printable {
    * @param shopName the shop's name, from Settings
    * @param shopDetails the shop's address and phone, one item per line, from Settings
    * @param stock what it's printed on
-   * @return the label
+   * @return the label, with no number yet
    */
   static ForwardingLabel of(Mailbox mailbox, ForwardingAddress address, String shopName, String shopDetails,
       Stock stock) {
-    return new ForwardingLabel(returnAddress(shopName, shopDetails), recipient(mailbox, address), stock);
+    return new ForwardingLabel(returnAddress(shopName, shopDetails), recipient(mailbox, address), stock, "");
   }
 
   /**
@@ -229,9 +248,11 @@ final class ForwardingLabel implements Printable {
       fromSize -= 0.5;
     }
     var toY = Math.max(ADDRESS_TOP, MARGIN + blockHeight(from, fromSize) + 0.5 * 72);
+    // Room is left at the bottom for the number.
+    var bottom = HEIGHT - MARGIN - NUMBER_SIZE * LINE_SPACING;
     var toSize = LARGEST_ADDRESS;
     while (toSize > SMALLEST_TEXT && (blockWidth(to, toSize, measure) > width
-        || toY + blockHeight(to, toSize) > HEIGHT - MARGIN)) {
+        || toY + blockHeight(to, toSize) > bottom)) {
       toSize -= 0.5;
     }
     return new Layout(fromSize, toSize, toY);
@@ -325,6 +346,12 @@ final class ForwardingLabel implements Printable {
     }
     drawLines(g, from, layout.fromSize, MARGIN, MARGIN);
     drawLines(g, to, layout.toSize, MARGIN, layout.toY);
+    if (!number.isEmpty()) {
+      g.setFont(font(NUMBER_SIZE));
+      var metrics = g.getFontMetrics();
+      g.drawString(number, (float) (WIDTH - MARGIN - metrics.stringWidth(number)),
+          (float) (HEIGHT - MARGIN - metrics.getDescent()));
+    }
   }
 
   /**
