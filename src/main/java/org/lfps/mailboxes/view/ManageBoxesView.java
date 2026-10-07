@@ -27,6 +27,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -269,11 +270,16 @@ public class ManageBoxesView {
     spreadsheetBtn.setOnAction(e -> TableOutput.run(statusLabel, () -> TableOutput.saveSpreadsheet(stage,
         "boxes-" + LocalDate.now() + ".csv", List.of(table))));
 
+    // Delete sits apart at the far right, so it isn't clicked in place of
+    // Close Box, which keeps the box's record.
+    var spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+
     var layout = new VBox(10,
         new HBox(10, backBtn, printBtn, spreadsheetBtn),
         new HBox(10, searchField, showChoice),
         table,
-        new HBox(10, viewBtn, editBtn, renewBtn, closeBtn, deleteBtn),
+        new HBox(10, viewBtn, editBtn, renewBtn, closeBtn, spacer, deleteBtn),
         statusLabel);
     layout.setPadding(new Insets(20));
 

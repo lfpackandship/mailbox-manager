@@ -50,6 +50,8 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 - Questions such as "Close box 12?" have buttons that say what they do, such
   as **Close Box** and **Keep It Open**, instead of **Yes** and **No**.
   Pressing Enter picks the one that leaves things as they are.
+- On Manage Boxes, **Delete** is at the far right, away from **Close Box**, so
+  one isn't clicked by mistake for the other.
 
 ### Fixed
 
