@@ -201,6 +201,14 @@ class SettingsViewTest {
   }
 
   @Test
+  void aboutShowsTheAppsVersion() {
+    var window = openSettings();
+
+    assertEquals(AppWindow.appVersion(), FxTestSupport.call(() -> ((Label) window.getScene()
+        .lookup("#appVersionLabel")).getText()));
+  }
+
+  @Test
   void aMistakeOnAnotherTabShowsThatTab() {
     var window = openSettings();
 

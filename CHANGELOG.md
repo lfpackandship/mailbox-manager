@@ -12,6 +12,8 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   If the box's rental ends on that entry's end date, changing the end date
   changes when the box's rental ends too. Before, a wrong entry had to be
   deleted and the box renewed again.
+- The **About** tab in Settings shows which version of Mailbox Manager is
+  running, as **Help → About Mailbox Manager** does.
 
 ## 1.9.0 – 2026-10-06
 

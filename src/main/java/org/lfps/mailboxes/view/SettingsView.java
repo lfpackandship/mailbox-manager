@@ -263,7 +263,10 @@ public class SettingsView {
         row("Google Drive:", drive),
         row("Data folder:", new HBox(8, dataFolderField, openDataFolderBtn)));
 
+    var appVersion = new Label(AppWindow.appVersion());
+    appVersion.setId("appVersionLabel");
     var about = grid(
+        row("Mailbox Manager version:", appVersion),
         row("Java version:", new Label(SystemInfo.javaVersion())),
         row("JavaFX version:", new Label(SystemInfo.javafxVersion())));
 
