@@ -55,7 +55,8 @@ final class UnsavedChanges {
    */
   boolean confirmLeave(Window owner) {
     return !changed || Dialogs.confirm.ask(owner, "Leave without saving?",
-        "The changes you've made here haven't been saved, and will be lost.");
+        "The changes you've made here haven't been saved, and will be lost.", "Leave Without Saving",
+        "Keep Editing");
   }
 
 }

@@ -232,7 +232,8 @@ public class BoxInventoryView {
     removeBtn.setOnAction(e -> {
       var numbers = boxNumbers(selected);
       if (!Dialogs.confirm.ask(stage, "Remove " + describe(numbers) + " from the box inventory?",
-          "Anyone renting " + (numbers.size() == 1 ? "it" : "them") + " keeps their box.")) {
+          "Anyone renting " + (numbers.size() == 1 ? "it" : "them") + " keeps their box.",
+          "Remove", "Cancel")) {
         return;
       }
       try {

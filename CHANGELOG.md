@@ -47,6 +47,9 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   name columns, like Renewals, leaving more room for the others. The
   spreadsheet from **Save as Spreadsheet…** still has first and last names in
   their own columns too.
+- Questions such as "Close box 12?" have buttons that say what they do, such
+  as **Close Box** and **Keep It Open**, instead of **Yes** and **No**.
+  Pressing Enter picks the one that leaves things as they are.
 
 ### Fixed
 

@@ -206,7 +206,7 @@ class ManageBoxesActionsTest {
 
   /** Makes every question the app asks get the same answer, noting each question and its details. */
   private void answer(boolean yes) {
-    Dialogs.confirm = (owner, question, details) -> {
+    Dialogs.confirm = (owner, question, details, yesButton, noButton) -> {
       questions.add(question + " | " + details);
       return yes;
     };

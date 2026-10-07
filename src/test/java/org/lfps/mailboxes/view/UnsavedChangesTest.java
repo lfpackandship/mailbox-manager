@@ -39,6 +39,9 @@ class UnsavedChangesTest {
   /** The questions asked, in order. */
   private final List<String> asked = new ArrayList<>();
 
+  /** The buttons offered with the last question. */
+  private List<String> buttons;
+
   /** The answer given to each question. */
   private boolean answer;
 
@@ -62,8 +65,9 @@ class UnsavedChangesTest {
       stmt.execute("DELETE FROM forwarding_addresses");
       stmt.execute("DELETE FROM mailboxes");
     }
-    Dialogs.confirm = (owner, question, details) -> {
+    Dialogs.confirm = (owner, question, details, yes, no) -> {
       asked.add(question);
+      buttons = List.of(yes, no);
       return answer;
     };
     mainWindow = FxTestSupport.call(Stage::new);
@@ -100,6 +104,7 @@ class UnsavedChangesTest {
     });
 
     assertEquals(List.of("Leave without saving?"), asked);
+    assertEquals(List.of("Leave Without Saving", "Keep Editing"), buttons);
     assertEquals("12", FxTestSupport.call(() -> fieldWithPrompt("310 (required)").getText()));
   }
 

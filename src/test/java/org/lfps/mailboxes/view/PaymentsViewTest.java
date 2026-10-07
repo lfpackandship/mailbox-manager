@@ -171,7 +171,7 @@ class PaymentsViewTest {
     var id = mailboxes.insert(box("1", null));
     history.renew(id, new RentalPeriod(0, 0, TODAY, TODAY, TODAY.plusMonths(6), 6000L, null, null));
     var questions = new ArrayList<String>();
-    Dialogs.confirm = (owner, question, details) -> questions.add(question);
+    Dialogs.confirm = (owner, question, details, yes, no) -> questions.add(question);
     try {
       FxTestSupport.run(() -> PaymentsView.show(mainWindow));
       FxTestSupport.run(() -> {
@@ -192,7 +192,7 @@ class PaymentsViewTest {
   void answeringNoKeepsTheEntry() throws SQLException {
     var id = mailboxes.insert(box("1", null));
     history.renew(id, new RentalPeriod(0, 0, TODAY, TODAY, TODAY.plusMonths(6), 6000L, null, null));
-    Dialogs.confirm = (owner, question, details) -> false;
+    Dialogs.confirm = (owner, question, details, yes, no) -> false;
     try {
       FxTestSupport.run(() -> PaymentsView.show(mainWindow));
       FxTestSupport.run(() -> {

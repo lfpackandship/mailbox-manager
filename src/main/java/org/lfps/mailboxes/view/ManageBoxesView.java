@@ -219,7 +219,7 @@ public class ManageBoxesView {
         } else if (Dialogs.confirm.ask(stage, "Close box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
             keysReminder(selected)
                 + "The box becomes free to rent to someone else. Everything recorded for it is kept, and you can "
-                + "find it again by showing closed boxes.")) {
+                + "find it again by showing closed boxes.", "Close Box", "Keep It Open")) {
           repository.setClosedDate(selected.getId(), LocalDate.now());
         } else {
           return;
@@ -242,7 +242,8 @@ public class ManageBoxesView {
       }
       if (!Dialogs.confirm.ask(stage, "Permanently delete box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
           "Everything recorded for it, including its rental history, will be erased. This can't be undone. "
-              + "If the holder has given up the box, close it instead to keep the record.")) {
+              + "If the holder has given up the box, close it instead to keep the record.",
+          "Delete Forever", "Cancel")) {
         return;
       }
       try {

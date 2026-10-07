@@ -244,7 +244,7 @@ class BoxInventoryViewTest {
   void removeAsksThenRemovesTheSelectedBoxes() throws SQLException {
     inventory.add(List.of("1", "2", "3"), null);
     var questions = new ArrayList<String>();
-    Dialogs.confirm = (owner, question, details) -> questions.add(question + " | " + details);
+    Dialogs.confirm = (owner, question, details, yes, no) -> questions.add(question + " | " + details);
     FxTestSupport.run(() -> BoxInventoryView.show(mainWindow));
     FxTestSupport.run(() -> {
       table().getSelectionModel().select(1);
@@ -260,7 +260,7 @@ class BoxInventoryViewTest {
   @Test
   void answeringNoKeepsTheBoxes() throws SQLException {
     inventory.add(List.of("1"), null);
-    Dialogs.confirm = (owner, question, details) -> false;
+    Dialogs.confirm = (owner, question, details, yes, no) -> false;
     FxTestSupport.run(() -> BoxInventoryView.show(mainWindow));
     FxTestSupport.run(() -> {
       table().getSelectionModel().select(0);

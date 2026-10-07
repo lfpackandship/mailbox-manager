@@ -144,7 +144,8 @@ final class GoogleDriveRow extends VBox {
   /** Asks whether to stop backing up to Google Drive, and does if the user agrees. */
   private void disconnect() {
     var yes = Dialogs.confirm.ask(owner, "Stop backing up to Google Drive?",
-        "Backups already in your Google Drive will be kept. You can connect again at any time.");
+        "Backups already in your Google Drive will be kept. You can connect again at any time.",
+        "Disconnect", "Keep Backing Up");
     if (!yes) {
       return;
     }

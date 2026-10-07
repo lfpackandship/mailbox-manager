@@ -119,7 +119,7 @@ class PriceChangeTest {
     assertEquals("$160.00", FxTestSupport.call(() -> field(window, "newPrice-small-6").getText()));
 
     Dialogs.Confirm original = Dialogs.confirm;
-    Dialogs.confirm = (owner, question, details) -> true;
+    Dialogs.confirm = (owner, question, details, yes, no) -> true;
     try {
       FxTestSupport.run(() -> button(window, "cancelPriceChangeButton").fire());
     } finally {

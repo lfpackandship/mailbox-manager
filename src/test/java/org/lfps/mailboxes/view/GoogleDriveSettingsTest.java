@@ -117,11 +117,11 @@ class GoogleDriveSettingsTest {
     FxTestSupport.run(() -> button(settings, "connectDriveButton").fire());
     waitFor(() -> visible(settings, "disconnectDriveButton"));
 
-    Dialogs.confirm = (owner, question, details) -> false;
+    Dialogs.confirm = (owner, question, details, yes, no) -> false;
     FxTestSupport.run(() -> button(settings, "disconnectDriveButton").fire());
     assertTrue(visible(settings, "disconnectDriveButton"));
 
-    Dialogs.confirm = (owner, question, details) -> true;
+    Dialogs.confirm = (owner, question, details, yes, no) -> true;
     FxTestSupport.run(() -> button(settings, "disconnectDriveButton").fire());
     assertTrue(visible(settings, "connectDriveButton"));
     assertNull(DriveBackup.account());
