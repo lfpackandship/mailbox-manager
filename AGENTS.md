@@ -15,6 +15,26 @@ it before making changes. This file covers how to work in the repository.
 - After a release is tagged, its branch can be deleted once `git log
   main..<branch>` is empty, locally and on GitHub.
 
+## Commits and checking in
+
+Work the way a developer on the team would: in small steps, asking along
+the way.
+
+- Make a commit for each task or each separate change, so the history is
+  easy to read and any one change can be undone on its own. Three tasks
+  means at least three commits. Each commit has passing tests, its
+  CHANGELOG.md entry, and a message saying what changed and why.
+- Before starting a list of tasks, say how you'll split it into commits and
+  ask about anything unclear. Then stop after each task: say what changed,
+  as the user would see it, and wait for a go-ahead before the next. Don't
+  work through the whole list in one go.
+- Ask rather than guess when a decision is the user's: what a field or
+  setting is for, how something should look or behave, or anything that
+  changes how the shop works day to day. Don't fill a gap with your own
+  idea and carry on.
+- Do what was asked. Suggest anything more, and wait to be asked before
+  doing it.
+
 ## Working on the code
 
 - Run the tests with `./mvnw test`, never from an IDE's test runner (see the
