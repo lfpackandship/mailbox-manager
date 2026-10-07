@@ -3,6 +3,16 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## Unreleased
+
+### Added
+
+- **Edit Entry…** on Payments fixes a payment recorded wrongly: the day it
+  was paid, the dates it covers, the amount, how it was paid, and the note.
+  If the box's rental ends on that entry's end date, changing the end date
+  changes when the box's rental ends too. Before, a wrong entry had to be
+  deleted and the box renewed again.
+
 ## 1.9.0 – 2026-10-06
 
 ### Added

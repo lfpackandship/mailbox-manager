@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -216,6 +217,19 @@ public class PaymentsView {
     viewBtn.disableProperty().bind(selection.isNull());
     viewBtn.setOnAction(e -> viewSelected.run());
 
+    // Fixes an entry recorded wrongly. A box that's been deleted has no
+    // history left, but an entry without a box can't be edited either way.
+    var editBtn = new Button("Edit Entry…");
+    editBtn.setId("paymentsEditButton");
+    editBtn.disableProperty().bind(Bindings.createBooleanBinding(
+        () -> selection.get() == null || selection.get().mailbox == null, selection));
+    editBtn.setOnAction(e -> {
+      var entry = table.getSelectionModel().getSelectedItem();
+      if (entry != null && entry.mailbox != null) {
+        RenewBoxView.edit(stage, entry.mailbox, entry.period, refresh);
+      }
+    });
+
     var deleteBtn = new Button("Delete Entry");
     deleteBtn.setId("paymentsDeleteButton");
     deleteBtn.disableProperty().bind(selection.isNull());
@@ -260,7 +274,7 @@ public class PaymentsView {
         table,
         totalLabel,
         depositsLabel,
-        new HBox(10, viewBtn, deleteBtn),
+        new HBox(10, viewBtn, editBtn, deleteBtn),
         statusLabel);
     layout.setPadding(new Insets(20));
 

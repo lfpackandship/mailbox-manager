@@ -2,6 +2,7 @@ package org.lfps.mailboxes.data;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -106,6 +107,59 @@ class RentalHistoryRepositoryTest {
   }
 
   @Test
+  void updatingAnEntryChangesItAndTheEndDateItSet() throws SQLException {
+    var id = mailboxes.insert(box("210", JAN_1));
+    history.renew(id, period(JAN_1, JAN_1, JAN_1.plusMonths(3)));
+    var entry = history.findForMailbox(id).get(0);
+
+    history.update(new RentalPeriod(entry.getId(), 0, JAN_1.plusDays(1), JAN_1, JAN_1.plusMonths(6),
+        9000L, "Check", "fixed"));
+
+    var updated = history.findForMailbox(id).get(0);
+    assertEquals(JAN_1.plusDays(1), updated.getRecordedOn());
+    assertEquals(JAN_1.plusMonths(6), updated.getEndDate());
+    assertEquals(9000L, updated.getAmountCents());
+    assertEquals("Check", updated.getPaymentMethod());
+    assertEquals("fixed", updated.getNote());
+    assertEquals(JAN_1.plusMonths(6), mailboxes.findAll().get(0).getEndDate());
+  }
+
+  @Test
+  void updatingAnEarlierEntryLeavesTheEndDateFromALaterOne() throws SQLException {
+    var id = mailboxes.insert(box("210", JAN_1));
+    history.renew(id, period(JAN_1, JAN_1, JAN_1.plusMonths(3)));
+    history.renew(id, period(JAN_1, JAN_1.plusMonths(3), JAN_1.plusMonths(6)));
+    var first = history.findForMailbox(id).get(0);
+
+    history.update(new RentalPeriod(first.getId(), 0, JAN_1, JAN_1, JAN_1.plusMonths(4), null, null, null));
+
+    assertEquals(JAN_1.plusMonths(4), history.findForMailbox(id).get(0).getEndDate());
+    assertEquals(JAN_1.plusMonths(6), mailboxes.findAll().get(0).getEndDate());
+  }
+
+  @Test
+  void updatingAnEntryForAnotherBoxLeavesThisBoxAlone() throws SQLException {
+    var id = mailboxes.insert(box("210", JAN_1));
+    var other = mailboxes.insert(box("211", JAN_1));
+    history.renew(id, period(JAN_1, JAN_1, JAN_1.plusMonths(3)));
+    history.renew(other, period(JAN_1, JAN_1, JAN_1.plusMonths(3)));
+    var entry = history.findForMailbox(id).get(0);
+
+    history.update(new RentalPeriod(entry.getId(), other, JAN_1, JAN_1, JAN_1.plusMonths(5), null, null, null));
+
+    assertEquals(JAN_1.plusMonths(5), endDate(id));
+    assertEquals(JAN_1.plusMonths(3), endDate(other));
+  }
+
+  @Test
+  void updatingAnEntryThatsGoneFailsAndChangesNothing() throws SQLException {
+    var id = mailboxes.insert(box("210", JAN_1));
+
+    assertThrows(SQLException.class, () -> history.update(period(JAN_1, JAN_1, JAN_1.plusMonths(3))));
+    assertEquals(JAN_1, endDate(id));
+  }
+
+  @Test
   void deletingABoxDeletesItsHistory() throws SQLException {
     var gone = mailboxes.insert(box("210", JAN_1));
     var kept = mailboxes.insert(box("211", JAN_1));
@@ -121,6 +175,11 @@ class RentalHistoryRepositoryTest {
   /** Makes a rental history entry paid for by card. */
   private static RentalPeriod period(LocalDate recordedOn, LocalDate start, LocalDate end) {
     return new RentalPeriod(0, 0, recordedOn, start, end, 1000L, "Card", null);
+  }
+
+  /** Returns the end date saved for a box. */
+  private LocalDate endDate(int id) throws SQLException {
+    return mailboxes.findAll().stream().filter(m -> m.getId() == id).findFirst().orElseThrow().getEndDate();
   }
 
   /** Makes a box with the given number and end date. */

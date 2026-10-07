@@ -207,6 +207,65 @@ class PaymentsViewTest {
   }
 
   @Test
+  void editEntryChangesThePaymentAndTheEndDateItSet() throws SQLException {
+    var id = mailboxes.insert(box("1", null));
+    history.renew(id, new RentalPeriod(0, 0, TODAY, TODAY, TODAY.plusMonths(6), 6000L, "Cash", "first"));
+    FxTestSupport.run(() -> PaymentsView.show(mainWindow));
+    FxTestSupport.run(() -> {
+      table().getSelectionModel().select(0);
+      ((Button) lookup("#paymentsEditButton")).fire();
+    });
+
+    var edit = FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup("#renewSaveButton") != null)
+        .map(w -> (Stage) w)
+        .findFirst()
+        .orElseThrow());
+    assertEquals("Edit Payment, Box 1", FxTestSupport.call(edit::getTitle));
+    assertEquals("$60.00", FxTestSupport.call(() -> ((TextField) edit.getScene().lookup("#amountField")).getText()));
+    assertEquals("Cash", FxTestSupport.call(() -> ((ComboBox<?>) edit.getScene().lookup("#paymentMethodField"))
+        .getEditor().getText()));
+    assertEquals("first", FxTestSupport.call(() -> ((TextField) edit.getScene().lookup("#renewNoteField")).getText()));
+
+    FxTestSupport.run(() -> {
+      ((TextField) edit.getScene().lookup("#amountField")).setText("65");
+      ((DatePicker) edit.getScene().lookup("#renewEndField")).setValue(TODAY.plusMonths(7));
+      ((Button) edit.getScene().lookup("#renewSaveButton")).fire();
+    });
+
+    var entry = history.findForMailbox(id).get(0);
+    assertEquals(6500L, entry.getAmountCents());
+    assertEquals(TODAY.plusMonths(7), entry.getEndDate());
+    assertEquals(TODAY.plusMonths(7), mailboxes.findAll().get(0).getEndDate());
+    assertEquals("1 entry, $65.00 paid", text("paymentsTotal"));
+  }
+
+  @Test
+  void editEntryNeedsTheDayItWasPaid() throws SQLException {
+    var id = mailboxes.insert(box("1", null));
+    history.renew(id, new RentalPeriod(0, 0, TODAY, TODAY, TODAY.plusMonths(6), 6000L, null, null));
+    FxTestSupport.run(() -> PaymentsView.show(mainWindow));
+    FxTestSupport.run(() -> {
+      table().getSelectionModel().select(0);
+      ((Button) lookup("#paymentsEditButton")).fire();
+    });
+    var edit = FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup("#renewSaveButton") != null)
+        .map(w -> (Stage) w)
+        .findFirst()
+        .orElseThrow());
+
+    FxTestSupport.run(() -> {
+      ((DatePicker) edit.getScene().lookup("#renewRecordedField")).setValue(null);
+      ((Button) edit.getScene().lookup("#renewSaveButton")).fire();
+    });
+
+    assertEquals("Choose the day it was paid.", FxTestSupport.call(() -> ((Label) edit.getScene()
+        .lookup("#renewErrorLabel")).getText()));
+    assertEquals(TODAY, history.findForMailbox(id).get(0).getRecordedOn());
+  }
+
+  @Test
   void viewBoxOpensTheBoxsDetails() throws SQLException {
     var id = mailboxes.insert(box("7", null));
     history.renew(id, new RentalPeriod(0, 0, TODAY, TODAY, TODAY.plusMonths(6), 6000L, null, null));
