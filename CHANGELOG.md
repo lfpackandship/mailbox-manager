@@ -36,6 +36,16 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   the name and address on it. No two labels get the same number, even after
   restoring an older backup. A label that's cancelled in the Print window
   isn't recorded.
+- **File → Forwarding** opens a Forwarding screen with two lists. **Who We
+  Forward For** lists every forwarding address, open and closed boxes alike,
+  with the newest first; search for one and click **Print Label…** to print
+  a label for it. **Labels Printed** lists every forwarding label printed,
+  newest first; search by label number, name, box, or address, and click
+  **Reprint…** to print one again with its original number. Either list can
+  be printed or saved as a spreadsheet. Addresses added before this version
+  have no date, so they're listed last.
+- The search on Manage Boxes also finds a box by the number of a forwarding
+  label printed for it.
 
 ## 1.9.0 – 2026-10-06
 

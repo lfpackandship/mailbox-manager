@@ -77,10 +77,11 @@ public class MailboxRepository {
 
   /** Adds a forwarding address to a mailbox. */
   private static final String INSERT_FORWARDING_ADDRESS_SQL = "INSERT INTO forwarding_addresses "
-      + "(mailbox_id, street, unit, city, state, zip, note) VALUES (?, ?, ?, ?, ?, ?, ?)";
+      + "(mailbox_id, street, unit, city, state, zip, note, added_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
   /** Reads a mailbox's forwarding addresses, in the order they were added. */
-  private static final String SELECT_FORWARDING_ADDRESSES_SQL = "SELECT street, unit, city, state, zip, note "
+  private static final String SELECT_FORWARDING_ADDRESSES_SQL =
+      "SELECT street, unit, city, state, zip, note, added_on "
       + "FROM forwarding_addresses WHERE mailbox_id = ? ORDER BY id";
 
   /** Deletes a mailbox's forwarding addresses. */
@@ -123,7 +124,7 @@ public class MailboxRepository {
           }
         }
         insertBusinessNames(conn, mailboxId, mailbox.getAlternateBusinessNames());
-        insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses());
+        insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses(), List.of());
         if (firstPeriod != null) {
           RentalHistoryRepository.insert(conn, mailboxId, firstPeriod);
         }
@@ -205,8 +206,10 @@ public class MailboxRepository {
         }
         deleteBusinessNames(conn, mailbox.getId());
         insertBusinessNames(conn, mailbox.getId(), mailbox.getAlternateBusinessNames());
+        // Addresses kept as they were keep the day they were added.
+        var previous = findForwardingAddresses(conn, mailbox.getId());
         deleteForwardingAddresses(conn, mailbox.getId());
-        insertForwardingAddresses(conn, mailbox.getId(), mailbox.getForwardingAddresses());
+        insertForwardingAddresses(conn, mailbox.getId(), mailbox.getForwardingAddresses(), previous);
         conn.commit();
       } catch (SQLException e) {
         conn.rollback();
@@ -376,17 +379,20 @@ public class MailboxRepository {
   }
 
   /**
-   * Adds forwarding addresses to a mailbox.
+   * Adds forwarding addresses to a mailbox, each with the day it was added
+   * (see {@link #addedOn}).
    *
    * @param conn the connection, which may be in a transaction
    * @param mailboxId the mailbox's id
    * @param addresses the addresses
+   * @param previous the box's addresses before this save, or none for a new box
    * @throws SQLException if they can't be added
    */
-  private void insertForwardingAddresses(Connection conn, int mailboxId, List<ForwardingAddress> addresses)
-      throws SQLException {
+  private void insertForwardingAddresses(Connection conn, int mailboxId, List<ForwardingAddress> addresses,
+      List<ForwardingAddress> previous) throws SQLException {
     try (PreparedStatement stmt = conn.prepareStatement(INSERT_FORWARDING_ADDRESS_SQL)) {
       for (var address : addresses) {
+        var addedOn = addedOn(address, previous);
         stmt.setInt(1, mailboxId);
         stmt.setString(2, address.getStreet());
         stmt.setString(3, address.getUnit());
@@ -394,10 +400,30 @@ public class MailboxRepository {
         stmt.setString(5, address.getState());
         stmt.setString(6, address.getZip());
         stmt.setString(7, address.getNote());
+        stmt.setString(8, addedOn == null ? null : addedOn.toString());
         stmt.addBatch();
       }
       stmt.executeBatch();
     }
+  }
+
+  /**
+   * Returns the day to save as an address's day added: the day it was first
+   * added if it was already on the box unchanged, which keeps an unknown day
+   * unknown for addresses from before version 1.10, or today if it's new or
+   * changed.
+   *
+   * @param address the address being saved
+   * @param previous the box's addresses before the save, or none for a new box
+   * @return the day, or {@code null} if it isn't known
+   */
+  static LocalDate addedOn(ForwardingAddress address, List<ForwardingAddress> previous) {
+    for (var old : previous) {
+      if (old.equals(address)) {
+        return old.getAddedOn();
+      }
+    }
+    return address.getAddedOn() != null ? address.getAddedOn() : LocalDate.now();
   }
 
   /**
@@ -430,7 +456,8 @@ public class MailboxRepository {
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
           addresses.add(new ForwardingAddress(rs.getString("street"), rs.getString("unit"),
-              rs.getString("city"), rs.getString("state"), rs.getString("zip"), rs.getString("note")));
+              rs.getString("city"), rs.getString("state"), rs.getString("zip"), rs.getString("note"),
+              date(rs.getString("added_on"))));
         }
       }
     }

@@ -1,11 +1,14 @@
 package org.lfps.mailboxes.model;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Objects;
 
 /**
  * An immutable address that a box holder's mail can be forwarded to, with an
- * optional note such as "summer" or "office".
+ * optional note such as "summer" or "office", and the day it was added. The
+ * day isn't part of the address: two addresses are equal if everything else
+ * is.
  */
 public final class ForwardingAddress {
 
@@ -33,8 +36,14 @@ public final class ForwardingAddress {
   private final String note;
 
   /**
-   * Creates a forwarding address. Surrounding whitespace is trimmed, the
-   * state is upper-cased, and blank optional parts are stored as {@code null}.
+   * The day the address was added to the box, or {@code null} if it isn't
+   * known, as for addresses added before version 1.10 or not yet saved.
+   */
+  private final LocalDate addedOn;
+
+  /**
+   * Creates a forwarding address with no day added, as typed on Add New Box
+   * or Edit Box; the day is set when it's saved.
    *
    * @param street the street address, such as "123 Main St"
    * @param unit the apartment or suite, or blank/null if none
@@ -44,12 +53,30 @@ public final class ForwardingAddress {
    * @param note a note about when or why to use this address, or blank/null
    */
   public ForwardingAddress(String street, String unit, String city, String state, String zip, String note) {
+    this(street, unit, city, state, zip, note, null);
+  }
+
+  /**
+   * Creates a forwarding address. Surrounding whitespace is trimmed, the
+   * state is upper-cased, and blank optional parts are stored as {@code null}.
+   *
+   * @param street the street address, such as "123 Main St"
+   * @param unit the apartment or suite, or blank/null if none
+   * @param city the city
+   * @param state the two-letter state code
+   * @param zip the ZIP code
+   * @param note a note about when or why to use this address, or blank/null
+   * @param addedOn the day it was added to the box, or {@code null} if not known
+   */
+  public ForwardingAddress(String street, String unit, String city, String state, String zip, String note,
+      LocalDate addedOn) {
     this.street = trimToNull(street);
     this.unit = trimToNull(unit);
     this.city = trimToNull(city);
     this.state = state == null ? null : trimToNull(state.toUpperCase(java.util.Locale.ROOT));
     this.zip = trimToNull(zip);
     this.note = trimToNull(note);
+    this.addedOn = addedOn;
   }
 
   /**
@@ -104,6 +131,25 @@ public final class ForwardingAddress {
    */
   public String getNote() {
     return note;
+  }
+
+  /**
+   * Returns the day the address was added to the box.
+   *
+   * @return the day, or {@code null} if it isn't known
+   */
+  public LocalDate getAddedOn() {
+    return addedOn;
+  }
+
+  /**
+   * Returns the same address with a different day added.
+   *
+   * @param day the day it was added, or {@code null} if not known
+   * @return the copy
+   */
+  public ForwardingAddress withAddedOn(LocalDate day) {
+    return new ForwardingAddress(street, unit, city, state, zip, note, day);
   }
 
   /**

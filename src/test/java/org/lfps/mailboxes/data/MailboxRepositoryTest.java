@@ -243,6 +243,43 @@ class MailboxRepositoryTest {
   }
 
   @Test
+  void aForwardingAddressKeepsTheDayItWasAddedUntilItChanges() throws SQLException {
+    var home = new ForwardingAddress("1 Elm St", null, "Town", "IL", "60000", null);
+    var office = new ForwardingAddress("2 Oak St", null, "Town", "IL", "60000", "office");
+    var id = repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "210", null, "", null, null, null,
+        List.of(home)));
+    // As if home had been added a while ago, and office before this list existed.
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("UPDATE forwarding_addresses SET added_on = '2026-01-15'");
+    }
+    var saved = repository.findAll().get(0);
+    assertEquals(LocalDate.of(2026, 1, 15), saved.getForwardingAddresses().get(0).getAddedOn());
+
+    var moved = new ForwardingAddress("1 Elm St", "Apt 2", "Town", "IL", "60000", null);
+    repository.update(new Mailbox(id, "Ada", "Lovelace", null, "210", null, "", null, null, null,
+        List.of(saved.getForwardingAddresses().get(0), office, moved)));
+
+    var addresses = repository.findAll().get(0).getForwardingAddresses();
+    assertEquals(LocalDate.of(2026, 1, 15), addresses.get(0).getAddedOn());
+    assertEquals(LocalDate.now(), addresses.get(1).getAddedOn());
+    assertEquals(LocalDate.now(), addresses.get(2).getAddedOn());
+  }
+
+  @Test
+  void anAddressFromBeforeTheDayWasKeptStaysUnknownWhenResaved() throws SQLException {
+    var home = new ForwardingAddress("1 Elm St", null, "Town", "IL", "60000", null);
+    var id = repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "210", null, "", null, null, null,
+        List.of(home)));
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("UPDATE forwarding_addresses SET added_on = NULL");
+    }
+
+    repository.update(new Mailbox(id, "Ada", "Lovelace", null, "210", null, "", null, null, null, List.of(home)));
+
+    assertNull(repository.findAll().get(0).getForwardingAddresses().get(0).getAddedOn());
+  }
+
+  @Test
   void aClosedBoxDoesNotHoldItsNumber() throws SQLException {
     var id = repository.insert(mailbox("210", List.of(), null));
     repository.setClosedDate(id, LocalDate.of(2026, 9, 1));

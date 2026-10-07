@@ -243,7 +243,8 @@ public class Database {
    * they don't already exist, and migrates older databases that predate the
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
    * {@code key_count}, {@code key_deposit_cents}, {@code forwarding_only},
-   * and {@code key_deposit_outcome} columns.
+   * and {@code key_deposit_outcome} columns of {@code mailboxes} and the
+   * {@code added_on} column of {@code forwarding_addresses}.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -280,6 +281,7 @@ public class Database {
         + "state TEXT NOT NULL, "
         + "zip TEXT NOT NULL, "
         + "note TEXT, "
+        + "added_on TEXT, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
     var createRentalPeriods = "CREATE TABLE IF NOT EXISTS rental_periods ("
@@ -353,6 +355,11 @@ public class Database {
         } catch (SQLException alreadyMigrated) {
           // The column already exists on a pre-existing database.
         }
+      }
+      try {
+        stmt.execute("ALTER TABLE forwarding_addresses ADD COLUMN added_on TEXT");
+      } catch (SQLException alreadyMigrated) {
+        // Added in 1.10; already there on a newer database.
       }
     } catch (SQLException e) {
       throw new RuntimeException("Failed to initialize database schema", e);

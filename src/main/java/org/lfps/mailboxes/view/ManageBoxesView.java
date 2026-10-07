@@ -2,9 +2,13 @@ package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
+import org.lfps.mailboxes.data.LabelRepository;
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
@@ -142,8 +146,13 @@ public class ManageBoxesView {
     table.getColumns().addAll(hiddenColumns());
 
     var allMailboxes = FXCollections.<Mailbox>observableArrayList();
+    // Each box's forwarding label numbers, so a search for one finds its box.
+    Map<Integer, List<String>> labelNumbers = new HashMap<>();
     try {
       allMailboxes.setAll(repository.findAll());
+      for (var label : new LabelRepository().findAll()) {
+        labelNumbers.computeIfAbsent(label.getMailboxId(), id -> new ArrayList<>()).add(label.getNumber());
+      }
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
       statusLabel.setText("Failed to load mailboxes: " + e.getMessage());
@@ -157,7 +166,8 @@ public class ManageBoxesView {
 
     var searchField = new TextField();
     searchField.setId("searchField");
-    searchField.setPromptText("Search by name, business, box, phone, email, forwarding address, or notes");
+    searchField.setPromptText("Search by name, business, box, phone, email, forwarding address, notes, "
+        + "or label number");
     HBox.setHgrow(searchField, Priority.ALWAYS);
 
     var showChoice = new ChoiceBox<Show>();
@@ -166,7 +176,8 @@ public class ManageBoxesView {
     showChoice.setValue(initialShow);
 
     Runnable filter = () -> mailboxes.setPredicate(
-        m -> showChoice.getValue().includes(m) && matches(m, searchField.getText()));
+        m -> showChoice.getValue().includes(m)
+            && matches(m, searchField.getText(), labelNumbers.getOrDefault(m.getId(), List.of())));
     searchField.textProperty().addListener((obs, oldQuery, query) -> filter.run());
     showChoice.valueProperty().addListener((obs, oldShow, newShow) -> filter.run());
     searchField.setText(initialQuery);
@@ -397,6 +408,20 @@ public class ManageBoxesView {
    * @return {@code true} if the box matches
    */
   static boolean matches(Mailbox mailbox, String query) {
+    return matches(mailbox, query, List.of());
+  }
+
+  /**
+   * Checks whether a mailbox matches every word of a search query, like
+   * {@link #matches(Mailbox, String)}, also looking in the numbers of the
+   * forwarding labels printed for it.
+   *
+   * @param mailbox the box
+   * @param query the search
+   * @param labelNumbers the numbers of its printed forwarding labels
+   * @return {@code true} if the box matches
+   */
+  static boolean matches(Mailbox mailbox, String query, List<String> labelNumbers) {
     if (query == null || query.isBlank()) {
       return true;
     }
@@ -414,6 +439,7 @@ public class ManageBoxesView {
     if (mailbox.isForwardingOnly()) {
       haystack.append("forwarding only\n");
     }
+    labelNumbers.forEach(number -> haystack.append(number).append('\n'));
     var text = haystack.toString().toLowerCase();
     var phoneDigits = mailbox.getPhone() == null ? "" : mailbox.getPhone().replaceAll("[^0-9]", "");
 

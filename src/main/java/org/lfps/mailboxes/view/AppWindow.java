@@ -255,6 +255,9 @@ public final class AppWindow {
     var remindersItem = new MenuItem("Print Renewal Reminders…");
     remindersItem.setOnAction(e -> printReminders(stage));
 
+    // Opens a screen, like the Go menu, so unsaved changes are asked about first.
+    var forwardingItem = goItem("Forwarding", "Shortcut+6", () -> ForwardingView.show(stage));
+
     var backUpItem = new MenuItem("Back Up Now…");
     backUpItem.setOnAction(e -> {
       try {
@@ -282,7 +285,8 @@ public final class AppWindow {
     });
 
     var fileMenu = new Menu("File");
-    fileMenu.getItems().addAll(priceSheetItem, remindersItem, new SeparatorMenuItem(),
+    fileMenu.getItems().addAll(priceSheetItem, remindersItem, new SeparatorMenuItem(), forwardingItem,
+        new SeparatorMenuItem(),
         backUpItem, restoreItem, new SeparatorMenuItem(),
         settingsItem, new SeparatorMenuItem(), exitItem);
 

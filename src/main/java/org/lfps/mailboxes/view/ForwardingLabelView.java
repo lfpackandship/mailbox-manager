@@ -6,6 +6,8 @@ import java.awt.print.Paper;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.function.Supplier;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -38,7 +40,8 @@ import org.lfps.mailboxes.model.PrintedLabel;
  * exactly what will print, and print it. Laid out like the window for
  * printing renewal reminders. Each label printed gets the next label number
  * and is recorded (see {@link LabelRepository}); one that's cancelled or
- * fails to print isn't.
+ * fails to print isn't. The same window reprints a label from the Forwarding
+ * screen, with its original number and address, without recording it again.
  */
 final class ForwardingLabelView {
 
@@ -55,15 +58,55 @@ final class ForwardingLabelView {
   private static Stage window;
 
   /**
-   * Opens the window for a box, closing one already open. Does nothing for a
-   * box with no forwarding address.
+   * Opens the window for a box, closing one already open, with its first
+   * forwarding address chosen. Does nothing for a box with no forwarding
+   * address.
    *
    * @param owner the window it belongs to
    * @param mailbox the box
    */
   static void show(Stage owner, Mailbox mailbox) {
+    open(owner, mailbox, null, null);
+  }
+
+  /**
+   * Opens the window for a box with one of its forwarding addresses chosen,
+   * as from the Forwarding screen.
+   *
+   * @param owner the window it belongs to
+   * @param mailbox the box
+   * @param address the address to choose, which should be one of the box's;
+   *     if it isn't, the first is chosen
+   */
+  static void show(Stage owner, Mailbox mailbox, ForwardingAddress address) {
+    open(owner, mailbox, address, null);
+  }
+
+  /**
+   * Opens the window to reprint a label already printed, with its number
+   * and the name and address as they were printed.
+   *
+   * @param owner the window it belongs to
+   * @param mailbox the box the label was for
+   * @param record the label
+   */
+  static void reprint(Stage owner, Mailbox mailbox, PrintedLabel record) {
+    open(owner, mailbox, null, record);
+  }
+
+  /**
+   * Builds and opens the window, closing one already open.
+   *
+   * @param owner the window it belongs to
+   * @param mailbox the box
+   * @param chosen the forwarding address to choose to start with, or
+   *     {@code null} for the first
+   * @param reprinting the label being reprinted, or {@code null} to print a
+   *     new one
+   */
+  private static void open(Stage owner, Mailbox mailbox, ForwardingAddress chosen, PrintedLabel reprinting) {
     var addresses = mailbox.getForwardingAddresses();
-    if (addresses.isEmpty()) {
+    if (addresses.isEmpty() && reprinting == null) {
       return;
     }
     if (window != null) {
@@ -95,8 +138,13 @@ final class ForwardingLabelView {
       radio.setToggleGroup(addressGroup);
       radio.setWrapText(true);
       addressChoices.getChildren().add(radio);
+      if (address.equals(chosen)) {
+        addressGroup.selectToggle(radio);
+      }
     }
-    addressGroup.selectToggle(addressGroup.getToggles().get(0));
+    if (addressGroup.getSelectedToggle() == null && !addresses.isEmpty()) {
+      addressGroup.selectToggle(addressGroup.getToggles().get(0));
+    }
 
     var stockGroup = new ToggleGroup();
     var stockChoices = new VBox(6);
@@ -124,9 +172,21 @@ final class ForwardingLabelView {
     HBox.setHgrow(preview, Priority.ALWAYS);
 
     var labels = new LabelRepository();
+    // The label as chosen so far, with no number for a new one.
+    Supplier<ForwardingLabel> current = () -> {
+      var stock = (ForwardingLabel.Stock) stockGroup.getSelectedToggle().getUserData();
+      if (reprinting != null) {
+        return new ForwardingLabel(ForwardingLabel.returnAddress(name, details),
+            List.of(reprinting.getAddress().split("\n")), stock, reprinting.getNumber());
+      }
+      return ForwardingLabel.of(mailbox, (ForwardingAddress) addressGroup.getSelectedToggle().getUserData(),
+          name, details, stock);
+    };
     Runnable showPreview = () -> {
-      var label = ForwardingLabel.of(mailbox, (ForwardingAddress) addressGroup.getSelectedToggle().getUserData(),
-          name, details, (ForwardingLabel.Stock) stockGroup.getSelectedToggle().getUserData());
+      if (reprinting != null) {
+        previewImage.setImage(preview(current.get()));
+        return;
+      }
       // The number it will most likely get; it's only handed out when printed.
       String next;
       try {
@@ -134,7 +194,7 @@ final class ForwardingLabelView {
       } catch (SQLException ex) {
         next = "";
       }
-      previewImage.setImage(preview(label.numbered(next)));
+      previewImage.setImage(preview(current.get().numbered(next)));
     };
     addressGroup.selectedToggleProperty().addListener((obs, was, now) -> {
       if (now == null) {
@@ -152,7 +212,11 @@ final class ForwardingLabelView {
     });
 
     var left = new VBox(10);
-    if (addresses.size() > 1) {
+    if (reprinting != null) {
+      var as = new Label(String.join(", ", reprinting.getAddress().split("\n")));
+      as.setWrapText(true);
+      left.getChildren().addAll(bold("Addressed to, as printed:"), as);
+    } else if (addresses.size() > 1) {
       left.getChildren().addAll(bold("Forward to:"), addressChoices);
     } else {
       var only = new Label(addresses.get(0).toString());
@@ -172,8 +236,12 @@ final class ForwardingLabelView {
     printBtn.setId("labelPrintButton");
     printBtn.setDefaultButton(true);
     printBtn.setOnAction(e -> {
-      var label = ForwardingLabel.of(mailbox, (ForwardingAddress) addressGroup.getSelectedToggle().getUserData(),
-          name, details, (ForwardingLabel.Stock) stockGroup.getSelectedToggle().getUserData());
+      var label = current.get();
+      if (reprinting != null) {
+        Printing.printLabel("Forwarding label " + reprinting.getNumber() + ", box " + mailbox.getBoxNumber(),
+            label, resultLabel, "Reprinted label " + reprinting.getNumber(), printed -> { });
+        return;
+      }
       PrintedLabel record;
       try {
         record = labels.record(mailbox.getId(), label.to, LocalDateTime.now());
@@ -200,7 +268,9 @@ final class ForwardingLabelView {
     closeBtn.setCancelButton(true);
     closeBtn.setOnAction(e -> stage.close());
 
-    var title = new Label("Forwarding Label for " + BoxLabels.boxAndHolder(mailbox));
+    var title = new Label(reprinting == null
+        ? "Forwarding Label for " + BoxLabels.boxAndHolder(mailbox)
+        : "Reprint Label " + reprinting.getNumber() + " for " + BoxLabels.boxAndHolder(mailbox));
     title.setStyle("-fx-font-size: 1.25em; -fx-font-weight: bold;");
     title.setWrapText(true);
 
@@ -210,7 +280,7 @@ final class ForwardingLabelView {
     showPreview.run();
 
     stage.initOwner(owner);
-    stage.setTitle("Print Forwarding Label");
+    stage.setTitle(reprinting == null ? "Print Forwarding Label" : "Reprint Forwarding Label");
     stage.setScene(new Scene(root));
     stage.setOnHidden(e -> {
       if (window == stage) {

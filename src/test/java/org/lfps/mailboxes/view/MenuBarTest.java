@@ -82,10 +82,17 @@ class MenuBarTest {
   void theMenusHoldWhatsDoneMostOften() {
     assertEquals(List.of("File", "Go", "Help"), FxTestSupport.call(() -> menuBar().getMenus().stream()
         .map(menu -> menu.getText()).collect(Collectors.toList())));
-    assertEquals(List.of("Print Price Sheet…", "Print Renewal Reminders…", "Back Up Now…", "Restore a Backup…",
-        "Settings", "Exit"), items("File"));
+    assertEquals(List.of("Print Price Sheet…", "Print Renewal Reminders…", "Forwarding", "Back Up Now…",
+        "Restore a Backup…", "Settings", "Exit"), items("File"));
     assertEquals(List.of("Main Menu", "Add New Box", "Manage Boxes", "Renewals", "Calendar", "Payments",
         "Box Inventory", "Prices…"), items("Go"));
+  }
+
+  @Test
+  void forwardingOpensTheForwardingScreen() {
+    FxTestSupport.run(() -> item("File", "Forwarding").fire());
+
+    assertTrue(FxTestSupport.call(() -> mainWindow.getScene().getRoot().lookup("#forwardingTabs") != null));
   }
 
   @Test
