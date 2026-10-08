@@ -331,12 +331,13 @@ public class ManageBoxesView {
     layout.setPadding(new Insets(20));
 
     AppWindow.show(stage, layout);
-    // Start in the search box, ready to type. A new screen gives its first
-    // button the cursor once it's shown, so wait until then.
-    Platform.runLater(() -> {
-      searchField.requestFocus();
-      searchField.end();
-    });
+    // Start in the search box, ready to type. The screen sits in a scroll
+    // pane, which only adds it to the window once styled, so style it now;
+    // until then the search box can't take the cursor, and when the window
+    // is next drawn its first button, Back, would get it instead.
+    stage.getScene().getRoot().applyCss();
+    searchField.requestFocus();
+    searchField.end();
   }
 
   /**

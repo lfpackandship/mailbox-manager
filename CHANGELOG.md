@@ -3,6 +3,14 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## 1.10.1 – 2026-10-07
+
+### Fixed
+
+- **Go → Find a Box** (Ctrl+F) and **Manage Boxes** sometimes left the
+  cursor on **Back** instead of in the search box, mostly on Linux, so
+  typing didn't search. The cursor now always starts in the search box.
+
 ## 1.10.0 – 2026-10-07
 
 ### Added
