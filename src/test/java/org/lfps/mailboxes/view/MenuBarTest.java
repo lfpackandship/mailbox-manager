@@ -117,7 +117,12 @@ class MenuBarTest {
 
   @Test
   void manageBoxesStartsWithTheCursorInTheSearch() {
-    FxTestSupport.run(() -> item("Go", "Manage Boxes").fire());
+    // Checked before the window is next drawn too: a cursor placed later than
+    // that could lose the race with the screen giving it to Back.
+    assertTrue(FxTestSupport.call(() -> {
+      item("Go", "Manage Boxes").fire();
+      return mainWindow.getScene().getFocusOwner() == mainWindow.getScene().getRoot().lookup("#searchField");
+    }));
     FxTestSupport.run(() -> { });
 
     assertTrue(FxTestSupport.call(() -> mainWindow.getScene().getFocusOwner()
