@@ -3,7 +3,7 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
-## Unreleased
+## 1.10.0 – 2026-10-07
 
 ### Added
 
@@ -44,12 +44,15 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   **Reprint…** to print one again with its original number. Either list can
   be printed or saved as a spreadsheet. Addresses added before this version
   have no date, so they're listed last.
-- The search on Manage Boxes also finds a box by the number of a forwarding
-  label printed for it.
 - **Go → Find a Box**, or **Ctrl+F** (**⌘F** on a Mac) from any screen,
   opens Manage Boxes ready to type a name or box number. On Manage Boxes, it
   selects the search already typed, so typing replaces it.
+
+### Changed
+
 - Manage Boxes starts with the cursor in its search box, however it's opened.
+- The search on Manage Boxes also finds a box by the number of a forwarding
+  label printed for it.
 
 ## 1.9.0 – 2026-10-06
 
