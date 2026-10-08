@@ -85,10 +85,13 @@ The main menu has six screens:
   After saving, the form empties, ready for the next box. Leaving a form with
   changes that haven't been saved asks first.
 - **Manage Boxes** – the open boxes in one table showing each box number,
-  holder's name, business title, and phone, with a search field. Search
+  holder's name, business title, and phone, with a search field, which has
+  the cursor in it when the screen opens. Search
   matches any part of a name, business name, box number, box name, phone
-  number, email, forwarding address (including its note), or the notes, and
-  phone numbers match with or without formatting. To see everything recorded
+  number, email, forwarding address (including its note), the notes, or the
+  number of a [forwarding label](#forwarding-labels) printed for the box, and
+  phone numbers match with or without formatting. **Ctrl+F** (⌘F on a Mac)
+  comes here from any screen, ready to search. To see everything recorded
   for a box, including its rental history, double-click it, or select it and
   click **View** or press Enter; the details open in their own window with
   **Edit** and **Renew…** buttons. Select a row to edit, renew, close, or
@@ -97,7 +100,9 @@ The main menu has six screens:
   Spreadsheet…** saves it as a file Excel or Google Sheets opens, with
   everything recorded for each box.
 - **Renewals** – open boxes that are past due, and those due within the next
-  30 days (adjustable in Settings), most urgent first. Select a box and click
+  30 days (adjustable in Settings), most urgent first. On the main menu, small
+  bubbles on the Renewals button count them: red for past due, yellow for due
+  soon. Point at the button to see what the numbers mean. Select a box and click
   **Renew…** to renew it, or double-click it, or select it and click **View**
   or press Enter, to see its full details. **Print Reminders…** prints a
   [renewal reminder](#renewal-reminders-and-the-price-sheet) for each box to
@@ -113,8 +118,10 @@ The main menu has six screens:
   total paid. It starts on this month; **Last Month** and **This Year** are a
   click away, or choose any dates and click **Show**. **Print…** and **Save as
   Spreadsheet…** print or save the list, for example for whoever does the
-  books. Key deposits aren't counted as paid, since they're given back; the
-  total held for open boxes is shown underneath.
+  books. Select an entry and click **Edit Entry…** to fix one recorded wrongly,
+  or **Delete Entry** to remove it. Key deposits aren't counted as paid, since
+  they're given back; the total held for open boxes is shown underneath, along
+  with any kept from boxes closed in the dates shown.
 - **Box Inventory** – every box you have, and whether it's rented or empty.
   See [Box inventory](#box-inventory).
 
@@ -124,9 +131,11 @@ The menus at the top of the window are there on every screen:
 
 - **File** – **Print Price Sheet…** (⌘P on a Mac, Ctrl+P on Windows and
   Linux), **Print Renewal Reminders…** for every box past due or due soon,
+  **Forwarding** (⌘6 or Ctrl+6, see [Forwarding labels](#forwarding-labels)),
   **Back Up Now…**, **Restore a Backup…**, **Settings**, and **Exit**.
 - **Go** – any screen, without going back to the main menu first: **Main
   Menu** (⌘0 or Ctrl+0), **Add New Box** (⌘N or Ctrl+N), **Manage Boxes**,
+  **Find a Box** (⌘F or Ctrl+F, which opens Manage Boxes ready to search),
   **Renewals**, **Calendar**, **Payments**, and **Box Inventory** (⌘1 to ⌘5,
   or Ctrl+1 to Ctrl+5), and the **Prices…** window.
 - **Help** – **Show Data Folder**, and **About Mailbox Manager**, which says
@@ -146,10 +155,13 @@ details and on Payments.
 Renting a box on Add New Box with an end date also starts its rental history,
 with the amount paid if entered.
 
-If a renewal was recorded by mistake, select it on Payments and click
-**Delete Entry**. That leaves the box's end date as it is; edit the box to
-change it. Editing a box's end date directly doesn't add anything to its
-history.
+To fix a renewal recorded wrongly, select it on Payments and click **Edit
+Entry…**: the day it was paid, the dates it covers, the amount, how it was
+paid, and the note can all be changed. If the box's rental ends on that
+entry's end date, changing the end date changes when the box's rental ends
+too. If a renewal was recorded by mistake, click **Delete Entry** instead.
+That leaves the box's end date as it is; edit the box to change it. Editing a
+box's end date directly doesn't add anything to its history.
 
 ### Renewal reminders and the price sheet
 
@@ -207,6 +219,12 @@ and the refundable deposit paid for them. Typing the number of keys fills in
 the deposit, at the **Key deposit per key** set in Settings ($10.00 unless
 changed); you can still change it. A box's details show its keys, and closing
 a box reminds you to collect them and give back the deposit.
+
+Closing a box with a deposit also asks whether the deposit was **Given back**
+or **Kept**, for example because the keys weren't returned. It starts on **Not
+recorded yet**, so you can close the box without answering and set it later:
+Edit Box has a **Key Deposit Was** choice for closed boxes. Payments shows the
+deposits kept from boxes closed in the dates shown.
 
 ### Closing a box
 
@@ -291,6 +309,38 @@ added is saved with the box anyway. The **Forwarding Addresses** and
 **Alternate Business Names** sections fold up to save room; click the heading
 to open one. Each heading says how many there are.
 
+### Forwarding labels
+
+To print a mailing label for forwarding a holder's mail, open the box's
+details and click **Print Label…**, or find the address under **File →
+Forwarding** and click **Print Label…** there. The window that opens shows a
+preview of the label: the shop's name and address from Settings in the top
+corner, and the holder's name, business, and forwarding address in large
+type. Choose the address if the box has more than one, and what to print on:
+
+- **Label** – a 4 by 6.5 inch label, in the label printer.
+- **Copy paper** – the same label in the corner of an ordinary sheet, with a
+  dashed line around it to cut out.
+
+Click **Print…** and choose the printer in the Print window that opens.
+
+Each label printed gets a number, printed small in its bottom corner, such as
+**261007-03** for the third label printed on October 7, 2026. The app keeps a
+record of every label: its number, the box, when it was printed, and the name
+and address on it. No two labels get the same number, even after restoring an
+older backup.
+
+**File → Forwarding** has two lists:
+
+- **Who We Forward For** – every forwarding address, closed boxes included,
+  newest first, with a search. Addresses added before version 1.10 have no
+  date and are listed last.
+- **Labels Printed** – every label printed, newest first, searchable by label
+  number, name, box, or address. **Reprint…** prints one again with its
+  original number and address.
+
+Either list can be printed or saved as a spreadsheet.
+
 ### Settings
 
 Open **File → Settings** (⌘, on a Mac, Ctrl+, on Windows and Linux). Settings
@@ -331,6 +381,9 @@ On **Backups**:
 
 The Backups tab also has an **Open** button that shows the data folder in
 Explorer or Finder.
+
+The **About** tab shows which version of Mailbox Manager is installed, and the
+versions of Java and JavaFX it runs on.
 
 ## Your data and backups
 
@@ -479,13 +532,16 @@ copies of the code don't use your Google project.
 src/main/java/org/lfps/mailboxes/
   App.java          start-up: data folder, database schema, daily backup, main window
   data/             database access: Database, MailboxRepository, RentalHistoryRepository,
-                    BoxInventoryRepository, PriceRepository, SettingsRepository, Setting
+                    BoxInventoryRepository, PriceRepository, SettingsRepository, Setting,
+                    LabelRepository (forwarding label numbers and records)
   drive/            Google Drive backups: DriveBackup (connect, upload, download),
                     GoogleDrive (talks to Google), DriveAccount (the saved sign-in)
-  model/            Mailbox, ForwardingAddress, RentalPeriod, and InventoryBox
+  model/            Mailbox, ForwardingAddress, RentalPeriod, InventoryBox, PrintedLabel, and
+                    DepositOutcome
   view/             one class per screen, plus AppWindow (menu bar, text size), SettingsView,
                     GoogleDriveRow, RestoreView, PriceSheet (the printed price sheet and
-                    reminders), Printing, and TableOutput (printing and saving lists)
+                    reminders), ForwardingLabel and ForwardingLabelView (forwarding labels),
+                    Printing, and TableOutput (printing and saving lists)
   util/             input validation, box number sorting, money, rental lengths, error
                     messages, and runtime info
   Launcher.java     the entry point of the jar and installers, which hands off to App
