@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -31,6 +32,7 @@ import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.data.RentalHistoryRepository;
+import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
 import org.lfps.mailboxes.util.BoxNumbers;
@@ -38,8 +40,9 @@ import org.lfps.mailboxes.util.Money;
 
 /**
  * Lists the rentals and renewals recorded between two dates, for every box,
- * with the total paid, for example to see what was taken in this month, and
- * the key deposits being held, which are given back.
+ * with the total paid, for example to see what was taken in this month, the
+ * key deposits being held, which are given back, and those kept from boxes
+ * closed in those dates.
  */
 public class PaymentsView {
 
@@ -88,9 +91,11 @@ public class PaymentsView {
     var statusLabel = new Label();
     var entries = new ArrayList<Entry>();
     var depositsHeld = "";
+    var depositsKept = "";
     try {
       var allMailboxes = new MailboxRepository().findAll();
       depositsHeld = depositsHeld(allMailboxes);
+      depositsKept = depositsKept(allMailboxes, from, to);
       var mailboxes = allMailboxes.stream()
           .collect(Collectors.toMap(Mailbox::getId, Function.identity()));
       for (var period : new RentalHistoryRepository().findRecordedBetween(from, to)) {
@@ -192,6 +197,11 @@ public class PaymentsView {
     depositsLabel.setVisible(!depositsHeld.isEmpty());
     depositsLabel.setManaged(!depositsHeld.isEmpty());
 
+    var keptLabel = new Label(depositsKept);
+    keptLabel.setId("paymentsDepositsKept");
+    keptLabel.setVisible(!depositsKept.isEmpty());
+    keptLabel.setManaged(!depositsKept.isEmpty());
+
     Runnable refresh = () -> show(stage, from, to);
     var selection = table.getSelectionModel().selectedItemProperty();
 
@@ -215,6 +225,19 @@ public class PaymentsView {
     viewBtn.setId("paymentsViewButton");
     viewBtn.disableProperty().bind(selection.isNull());
     viewBtn.setOnAction(e -> viewSelected.run());
+
+    // Fixes an entry recorded wrongly. A box that's been deleted has no
+    // history left, but an entry without a box can't be edited either way.
+    var editBtn = new Button("Edit Entry…");
+    editBtn.setId("paymentsEditButton");
+    editBtn.disableProperty().bind(Bindings.createBooleanBinding(
+        () -> selection.get() == null || selection.get().mailbox == null, selection));
+    editBtn.setOnAction(e -> {
+      var entry = table.getSelectionModel().getSelectedItem();
+      if (entry != null && entry.mailbox != null) {
+        RenewBoxView.edit(stage, entry.mailbox, entry.period, refresh);
+      }
+    });
 
     var deleteBtn = new Button("Delete Entry");
     deleteBtn.setId("paymentsDeleteButton");
@@ -260,7 +283,8 @@ public class PaymentsView {
         table,
         totalLabel,
         depositsLabel,
-        new HBox(10, viewBtn, deleteBtn),
+        keptLabel,
+        new HBox(10, viewBtn, editBtn, deleteBtn),
         statusLabel);
     layout.setPadding(new Insets(20));
 
@@ -297,6 +321,27 @@ public class PaymentsView {
         .mapToLong(Mailbox::getKeyDepositCents)
         .sum();
     return cents == 0 ? "" : "Key deposits held for open boxes: " + Money.format(cents) + " (not included above)";
+  }
+
+  /**
+   * Describes the key deposits kept, rather than given back, from boxes
+   * closed between two days, such as "Key deposits kept from boxes closed in
+   * these dates: $20.00 (not included above)". They're counted on the day the
+   * box closed.
+   *
+   * @param mailboxes every box
+   * @param from the first day, inclusive
+   * @param to the last day, inclusive
+   * @return the description, or an empty string if none were kept
+   */
+  static String depositsKept(List<Mailbox> mailboxes, LocalDate from, LocalDate to) {
+    var cents = mailboxes.stream()
+        .filter(m -> m.getKeyDepositOutcome() == DepositOutcome.KEPT && m.getKeyDepositCents() != null)
+        .filter(m -> m.isClosed() && !m.getClosedDate().isBefore(from) && !m.getClosedDate().isAfter(to))
+        .mapToLong(Mailbox::getKeyDepositCents)
+        .sum();
+    return cents == 0 ? ""
+        : "Key deposits kept from boxes closed in these dates: " + Money.format(cents) + " (not included above)";
   }
 
   /** Not used: the screen is built with static methods. */

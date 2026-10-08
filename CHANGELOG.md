@@ -3,6 +3,57 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## 1.10.0 – 2026-10-07
+
+### Added
+
+- **Edit Entry…** on Payments fixes a payment recorded wrongly: the day it
+  was paid, the dates it covers, the amount, how it was paid, and the note.
+  If the box's rental ends on that entry's end date, changing the end date
+  changes when the box's rental ends too. Before, a wrong entry had to be
+  deleted and the box renewed again.
+- The **About** tab in Settings shows which version of Mailbox Manager is
+  running, as **Help → About Mailbox Manager** does.
+- Closing a box with a key deposit asks whether the deposit was **Given
+  back** or **Kept**, for example because the keys weren't returned. It can
+  be left as **Not recorded yet** and set later on Edit Box, which has a
+  **Key Deposit Was** choice for closed boxes. The box's details show it,
+  Payments shows the deposits kept from boxes closed in the dates shown, and
+  reopening a box clears it.
+- The **Renewals** button on the main menu has small bubbles counting the
+  boxes past due, in red, and the boxes ending soon, in yellow. Pointing at
+  the button says more, such as "2 boxes are past due, and 5 end in the next
+  30 days." A bubble is left out when its count is zero.
+- **Print Label…** on a box's details prints a 4 by 6.5 inch mailing label
+  for forwarding the holder's mail: their name, business, and forwarding
+  address, with the shop's name and address from Settings as the return
+  address. The window it opens shows a preview, asks which forwarding
+  address to use if there's more than one, and prints on a **Label** or on
+  **Copy paper**, where the label has a dashed line around it to cut out.
+- Each forwarding label printed has a number in small type in its bottom
+  corner, such as **261007-03** for the third label printed on October 7,
+  2026, and the app keeps a record of it: the box, when it was printed, and
+  the name and address on it. No two labels get the same number, even after
+  restoring an older backup. A label that's cancelled in the Print window
+  isn't recorded.
+- **File → Forwarding** opens a Forwarding screen with two lists. **Who We
+  Forward For** lists every forwarding address, open and closed boxes alike,
+  with the newest first; search for one and click **Print Label…** to print
+  a label for it. **Labels Printed** lists every forwarding label printed,
+  newest first; search by label number, name, box, or address, and click
+  **Reprint…** to print one again with its original number. Either list can
+  be printed or saved as a spreadsheet. Addresses added before this version
+  have no date, so they're listed last.
+- **Go → Find a Box**, or **Ctrl+F** (**⌘F** on a Mac) from any screen,
+  opens Manage Boxes ready to type a name or box number. On Manage Boxes, it
+  selects the search already typed, so typing replaces it.
+
+### Changed
+
+- Manage Boxes starts with the cursor in its search box, however it's opened.
+- The search on Manage Boxes also finds a box by the number of a forwarding
+  label printed for it.
+
 ## 1.9.0 – 2026-10-06
 
 ### Added

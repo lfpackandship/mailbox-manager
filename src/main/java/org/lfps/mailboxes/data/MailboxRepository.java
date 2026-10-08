@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
@@ -30,32 +31,37 @@ public class MailboxRepository {
   /** Adds a mailbox. */
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
       + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date, notes, "
-      + "closed_date, key_count, key_deposit_cents, forwarding_only) "
-      + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      + "closed_date, key_count, key_deposit_cents, forwarding_only, key_deposit_outcome) "
+      + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   /** Reads every mailbox. */
   private static final String SELECT_ALL_SQL = "SELECT id, first_name, last_name, "
       + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date, key_count, "
-      + "key_deposit_cents, forwarding_only FROM mailboxes";
+      + "key_deposit_cents, forwarding_only, key_deposit_outcome FROM mailboxes";
 
   /** Replaces a mailbox's details. */
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
       + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ?, notes = ?, "
-      + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ? WHERE id = ?";
+      + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ?, key_deposit_outcome = ? "
+      + "WHERE id = ?";
 
   /** Checks whether another open, rented box has a box number. */
   private static final String BOX_NUMBER_TAKEN_SQL = "SELECT 1 FROM mailboxes "
       + "WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? AND closed_date IS NULL AND forwarding_only = 0 "
       + "LIMIT 1";
 
-  /** Closes or reopens a mailbox. */
-  private static final String SET_CLOSED_DATE_SQL = "UPDATE mailboxes SET closed_date = ? WHERE id = ?";
+  /** Closes or reopens a mailbox, and records what happened to its key deposit. */
+  private static final String SET_CLOSED_DATE_SQL =
+      "UPDATE mailboxes SET closed_date = ?, key_deposit_outcome = ? WHERE id = ?";
 
   /** Deletes a mailbox. */
   private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
 
   /** Deletes a mailbox's rental history. */
   private static final String DELETE_RENTAL_PERIODS_SQL = "DELETE FROM rental_periods WHERE mailbox_id = ?";
+
+  /** Deletes the records of a mailbox's printed forwarding labels. */
+  private static final String DELETE_LABELS_SQL = "DELETE FROM labels WHERE mailbox_id = ?";
 
   /** Adds an alternate business name to a mailbox. */
   private static final String INSERT_BUSINESS_NAME_SQL =
@@ -71,10 +77,11 @@ public class MailboxRepository {
 
   /** Adds a forwarding address to a mailbox. */
   private static final String INSERT_FORWARDING_ADDRESS_SQL = "INSERT INTO forwarding_addresses "
-      + "(mailbox_id, street, unit, city, state, zip, note) VALUES (?, ?, ?, ?, ?, ?, ?)";
+      + "(mailbox_id, street, unit, city, state, zip, note, added_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
   /** Reads a mailbox's forwarding addresses, in the order they were added. */
-  private static final String SELECT_FORWARDING_ADDRESSES_SQL = "SELECT street, unit, city, state, zip, note "
+  private static final String SELECT_FORWARDING_ADDRESSES_SQL =
+      "SELECT street, unit, city, state, zip, note, added_on "
       + "FROM forwarding_addresses WHERE mailbox_id = ? ORDER BY id";
 
   /** Deletes a mailbox's forwarding addresses. */
@@ -117,7 +124,7 @@ public class MailboxRepository {
           }
         }
         insertBusinessNames(conn, mailboxId, mailbox.getAlternateBusinessNames());
-        insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses());
+        insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses(), List.of());
         if (firstPeriod != null) {
           RentalHistoryRepository.insert(conn, mailboxId, firstPeriod);
         }
@@ -172,7 +179,8 @@ public class MailboxRepository {
             date(rs.getString("closed_date")),
             rs.getObject("key_count") == null ? null : rs.getInt("key_count"),
             rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents"),
-            rs.getInt("forwarding_only") != 0));
+            rs.getInt("forwarding_only") != 0,
+            DepositOutcome.fromName(rs.getString("key_deposit_outcome"))));
       }
     }
 
@@ -193,13 +201,15 @@ public class MailboxRepository {
       try {
         try (PreparedStatement stmt = conn.prepareStatement(UPDATE_SQL)) {
           bindMailboxFields(stmt, mailbox);
-          stmt.setInt(14, mailbox.getId());
+          stmt.setInt(15, mailbox.getId());
           stmt.executeUpdate();
         }
         deleteBusinessNames(conn, mailbox.getId());
         insertBusinessNames(conn, mailbox.getId(), mailbox.getAlternateBusinessNames());
+        // Addresses kept as they were keep the day they were added.
+        var previous = findForwardingAddresses(conn, mailbox.getId());
         deleteForwardingAddresses(conn, mailbox.getId());
-        insertForwardingAddresses(conn, mailbox.getId(), mailbox.getForwardingAddresses());
+        insertForwardingAddresses(conn, mailbox.getId(), mailbox.getForwardingAddresses(), previous);
         conn.commit();
       } catch (SQLException e) {
         conn.rollback();
@@ -231,25 +241,42 @@ public class MailboxRepository {
   }
 
   /**
-   * Closes a box on the given day, or reopens it. Its record and history
-   * are kept.
+   * Closes a box on the given day with no key deposit outcome recorded, or
+   * reopens it. Its record and history are kept.
    *
    * @param id the id of the mailbox
    * @param closedDate the day it closed, or {@code null} to reopen it
    * @throws SQLException if the update fails
    */
   public void setClosedDate(int id, LocalDate closedDate) throws SQLException {
+    setClosedDate(id, closedDate, null);
+  }
+
+  /**
+   * Closes a box on the given day, or reopens it, and records whether its
+   * key deposit was given back or kept. Its record and history are kept.
+   * Reopening a box always forgets the outcome.
+   *
+   * @param id the id of the mailbox
+   * @param closedDate the day it closed, or {@code null} to reopen it
+   * @param keyDepositOutcome what happened to the key deposit, or
+   *     {@code null} if it isn't recorded
+   * @throws SQLException if the update fails
+   */
+  public void setClosedDate(int id, LocalDate closedDate, DepositOutcome keyDepositOutcome) throws SQLException {
     try (Connection conn = Database.connect();
         PreparedStatement stmt = conn.prepareStatement(SET_CLOSED_DATE_SQL)) {
       stmt.setString(1, closedDate == null ? null : closedDate.toString());
-      stmt.setInt(2, id);
+      stmt.setString(2, closedDate == null || keyDepositOutcome == null ? null : keyDepositOutcome.name());
+      stmt.setInt(3, id);
       stmt.executeUpdate();
     }
   }
 
   /**
    * Permanently deletes a mailbox with its alternate business names,
-   * forwarding addresses, and rental history.
+   * forwarding addresses, rental history, and the records of its printed
+   * forwarding labels.
    *
    * @param id the id of the mailbox to delete
    * @throws SQLException if the delete fails
@@ -261,6 +288,10 @@ public class MailboxRepository {
         deleteBusinessNames(conn, id);
         deleteForwardingAddresses(conn, id);
         try (PreparedStatement stmt = conn.prepareStatement(DELETE_RENTAL_PERIODS_SQL)) {
+          stmt.setInt(1, id);
+          stmt.executeUpdate();
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(DELETE_LABELS_SQL)) {
           stmt.setInt(1, id);
           stmt.executeUpdate();
         }
@@ -277,7 +308,7 @@ public class MailboxRepository {
   }
 
   /**
-   * Fills in a mailbox's details as the first 13 parameters of an insert or
+   * Fills in a mailbox's details as the first 14 parameters of an insert or
    * update.
    *
    * @param stmt the insert or update
@@ -298,6 +329,7 @@ public class MailboxRepository {
     stmt.setObject(11, mailbox.getKeyCount());
     stmt.setObject(12, mailbox.getKeyDepositCents());
     stmt.setInt(13, mailbox.isForwardingOnly() ? 1 : 0);
+    stmt.setString(14, mailbox.getKeyDepositOutcome() == null ? null : mailbox.getKeyDepositOutcome().name());
   }
 
   /**
@@ -347,17 +379,20 @@ public class MailboxRepository {
   }
 
   /**
-   * Adds forwarding addresses to a mailbox.
+   * Adds forwarding addresses to a mailbox, each with the day it was added
+   * (see {@link #addedOn}).
    *
    * @param conn the connection, which may be in a transaction
    * @param mailboxId the mailbox's id
    * @param addresses the addresses
+   * @param previous the box's addresses before this save, or none for a new box
    * @throws SQLException if they can't be added
    */
-  private void insertForwardingAddresses(Connection conn, int mailboxId, List<ForwardingAddress> addresses)
-      throws SQLException {
+  private void insertForwardingAddresses(Connection conn, int mailboxId, List<ForwardingAddress> addresses,
+      List<ForwardingAddress> previous) throws SQLException {
     try (PreparedStatement stmt = conn.prepareStatement(INSERT_FORWARDING_ADDRESS_SQL)) {
       for (var address : addresses) {
+        var addedOn = addedOn(address, previous);
         stmt.setInt(1, mailboxId);
         stmt.setString(2, address.getStreet());
         stmt.setString(3, address.getUnit());
@@ -365,10 +400,30 @@ public class MailboxRepository {
         stmt.setString(5, address.getState());
         stmt.setString(6, address.getZip());
         stmt.setString(7, address.getNote());
+        stmt.setString(8, addedOn == null ? null : addedOn.toString());
         stmt.addBatch();
       }
       stmt.executeBatch();
     }
+  }
+
+  /**
+   * Returns the day to save as an address's day added: the day it was first
+   * added if it was already on the box unchanged, which keeps an unknown day
+   * unknown for addresses from before version 1.10, or today if it's new or
+   * changed.
+   *
+   * @param address the address being saved
+   * @param previous the box's addresses before the save, or none for a new box
+   * @return the day, or {@code null} if it isn't known
+   */
+  static LocalDate addedOn(ForwardingAddress address, List<ForwardingAddress> previous) {
+    for (var old : previous) {
+      if (old.equals(address)) {
+        return old.getAddedOn();
+      }
+    }
+    return address.getAddedOn() != null ? address.getAddedOn() : LocalDate.now();
   }
 
   /**
@@ -401,7 +456,8 @@ public class MailboxRepository {
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
           addresses.add(new ForwardingAddress(rs.getString("street"), rs.getString("unit"),
-              rs.getString("city"), rs.getString("state"), rs.getString("zip"), rs.getString("note")));
+              rs.getString("city"), rs.getString("state"), rs.getString("zip"), rs.getString("note"),
+              date(rs.getString("added_on"))));
         }
       }
     }

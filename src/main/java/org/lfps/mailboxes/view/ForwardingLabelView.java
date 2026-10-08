@@ -1,0 +1,357 @@
+package org.lfps.mailboxes.view;
+
+import java.awt.image.BufferedImage;
+import java.awt.print.PageFormat;
+import java.awt.print.Paper;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.function.Supplier;
+
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritableImage;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+import org.lfps.mailboxes.data.LabelRepository;
+import org.lfps.mailboxes.data.Setting;
+import org.lfps.mailboxes.data.SettingsRepository;
+import org.lfps.mailboxes.model.ForwardingAddress;
+import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.model.PrintedLabel;
+
+/**
+ * The Print Forwarding Label window, opened with "Print Label…" on a box's
+ * details: choose which forwarding address to use, if the box has more than
+ * one, and whether to print on a label or on copy paper, see a preview of
+ * exactly what will print, and print it. Laid out like the window for
+ * printing renewal reminders. Each label printed gets the next label number
+ * and is recorded (see {@link LabelRepository}); one that's cancelled or
+ * fails to print isn't. The same window reprints a label from the Forwarding
+ * screen, with its original number and address, without recording it again.
+ */
+final class ForwardingLabelView {
+
+  /** How the preview is drawn: pixels per point, for sharp text. */
+  private static final double PREVIEW_DENSITY = 2;
+
+  /** How tall the preview is shown, in pixels. */
+  private static final double PREVIEW_HEIGHT = 480;
+
+  /** The printer's edge assumed for the preview on copy paper: a quarter inch. */
+  private static final double PAPER_EDGE = 0.25 * 72;
+
+  /** The open window, or {@code null} if none is open. */
+  private static Stage window;
+
+  /**
+   * Opens the window for a box, closing one already open, with its first
+   * forwarding address chosen. Does nothing for a box with no forwarding
+   * address.
+   *
+   * @param owner the window it belongs to
+   * @param mailbox the box
+   */
+  static void show(Stage owner, Mailbox mailbox) {
+    open(owner, mailbox, null, null);
+  }
+
+  /**
+   * Opens the window for a box with one of its forwarding addresses chosen,
+   * as from the Forwarding screen.
+   *
+   * @param owner the window it belongs to
+   * @param mailbox the box
+   * @param address the address to choose, which should be one of the box's;
+   *     if it isn't, the first is chosen
+   */
+  static void show(Stage owner, Mailbox mailbox, ForwardingAddress address) {
+    open(owner, mailbox, address, null);
+  }
+
+  /**
+   * Opens the window to reprint a label already printed, with its number
+   * and the name and address as they were printed.
+   *
+   * @param owner the window it belongs to
+   * @param mailbox the box the label was for
+   * @param record the label
+   */
+  static void reprint(Stage owner, Mailbox mailbox, PrintedLabel record) {
+    open(owner, mailbox, null, record);
+  }
+
+  /**
+   * Builds and opens the window, closing one already open.
+   *
+   * @param owner the window it belongs to
+   * @param mailbox the box
+   * @param chosen the forwarding address to choose to start with, or
+   *     {@code null} for the first
+   * @param reprinting the label being reprinted, or {@code null} to print a
+   *     new one
+   */
+  private static void open(Stage owner, Mailbox mailbox, ForwardingAddress chosen, PrintedLabel reprinting) {
+    var addresses = mailbox.getForwardingAddresses();
+    if (addresses.isEmpty() && reprinting == null) {
+      return;
+    }
+    if (window != null) {
+      window.close();
+    }
+
+    String shopName;
+    String shopDetails;
+    try {
+      var settings = new SettingsRepository();
+      shopName = settings.get(Setting.SHOP_NAME);
+      shopDetails = settings.get(Setting.SHOP_DETAILS);
+    } catch (SQLException e) {
+      shopName = Setting.SHOP_NAME.defaultValue();
+      shopDetails = Setting.SHOP_DETAILS.defaultValue();
+    }
+    var name = shopName;
+    var details = shopDetails;
+
+    var resultLabel = new Label();
+    resultLabel.setId("labelResultLabel");
+    resultLabel.setWrapText(true);
+
+    var addressGroup = new ToggleGroup();
+    var addressChoices = new VBox(6);
+    for (var address : addresses) {
+      var radio = new RadioButton(address.toString());
+      radio.setUserData(address);
+      radio.setToggleGroup(addressGroup);
+      radio.setWrapText(true);
+      addressChoices.getChildren().add(radio);
+      if (address.equals(chosen)) {
+        addressGroup.selectToggle(radio);
+      }
+    }
+    if (addressGroup.getSelectedToggle() == null && !addresses.isEmpty()) {
+      addressGroup.selectToggle(addressGroup.getToggles().get(0));
+    }
+
+    var stockGroup = new ToggleGroup();
+    var stockChoices = new VBox(6);
+    for (var stock : ForwardingLabel.Stock.values()) {
+      var radio = new RadioButton(stock.toString());
+      radio.setId(stock == ForwardingLabel.Stock.LABEL ? "labelStockLabel" : "labelStockPaper");
+      radio.setUserData(stock);
+      radio.setToggleGroup(stockGroup);
+      stockChoices.getChildren().add(radio);
+    }
+    stockGroup.selectToggle(stockGroup.getToggles().get(0));
+
+    var previewImage = new ImageView();
+    previewImage.setId("labelPreview");
+    previewImage.setPreserveRatio(true);
+    previewImage.setFitHeight(PREVIEW_HEIGHT);
+    var preview = new StackPane(previewImage);
+    preview.setPadding(new Insets(10));
+    preview.setAlignment(Pos.TOP_CENTER);
+    preview.setStyle("-fx-background-color: #9e9e9e;");
+    // Wide enough for a sheet of paper, the wider of the two, so the window
+    // doesn't change size when switching.
+    preview.setMinWidth(PREVIEW_HEIGHT * 8.5 / 11 + 20);
+    preview.setPrefWidth(PREVIEW_HEIGHT * 8.5 / 11 + 20);
+    HBox.setHgrow(preview, Priority.ALWAYS);
+
+    var labels = new LabelRepository();
+    // The label as chosen so far, with no number for a new one.
+    Supplier<ForwardingLabel> current = () -> {
+      var stock = (ForwardingLabel.Stock) stockGroup.getSelectedToggle().getUserData();
+      if (reprinting != null) {
+        return new ForwardingLabel(ForwardingLabel.returnAddress(name, details),
+            List.of(reprinting.getAddress().split("\n")), stock, reprinting.getNumber());
+      }
+      return ForwardingLabel.of(mailbox, (ForwardingAddress) addressGroup.getSelectedToggle().getUserData(),
+          name, details, stock);
+    };
+    Runnable showPreview = () -> {
+      if (reprinting != null) {
+        previewImage.setImage(preview(current.get()));
+        return;
+      }
+      // The number it will most likely get; it's only handed out when printed.
+      String next;
+      try {
+        next = labels.peekNextNumber(LocalDate.now());
+      } catch (SQLException ex) {
+        next = "";
+      }
+      previewImage.setImage(preview(current.get().numbered(next)));
+    };
+    addressGroup.selectedToggleProperty().addListener((obs, was, now) -> {
+      if (now == null) {
+        addressGroup.selectToggle(was);
+      } else {
+        showPreview.run();
+      }
+    });
+    stockGroup.selectedToggleProperty().addListener((obs, was, now) -> {
+      if (now == null) {
+        stockGroup.selectToggle(was);
+      } else {
+        showPreview.run();
+      }
+    });
+
+    var left = new VBox(10);
+    if (reprinting != null) {
+      var as = new Label(String.join(", ", reprinting.getAddress().split("\n")));
+      as.setWrapText(true);
+      left.getChildren().addAll(bold("Addressed to, as printed:"), as);
+    } else if (addresses.size() > 1) {
+      left.getChildren().addAll(bold("Forward to:"), addressChoices);
+    } else {
+      var only = new Label(addresses.get(0).toString());
+      only.setWrapText(true);
+      left.getChildren().addAll(bold("Forward to:"), only);
+    }
+    var explanation = new Label("Print opens the Print window: choose the label printer for a label, or an "
+        + "ordinary printer for copy paper. The shop's address is changed in File → Settings.");
+    explanation.setWrapText(true);
+    left.getChildren().addAll(bold("Print on:"), stockChoices, explanation);
+    left.setPrefWidth(280);
+    left.setMinWidth(280);
+
+    var stage = new Stage();
+
+    var printBtn = new Button("Print…");
+    printBtn.setId("labelPrintButton");
+    printBtn.setDefaultButton(true);
+    printBtn.setOnAction(e -> {
+      var label = current.get();
+      if (reprinting != null) {
+        Printing.printLabel("Forwarding label " + reprinting.getNumber() + ", box " + mailbox.getBoxNumber(),
+            label, resultLabel, "Reprinted label " + reprinting.getNumber(), printed -> { });
+        return;
+      }
+      PrintedLabel record;
+      try {
+        record = labels.record(mailbox.getId(), label.to, LocalDateTime.now());
+      } catch (SQLException ex) {
+        resultLabel.setStyle("-fx-text-fill: red;");
+        resultLabel.setText("Couldn't give the label a number, so it wasn't printed: " + ex.getMessage());
+        return;
+      }
+      Printing.printLabel("Forwarding label " + record.getNumber() + ", box " + mailbox.getBoxNumber(),
+          label.numbered(record.getNumber()), resultLabel, "Printed label " + record.getNumber(), printed -> {
+            if (!printed) {
+              try {
+                labels.delete(record.getNumber());
+              } catch (SQLException ex) {
+                // The record stays; its number simply isn't on a label.
+              }
+            }
+            showPreview.run();
+          });
+    });
+
+    var closeBtn = new Button("Close");
+    closeBtn.setId("labelCloseButton");
+    closeBtn.setCancelButton(true);
+    closeBtn.setOnAction(e -> stage.close());
+
+    var title = new Label(reprinting == null
+        ? "Forwarding Label for " + BoxLabels.boxAndHolder(mailbox)
+        : "Reprint Label " + reprinting.getNumber() + " for " + BoxLabels.boxAndHolder(mailbox));
+    title.setStyle("-fx-font-size: 1.25em; -fx-font-weight: bold;");
+    title.setWrapText(true);
+
+    var root = new VBox(12, title, new HBox(15, left, preview), new HBox(10, printBtn, closeBtn), resultLabel);
+    root.setPadding(new Insets(20));
+    AppWindow.applyTextSize(root);
+    showPreview.run();
+
+    stage.initOwner(owner);
+    stage.setTitle(reprinting == null ? "Print Forwarding Label" : "Reprint Forwarding Label");
+    stage.setScene(new Scene(root));
+    stage.setOnHidden(e -> {
+      if (window == stage) {
+        window = null;
+      }
+    });
+    window = stage;
+    AppWindow.showWithinScreen(stage);
+  }
+
+  /**
+   * Makes a heading for a group of choices.
+   *
+   * @param text the heading
+   * @return the label
+   */
+  private static Label bold(String text) {
+    var label = new Label(text);
+    label.setStyle("-fx-font-weight: bold;");
+    return label;
+  }
+
+  /**
+   * Returns the page the label prints on, for the preview: the label itself,
+   * or a sheet of letter paper with a printer's usual quarter-inch edge.
+   *
+   * @param stock what the label is printed on
+   * @return the page
+   */
+  static PageFormat previewPage(ForwardingLabel.Stock stock) {
+    var paper = new Paper();
+    if (stock == ForwardingLabel.Stock.LABEL) {
+      paper.setSize(ForwardingLabel.WIDTH, ForwardingLabel.HEIGHT);
+      paper.setImageableArea(0, 0, ForwardingLabel.WIDTH, ForwardingLabel.HEIGHT);
+    } else {
+      paper.setSize(8.5 * 72, 11 * 72);
+      paper.setImageableArea(PAPER_EDGE, PAPER_EDGE, 8.5 * 72 - 2 * PAPER_EDGE, 11 * 72 - 2 * PAPER_EDGE);
+    }
+    var format = new PageFormat();
+    format.setPaper(paper);
+    return format;
+  }
+
+  /**
+   * Draws a picture of the label as it will print, on its page, using the
+   * same drawing as printing does.
+   *
+   * @param label the label
+   * @return the picture
+   */
+  static Image preview(ForwardingLabel label) {
+    var page = previewPage(label.stock);
+    var width = (int) Math.round(page.getWidth() * PREVIEW_DENSITY);
+    var height = (int) Math.round(page.getHeight() * PREVIEW_DENSITY);
+    var picture = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+    var g = picture.createGraphics();
+    g.setColor(java.awt.Color.WHITE);
+    g.fillRect(0, 0, width, height);
+    g.scale(PREVIEW_DENSITY, PREVIEW_DENSITY);
+    label.print(g, page, 0);
+    g.dispose();
+
+    var pixels = new int[width * height];
+    picture.getRGB(0, 0, width, height, pixels, 0, width);
+    var image = new WritableImage(width, height);
+    image.getPixelWriter().setPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), pixels, 0, width);
+    return image;
+  }
+
+  /** Not used: the window is built with static methods. */
+  private ForwardingLabelView() {
+  }
+
+}

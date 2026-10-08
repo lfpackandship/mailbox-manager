@@ -1,11 +1,13 @@
 package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
+import java.util.List;
 
 import javafx.scene.control.TextField;
 
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
+import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.util.Money;
 
 /**
@@ -15,6 +17,19 @@ import org.lfps.mailboxes.util.Money;
  * in Settings.
  */
 final class KeyFields {
+
+  /**
+   * The choices for what happened to a closed box's key deposit, asked when
+   * closing a box and on Edit Box: given back, kept, or not recorded yet, in
+   * that order (see {@link #outcomeAt} and {@link #indexOf}).
+   */
+  static final List<String> OUTCOME_CHOICES = List.of(
+      DepositOutcome.RETURNED.getLabel(),
+      DepositOutcome.KEPT.getLabel() + " (for example, the keys weren't returned)",
+      "Not recorded yet");
+
+  /** The index in {@link #OUTCOME_CHOICES} of "Not recorded yet". */
+  static final int NOT_RECORDED = 2;
 
   /** The most keys a box can have. */
   static final int MAX_KEYS = 20;
@@ -116,6 +131,52 @@ final class KeyFields {
     } catch (IllegalArgumentException | SQLException notANumberOrBadSetting) {
       return "";
     }
+  }
+
+  /**
+   * Returns the outcome for a choice in {@link #OUTCOME_CHOICES}.
+   *
+   * @param index the index of the choice
+   * @return the outcome, or {@code null} for "Not recorded yet"
+   */
+  static DepositOutcome outcomeAt(int index) {
+    if (index == 0) {
+      return DepositOutcome.RETURNED;
+    }
+    return index == 1 ? DepositOutcome.KEPT : null;
+  }
+
+  /**
+   * Returns where an outcome is in {@link #OUTCOME_CHOICES}.
+   *
+   * @param outcome the outcome, or {@code null} if not recorded
+   * @return its index
+   */
+  static int indexOf(DepositOutcome outcome) {
+    if (outcome == null) {
+      return NOT_RECORDED;
+    }
+    return outcome == DepositOutcome.RETURNED ? 0 : 1;
+  }
+
+  /**
+   * Describes the keys and deposit recorded for a box, and what happened to
+   * the deposit if the box is closed, such as "2 keys, $20.00 deposit, given
+   * back".
+   *
+   * @param count the number of keys, or {@code null} if not recorded
+   * @param depositCents the deposit, or {@code null} if not recorded
+   * @param outcome what happened to the deposit, or {@code null} if not
+   *     recorded
+   * @return the description, or an empty string if nothing is recorded
+   */
+  static String describe(Integer count, Long depositCents, DepositOutcome outcome) {
+    var text = describe(count, depositCents);
+    if (outcome == null) {
+      return text;
+    }
+    var what = outcome.getLabel().toLowerCase();
+    return text.isEmpty() ? "Deposit " + what : text + ", " + what;
   }
 
   /**

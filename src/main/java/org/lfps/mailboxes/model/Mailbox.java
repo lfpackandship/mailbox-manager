@@ -77,6 +77,12 @@ public final class Mailbox {
   private final boolean forwardingOnly;
 
   /**
+   * Whether a closed box's key deposit was given back or kept, or
+   * {@code null} if that isn't recorded.
+   */
+  private final DepositOutcome keyDepositOutcome;
+
+  /**
    * Creates an open mailbox record with no notes.
    *
    * @param id the database id, or {@code 0} for a not-yet-persisted mailbox
@@ -186,6 +192,43 @@ public final class Mailbox {
       String boxNumber, String boxName, String phone, String email,
       List<String> alternateBusinessNames, LocalDate endDate, List<ForwardingAddress> forwardingAddresses,
       String notes, LocalDate closedDate, Integer keyCount, Long keyDepositCents, boolean forwardingOnly) {
+    this(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email, alternateBusinessNames,
+        endDate, forwardingAddresses, notes, closedDate, keyCount, keyDepositCents, forwardingOnly, null);
+  }
+
+  /**
+   * Creates a mailbox record, including what happened to the key deposit of
+   * a closed box.
+   *
+   * @param id the database id, or {@code 0} for a not-yet-persisted mailbox
+   * @param firstName the holder's first name
+   * @param lastName the holder's last name
+   * @param businessTitle the holder's primary business title, or blank/null if none
+   * @param boxNumber the physical box number, or for a forwarding-only box
+   *     the number the holder's mail is addressed to
+   * @param boxName an optional nickname/label for the box itself
+   * @param phone the holder's phone number
+   * @param email the holder's email address, or blank/null if none
+   * @param alternateBusinessNames additional business names (DBAs) that also
+   *     receive mail at this box; {@code null} is treated as empty
+   * @param endDate the date the box rental ends, or {@code null} if not set
+   * @param forwardingAddresses addresses the holder's mail can be forwarded
+   *     to; {@code null} is treated as empty
+   * @param notes free-form notes about the box or holder, or blank/null if none
+   * @param closedDate the date the box was closed, or {@code null} if it's open
+   * @param keyCount how many keys the holder was given, or {@code null} if not recorded
+   * @param keyDepositCents the refundable deposit paid for the keys, in
+   *     cents, or {@code null} if not recorded
+   * @param forwardingOnly whether the shop only forwards the holder's mail,
+   *     with no box rented here; see {@link #isForwardingOnly()}
+   * @param keyDepositOutcome whether the key deposit was given back or kept
+   *     when the box closed, or {@code null} if not recorded
+   */
+  public Mailbox(int id, String firstName, String lastName, String businessTitle,
+      String boxNumber, String boxName, String phone, String email,
+      List<String> alternateBusinessNames, LocalDate endDate, List<ForwardingAddress> forwardingAddresses,
+      String notes, LocalDate closedDate, Integer keyCount, Long keyDepositCents, boolean forwardingOnly,
+      DepositOutcome keyDepositOutcome) {
     this.id = id;
     this.firstName = firstName;
     this.lastName = lastName;
@@ -206,6 +249,7 @@ public final class Mailbox {
     this.keyCount = keyCount;
     this.keyDepositCents = keyDepositCents;
     this.forwardingOnly = forwardingOnly;
+    this.keyDepositOutcome = keyDepositOutcome;
   }
 
   /**
@@ -359,6 +403,16 @@ public final class Mailbox {
   }
 
   /**
+   * Returns whether the key deposit was given back or kept when the box
+   * closed.
+   *
+   * @return the outcome, or {@code null} if it isn't recorded
+   */
+  public DepositOutcome getKeyDepositOutcome() {
+    return keyDepositOutcome;
+  }
+
+  /**
    * Returns whether the box has been closed.
    *
    * @return {@code true} if the box is closed
@@ -376,12 +430,13 @@ public final class Mailbox {
   public Mailbox withEndDate(LocalDate newEndDate) {
     return new Mailbox(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email,
         alternateBusinessNames, newEndDate, forwardingAddresses, notes, closedDate, keyCount, keyDepositCents,
-        forwardingOnly);
+        forwardingOnly, keyDepositOutcome);
   }
 
   /**
    * Returns a copy of this mailbox that is closed on the given date, or
-   * reopened.
+   * reopened. Reopening forgets what happened to the key deposit, since the
+   * holder has the box again.
    *
    * @param newClosedDate the closing date, or {@code null} to reopen
    * @return the updated copy
@@ -389,7 +444,7 @@ public final class Mailbox {
   public Mailbox withClosedDate(LocalDate newClosedDate) {
     return new Mailbox(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email,
         alternateBusinessNames, endDate, forwardingAddresses, notes, newClosedDate, keyCount, keyDepositCents,
-        forwardingOnly);
+        forwardingOnly, newClosedDate == null ? null : keyDepositOutcome);
   }
 
   /**

@@ -238,11 +238,13 @@ public class Database {
   /**
    * Creates the {@code mailboxes}, {@code business_names},
    * {@code forwarding_addresses}, {@code rental_periods},
-   * {@code box_inventory}, {@code prices}, {@code box_sizes}, and {@code settings} tables if
+   * {@code box_inventory}, {@code prices}, {@code box_sizes}, {@code settings}, and
+   * {@code labels} tables if
    * they don't already exist, and migrates older databases that predate the
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
-   * {@code key_count}, {@code key_deposit_cents}, and {@code forwarding_only}
-   * columns.
+   * {@code key_count}, {@code key_deposit_cents}, {@code forwarding_only},
+   * and {@code key_deposit_outcome} columns of {@code mailboxes} and the
+   * {@code added_on} column of {@code forwarding_addresses}.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -261,7 +263,8 @@ public class Database {
         + "closed_date TEXT, "
         + "key_count INTEGER, "
         + "key_deposit_cents INTEGER, "
-        + "forwarding_only INTEGER NOT NULL DEFAULT 0)";
+        + "forwarding_only INTEGER NOT NULL DEFAULT 0, "
+        + "key_deposit_outcome TEXT)";
 
     var createBusinessNames = "CREATE TABLE IF NOT EXISTS business_names ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -278,6 +281,7 @@ public class Database {
         + "state TEXT NOT NULL, "
         + "zip TEXT NOT NULL, "
         + "note TEXT, "
+        + "added_on TEXT, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
     var createRentalPeriods = "CREATE TABLE IF NOT EXISTS rental_periods ("
@@ -322,6 +326,15 @@ public class Database {
         + "key TEXT PRIMARY KEY, "
         + "value TEXT NOT NULL)";
 
+    // Forwarding labels printed; see LabelRepository.
+    var createLabels = "CREATE TABLE IF NOT EXISTS labels ("
+        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        + "number TEXT NOT NULL UNIQUE, "
+        + "mailbox_id INTEGER NOT NULL, "
+        + "printed_at TEXT NOT NULL, "
+        + "address TEXT NOT NULL, "
+        + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
+
     try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
       stmt.execute(createMailboxes);
       stmt.execute(createBusinessNames);
@@ -332,14 +345,21 @@ public class Database {
       stmt.execute(createScheduledPrices);
       stmt.execute(createBoxSizes);
       stmt.execute(createSettings);
+      stmt.execute(createLabels);
 
       for (var column : List.of("box_name TEXT", "end_date TEXT", "notes TEXT", "closed_date TEXT",
-          "key_count INTEGER", "key_deposit_cents INTEGER", "forwarding_only INTEGER NOT NULL DEFAULT 0")) {
+          "key_count INTEGER", "key_deposit_cents INTEGER", "forwarding_only INTEGER NOT NULL DEFAULT 0",
+          "key_deposit_outcome TEXT")) {
         try {
           stmt.execute("ALTER TABLE mailboxes ADD COLUMN " + column);
         } catch (SQLException alreadyMigrated) {
           // The column already exists on a pre-existing database.
         }
+      }
+      try {
+        stmt.execute("ALTER TABLE forwarding_addresses ADD COLUMN added_on TEXT");
+      } catch (SQLException alreadyMigrated) {
+        // Added in 1.10; already there on a newer database.
       }
     } catch (SQLException e) {
       throw new RuntimeException("Failed to initialize database schema", e);

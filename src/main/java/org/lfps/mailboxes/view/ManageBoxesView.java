@@ -2,9 +2,13 @@ package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
+import org.lfps.mailboxes.data.LabelRepository;
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
@@ -12,6 +16,7 @@ import org.lfps.mailboxes.util.Money;
 
 import java.util.stream.Collectors;
 
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -91,6 +96,28 @@ public class ManageBoxesView {
   }
 
   /**
+   * Gets ready to search for a box, from Go → Find a Box (Ctrl+F, or Cmd+F on
+   * a Mac): opens Manage Boxes, which starts with the cursor in its search
+   * box, or if it's already showing, puts the cursor there with the search
+   * already typed selected, so typing replaces it.
+   *
+   * @param stage the main window
+   */
+  public static void find(Stage stage) {
+    var existing = stage.getScene() == null ? null : stage.getScene().getRoot().lookup("#searchField");
+    if (!(existing instanceof TextField)) {
+      show(stage);
+      return;
+    }
+    var searchField = (TextField) existing;
+    // After the menu has closed, which can take the cursor back.
+    Platform.runLater(() -> {
+      searchField.requestFocus();
+      searchField.selectAll();
+    });
+  }
+
+  /**
    * Builds and displays the list of boxes with a search already typed and a
    * choice of boxes already made, as when coming back to the screen.
    *
@@ -142,8 +169,13 @@ public class ManageBoxesView {
     table.getColumns().addAll(hiddenColumns());
 
     var allMailboxes = FXCollections.<Mailbox>observableArrayList();
+    // Each box's forwarding label numbers, so a search for one finds its box.
+    Map<Integer, List<String>> labelNumbers = new HashMap<>();
     try {
       allMailboxes.setAll(repository.findAll());
+      for (var label : new LabelRepository().findAll()) {
+        labelNumbers.computeIfAbsent(label.getMailboxId(), id -> new ArrayList<>()).add(label.getNumber());
+      }
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
       statusLabel.setText("Failed to load mailboxes: " + e.getMessage());
@@ -157,7 +189,8 @@ public class ManageBoxesView {
 
     var searchField = new TextField();
     searchField.setId("searchField");
-    searchField.setPromptText("Search by name, business, box, phone, email, forwarding address, or notes");
+    searchField.setPromptText("Search by name, business, box, phone, email, forwarding address, notes, "
+        + "or label number");
     HBox.setHgrow(searchField, Priority.ALWAYS);
 
     var showChoice = new ChoiceBox<Show>();
@@ -166,7 +199,8 @@ public class ManageBoxesView {
     showChoice.setValue(initialShow);
 
     Runnable filter = () -> mailboxes.setPredicate(
-        m -> showChoice.getValue().includes(m) && matches(m, searchField.getText()));
+        m -> showChoice.getValue().includes(m)
+            && matches(m, searchField.getText(), labelNumbers.getOrDefault(m.getId(), List.of())));
     searchField.textProperty().addListener((obs, oldQuery, query) -> filter.run());
     showChoice.valueProperty().addListener((obs, oldShow, newShow) -> filter.run());
     searchField.setText(initialQuery);
@@ -217,13 +251,26 @@ public class ManageBoxesView {
             return;
           }
           repository.setClosedDate(selected.getId(), null);
-        } else if (Dialogs.confirm.ask(stage, "Close box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
-            keysReminder(selected)
-                + "The box becomes free to rent to someone else. Everything recorded for it is kept, and you can "
-                + "find it again by showing closed boxes.", "Close Box", "Keep It Open")) {
-          repository.setClosedDate(selected.getId(), LocalDate.now());
         } else {
-          return;
+          var question = "Close box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?";
+          var details = keysReminder(selected)
+              + "The box becomes free to rent to someone else. Everything recorded for it is kept, and you can "
+              + "find it again by showing closed boxes.";
+          var deposit = selected.getKeyDepositCents();
+          if (deposit != null && deposit > 0) {
+            // Optional: it can be left as not recorded, and set later on Edit Box.
+            var choice = Dialogs.confirmWithChoice.ask(stage, question, details,
+                "The " + Money.format(deposit) + " key deposit was:", KeyFields.OUTCOME_CHOICES,
+                KeyFields.NOT_RECORDED, "Close Box", "Keep It Open");
+            if (choice < 0) {
+              return;
+            }
+            repository.setClosedDate(selected.getId(), LocalDate.now(), KeyFields.outcomeAt(choice));
+          } else if (Dialogs.confirm.ask(stage, question, details, "Close Box", "Keep It Open")) {
+            repository.setClosedDate(selected.getId(), LocalDate.now());
+          } else {
+            return;
+          }
         }
         BoxDetailsView.close();
         refresh.run();
@@ -284,6 +331,12 @@ public class ManageBoxesView {
     layout.setPadding(new Insets(20));
 
     AppWindow.show(stage, layout);
+    // Start in the search box, ready to type. A new screen gives its first
+    // button the cursor once it's shown, so wait until then.
+    Platform.runLater(() -> {
+      searchField.requestFocus();
+      searchField.end();
+    });
   }
 
   /**
@@ -330,6 +383,10 @@ public class ManageBoxesView {
     depositCol.setCellValueFactory(new PropertyValueFactory<>("keyDepositCents"));
     TableOutput.formatWith(depositCol, Money::format);
 
+    var outcomeCol = new TableColumn<Mailbox, String>("Key Deposit Was");
+    outcomeCol.setCellValueFactory(cell -> new SimpleStringProperty(
+        cell.getValue().getKeyDepositOutcome() == null ? "" : cell.getValue().getKeyDepositOutcome().getLabel()));
+
     var notesCol = new TableColumn<Mailbox, String>("Notes");
     notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
 
@@ -342,7 +399,7 @@ public class ManageBoxesView {
         cell.getValue().isForwardingOnly() ? "Yes" : ""));
 
     var columns = List.<TableColumn<Mailbox, ?>>of(boxNameCol, emailCol, endDateCol, forwardingOnlyCol,
-        alternateNamesCol, forwardingCol, keysCol, depositCol, notesCol, closedCol);
+        alternateNamesCol, forwardingCol, keysCol, depositCol, outcomeCol, notesCol, closedCol);
     columns.forEach(column -> column.setVisible(false));
     return columns;
   }
@@ -380,6 +437,20 @@ public class ManageBoxesView {
    * @return {@code true} if the box matches
    */
   static boolean matches(Mailbox mailbox, String query) {
+    return matches(mailbox, query, List.of());
+  }
+
+  /**
+   * Checks whether a mailbox matches every word of a search query, like
+   * {@link #matches(Mailbox, String)}, also looking in the numbers of the
+   * forwarding labels printed for it.
+   *
+   * @param mailbox the box
+   * @param query the search
+   * @param labelNumbers the numbers of its printed forwarding labels
+   * @return {@code true} if the box matches
+   */
+  static boolean matches(Mailbox mailbox, String query, List<String> labelNumbers) {
     if (query == null || query.isBlank()) {
       return true;
     }
@@ -397,6 +468,7 @@ public class ManageBoxesView {
     if (mailbox.isForwardingOnly()) {
       haystack.append("forwarding only\n");
     }
+    labelNumbers.forEach(number -> haystack.append(number).append('\n'));
     var text = haystack.toString().toLowerCase();
     var phoneDigits = mailbox.getPhone() == null ? "" : mailbox.getPhone().replaceAll("[^0-9]", "");
 

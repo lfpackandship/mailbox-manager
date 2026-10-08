@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -51,6 +52,18 @@ final class Printing {
     CompletableFuture<Boolean> print(String jobName, List<Region> pages);
   }
 
+  /** Prints something that draws itself to fit the paper, such as a label. */
+  interface PaperPrinter {
+    /**
+     * Asks which printer to use, then prints.
+     *
+     * @param jobName what the print job is called in the printer's queue
+     * @param printable what to print, drawn to fit the paper the printer has
+     * @return completes like {@link Printer#print}
+     */
+    CompletableFuture<Boolean> print(String jobName, Printable printable);
+  }
+
   /** Whether the app is running on a Mac, whose print dialog behaves differently. */
   private static final boolean MAC = System.getProperty("os.name", "").toLowerCase().contains("mac");
 
@@ -59,6 +72,9 @@ final class Printing {
 
   /** Prints pages after showing the computer's print dialog. */
   static Printer printer = Printing::printWithSystemDialog;
+
+  /** Prints labels after showing the computer's print dialog. */
+  static PaperPrinter paperPrinter = Printing::printToPaperWithSystemDialog;
 
   /** Whether a print dialog is open, so a second click on Print doesn't open another. */
   private static boolean printing;
@@ -81,6 +97,42 @@ final class Printing {
     status.setText("");
     printer.print(jobName, pages).whenComplete((printed, error) -> Platform.runLater(() -> {
       printing = false;
+      if (error != null) {
+        var cause = error.getCause() instanceof IllegalStateException ? error.getCause() : error;
+        status.setStyle("-fx-text-fill: red;");
+        status.setText(cause.getMessage());
+      } else if (printed) {
+        status.setStyle("-fx-text-fill: green;");
+        status.setText(printedMessage);
+      }
+    }));
+  }
+
+  /**
+   * Prints something that draws itself to fit the paper, such as a
+   * forwarding label, then says how it went, like
+   * {@link #print(String, List, Label, String)}. Must be called on the
+   * JavaFX thread.
+   *
+   * @param jobName what the print job is called in the printer's queue
+   * @param printable what to print
+   * @param status where to say how it went
+   * @param printedMessage what to say once printed
+   * @param done called on the JavaFX thread afterwards with {@code true} if
+   *     it was printed, or {@code false} if it was cancelled, couldn't be
+   *     printed, or another print was already under way
+   */
+  static void printLabel(String jobName, Printable printable, Label status, String printedMessage,
+      Consumer<Boolean> done) {
+    if (printing) {
+      done.accept(false);
+      return;
+    }
+    printing = true;
+    status.setText("");
+    paperPrinter.print(jobName, printable).whenComplete((printed, error) -> Platform.runLater(() -> {
+      printing = false;
+      done.accept(error == null && printed);
       if (error != null) {
         var cause = error.getCause() instanceof IllegalStateException ? error.getCause() : error;
         status.setStyle("-fx-text-fill: red;");
@@ -198,6 +250,79 @@ final class Printing {
     thread.setDaemon(true);
     thread.start();
     return result;
+  }
+
+  /**
+   * Shows the computer's print dialog and prints something that draws itself
+   * to fit the paper, on a thread of its own like
+   * {@link #printWithSystemDialog}. It's given the whole sheet or label the
+   * printer has, less only the edges the printer itself can't reach (see
+   * {@link #fullPage}).
+   *
+   * @param jobName what the print job is called in the printer queue
+   * @param printable what to print
+   * @return completes with {@code true} once printed, {@code false} if the user
+   *     cancelled, or with the problem
+   */
+  private static CompletableFuture<Boolean> printToPaperWithSystemDialog(String jobName, Printable printable) {
+    var result = new CompletableFuture<Boolean>();
+    var thread = new Thread(() -> {
+      try {
+        var job = PrinterJob.getPrinterJob();
+        if (job.getPrintService() == null && !MAC) {
+          throw new IllegalStateException("No printer is set up on this computer.");
+        }
+        job.setJobName(jobName);
+        job.setPrintable(printable);
+        if (!job.printDialog()) {
+          result.complete(false);
+          return;
+        }
+        job.setPrintable(printable, fullPage(job));
+        job.print();
+        result.complete(true);
+      } catch (PrinterException e) {
+        result.completeExceptionally(new IllegalStateException(
+            "Printing didn't work. Check that the printer is on and try again. (" + e.getMessage() + ")", e));
+      } catch (IllegalStateException e) {
+        result.completeExceptionally(e);
+      } catch (RuntimeException e) {
+        result.completeExceptionally(new IllegalStateException(
+            "Something went wrong while printing. Check that the printer is on and try again. ("
+                + e.getMessage() + ")", e));
+      }
+    }, "Printing");
+    thread.setDaemon(true);
+    thread.start();
+    return result;
+  }
+
+  /**
+   * Returns the page chosen in the print dialog with as much of the paper
+   * usable as the printer allows, rather than the inch-wide margins Java
+   * otherwise assumes, which would leave almost nothing of a small label. If
+   * the printer's driver gives back nothing sensible, its own page is used as
+   * it is.
+   *
+   * @param job the print job, after its dialog
+   * @return the page
+   */
+  static PageFormat fullPage(PrinterJob job) {
+    var page = job.defaultPage();
+    try {
+      var full = (PageFormat) page.clone();
+      var paper = full.getPaper();
+      paper.setImageableArea(0, 0, paper.getWidth(), paper.getHeight());
+      full.setPaper(paper);
+      var checked = job.validatePage(full);
+      // Less than half an inch either way means something's wrong.
+      if (checked.getImageableWidth() >= 36 && checked.getImageableHeight() >= 36) {
+        return checked;
+      }
+    } catch (RuntimeException driverProblem) {
+      // Use the printer's own page below.
+    }
+    return page;
   }
 
   /**

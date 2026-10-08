@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 
@@ -216,6 +217,66 @@ class MailboxRepositoryTest {
 
     repository.setClosedDate(id, null);
     assertFalse(repository.findOpen().get(0).isClosed());
+  }
+
+  @Test
+  void closingRecordsWhatHappenedToTheKeyDepositAndReopeningForgetsIt() throws SQLException {
+    var id = repository.insert(mailbox("210", List.of(), null));
+
+    repository.setClosedDate(id, LocalDate.of(2026, 9, 1), DepositOutcome.KEPT);
+    assertEquals(DepositOutcome.KEPT, repository.findAll().get(0).getKeyDepositOutcome());
+
+    repository.setClosedDate(id, null, DepositOutcome.KEPT);
+    assertNull(repository.findAll().get(0).getKeyDepositOutcome());
+  }
+
+  @Test
+  void updateSavesTheKeyDepositOutcome() throws SQLException {
+    var id = repository.insert(mailbox("210", List.of(), null));
+    repository.setClosedDate(id, LocalDate.of(2026, 9, 1));
+    var closed = repository.findAll().get(0);
+
+    repository.update(new Mailbox(id, "Ada", "Lovelace", null, "210", null, "", null, null, null, null, null,
+        closed.getClosedDate(), 1, 1000L, false, DepositOutcome.RETURNED));
+
+    assertEquals(DepositOutcome.RETURNED, repository.findAll().get(0).getKeyDepositOutcome());
+  }
+
+  @Test
+  void aForwardingAddressKeepsTheDayItWasAddedUntilItChanges() throws SQLException {
+    var home = new ForwardingAddress("1 Elm St", null, "Town", "IL", "60000", null);
+    var office = new ForwardingAddress("2 Oak St", null, "Town", "IL", "60000", "office");
+    var id = repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "210", null, "", null, null, null,
+        List.of(home)));
+    // As if home had been added a while ago, and office before this list existed.
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("UPDATE forwarding_addresses SET added_on = '2026-01-15'");
+    }
+    var saved = repository.findAll().get(0);
+    assertEquals(LocalDate.of(2026, 1, 15), saved.getForwardingAddresses().get(0).getAddedOn());
+
+    var moved = new ForwardingAddress("1 Elm St", "Apt 2", "Town", "IL", "60000", null);
+    repository.update(new Mailbox(id, "Ada", "Lovelace", null, "210", null, "", null, null, null,
+        List.of(saved.getForwardingAddresses().get(0), office, moved)));
+
+    var addresses = repository.findAll().get(0).getForwardingAddresses();
+    assertEquals(LocalDate.of(2026, 1, 15), addresses.get(0).getAddedOn());
+    assertEquals(LocalDate.now(), addresses.get(1).getAddedOn());
+    assertEquals(LocalDate.now(), addresses.get(2).getAddedOn());
+  }
+
+  @Test
+  void anAddressFromBeforeTheDayWasKeptStaysUnknownWhenResaved() throws SQLException {
+    var home = new ForwardingAddress("1 Elm St", null, "Town", "IL", "60000", null);
+    var id = repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "210", null, "", null, null, null,
+        List.of(home)));
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("UPDATE forwarding_addresses SET added_on = NULL");
+    }
+
+    repository.update(new Mailbox(id, "Ada", "Lovelace", null, "210", null, "", null, null, null, List.of(home)));
+
+    assertNull(repository.findAll().get(0).getForwardingAddresses().get(0).getAddedOn());
   }
 
   @Test

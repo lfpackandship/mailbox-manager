@@ -30,6 +30,7 @@ import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.data.RentalHistoryRepository;
 import org.lfps.mailboxes.data.TestSandbox;
+import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
 
@@ -40,6 +41,8 @@ import org.lfps.mailboxes.model.RentalPeriod;
 class ManageBoxesActionsTest {
 
   private static final Dialogs.Confirm REAL_CONFIRM = Dialogs.confirm;
+
+  private static final Dialogs.ConfirmWithChoice REAL_CONFIRM_WITH_CHOICE = Dialogs.confirmWithChoice;
 
   private final MailboxRepository mailboxes = new MailboxRepository();
 
@@ -82,6 +85,7 @@ class ManageBoxesActionsTest {
   @AfterEach
   void closeAllWindows() {
     Dialogs.confirm = REAL_CONFIRM;
+    Dialogs.confirmWithChoice = REAL_CONFIRM_WITH_CHOICE;
     FxTestSupport.run(() -> {
       for (var window : List.copyOf(Window.getWindows())) {
         window.hide();
@@ -101,6 +105,36 @@ class ManageBoxesActionsTest {
     assertEquals(LocalDate.now(), ada.getClosedDate());
     assertEquals(List.of("9"), boxNumbersShown());
     assertFalse(mailboxes.isBoxNumberTaken("10", 0));
+  }
+
+  @Test
+  void closingABoxWithADepositAsksWhatHappenedToIt() throws SQLException {
+    var id = mailboxes.insert(new Mailbox(0, "Edsger", "Dijkstra", null, "20", null, "", null, null, null, null,
+        null, null, 2, 2000L));
+    var asked = new ArrayList<String>();
+    Dialogs.confirmWithChoice = (owner, question, details, choiceQuestion, choices, initial, yes, no) -> {
+      asked.add(choiceQuestion + " " + choices.get(initial));
+      return KeyFields.indexOf(DepositOutcome.RETURNED);
+    };
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+    select("20");
+    FxTestSupport.run(() -> button("closeButton").fire());
+
+    assertEquals(List.of("The $20.00 key deposit was: Not recorded yet"), asked);
+    assertEquals(DepositOutcome.RETURNED, find(id).getKeyDepositOutcome());
+    assertTrue(find(id).isClosed());
+  }
+
+  @Test
+  void answeringNoToTheDepositQuestionLeavesTheBoxOpen() throws SQLException {
+    var id = mailboxes.insert(new Mailbox(0, "Edsger", "Dijkstra", null, "20", null, "", null, null, null, null,
+        null, null, 2, 2000L));
+    Dialogs.confirmWithChoice = (owner, question, details, choiceQuestion, choices, initial, yes, no) -> -1;
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+    select("20");
+    FxTestSupport.run(() -> button("closeButton").fire());
+
+    assertFalse(find(id).isClosed());
   }
 
   @Test
