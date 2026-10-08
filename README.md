@@ -491,6 +491,9 @@ delete while testing changes your real records.
 Always run tests with `./mvnw test`. Maven points them at a throwaway data
 folder under `target/`, and the tests refuse to run anywhere else, which is why
 they fail from an IDE's test runner instead of touching your real database.
+On Windows, run `.\mvnw.cmd test`; a Windows-only profile in `pom.xml` also
+points `APPDATA`, which the app uses there instead of the home folder, at the
+throwaway folder.
 
 Some tests open real windows and press buttons and keys in code, so windows
 briefly appear on screen while the tests run. They don't move the mouse. In CI
