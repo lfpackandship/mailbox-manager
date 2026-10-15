@@ -244,7 +244,8 @@ public class Database {
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
    * {@code key_count}, {@code key_deposit_cents}, {@code forwarding_only},
    * and {@code key_deposit_outcome} columns of {@code mailboxes} and the
-   * {@code added_on} column of {@code forwarding_addresses}.
+   * {@code added_on} column of {@code forwarding_addresses}. Also adds the
+   * indexes that keep loading boxes and payments fast, if they're missing.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -361,6 +362,16 @@ public class Database {
       } catch (SQLException alreadyMigrated) {
         // Added in 1.10; already there on a newer database.
       }
+
+      // Without these, finding a box's names, addresses, or history reads
+      // the whole table each time, so loading every box slows down with the
+      // square of the number of boxes. Added in 1.11; older versions of the
+      // app still open a database that has them.
+      stmt.execute("CREATE INDEX IF NOT EXISTS business_names_mailbox ON business_names (mailbox_id)");
+      stmt.execute("CREATE INDEX IF NOT EXISTS forwarding_addresses_mailbox ON forwarding_addresses (mailbox_id)");
+      stmt.execute("CREATE INDEX IF NOT EXISTS rental_periods_mailbox ON rental_periods (mailbox_id)");
+      // For the Payments screen, which looks entries up by the day they were paid.
+      stmt.execute("CREATE INDEX IF NOT EXISTS rental_periods_recorded_on ON rental_periods (recorded_on)");
     } catch (SQLException e) {
       throw new RuntimeException("Failed to initialize database schema", e);
     }

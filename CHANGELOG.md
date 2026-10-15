@@ -3,6 +3,13 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## Unreleased
+
+### Changed
+
+- Manage Boxes, Renewals, the Calendar, Payments, and the other screens that
+  list boxes open faster in a shop with many boxes and a long rental history.
+
 ## 1.10.1 – 2026-10-07
 
 ### Fixed
