@@ -7,8 +7,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.ForwardingAddress;
@@ -39,6 +40,9 @@ public class MailboxRepository {
       + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date, key_count, "
       + "key_deposit_cents, forwarding_only, key_deposit_outcome FROM mailboxes";
 
+  /** Reads every open mailbox's details; see {@link Mailbox#isClosed()}. */
+  private static final String SELECT_OPEN_SQL = SELECT_ALL_SQL + " WHERE closed_date IS NULL";
+
   /** Replaces a mailbox's details. */
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
       + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ?, notes = ?, "
@@ -67,9 +71,9 @@ public class MailboxRepository {
   private static final String INSERT_BUSINESS_NAME_SQL =
       "INSERT INTO business_names (mailbox_id, name) VALUES (?, ?)";
 
-  /** Reads a mailbox's alternate business names, in the order they were added. */
-  private static final String SELECT_BUSINESS_NAMES_SQL =
-      "SELECT name FROM business_names WHERE mailbox_id = ? ORDER BY id";
+  /** Reads every mailbox's alternate business names, in the order they were added. */
+  private static final String SELECT_ALL_BUSINESS_NAMES_SQL =
+      "SELECT mailbox_id, name FROM business_names ORDER BY id";
 
   /** Deletes a mailbox's alternate business names. */
   private static final String DELETE_BUSINESS_NAMES_SQL =
@@ -83,6 +87,11 @@ public class MailboxRepository {
   private static final String SELECT_FORWARDING_ADDRESSES_SQL =
       "SELECT street, unit, city, state, zip, note, added_on "
       + "FROM forwarding_addresses WHERE mailbox_id = ? ORDER BY id";
+
+  /** Reads every mailbox's forwarding addresses, in the order they were added. */
+  private static final String SELECT_ALL_FORWARDING_ADDRESSES_SQL =
+      "SELECT mailbox_id, street, unit, city, state, zip, note, added_on "
+      + "FROM forwarding_addresses ORDER BY id";
 
   /** Deletes a mailbox's forwarding addresses. */
   private static final String DELETE_FORWARDING_ADDRESSES_SQL =
@@ -144,7 +153,7 @@ public class MailboxRepository {
    * @throws SQLException if the query fails
    */
   public List<Mailbox> findOpen() throws SQLException {
-    return findAll().stream().filter(m -> !m.isClosed()).collect(Collectors.toList());
+    return find(SELECT_OPEN_SQL);
   }
 
   /**
@@ -156,36 +165,66 @@ public class MailboxRepository {
    * @throws SQLException if the query fails
    */
   public List<Mailbox> findAll() throws SQLException {
+    return find(SELECT_ALL_SQL);
+  }
+
+  /**
+   * Reads mailboxes with their alternate business names and forwarding
+   * addresses, ordered by box number. The names and addresses of every box
+   * are read in one query each, rather than two queries per box, which
+   * would take thousands of queries in a large shop.
+   *
+   * @param sql {@link #SELECT_ALL_SQL} or {@link #SELECT_OPEN_SQL}
+   * @return the mailboxes it finds
+   * @throws SQLException if the query fails
+   */
+  private List<Mailbox> find(String sql) throws SQLException {
     var mailboxes = new ArrayList<Mailbox>();
 
-    try (Connection conn = Database.connect();
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(SELECT_ALL_SQL)) {
-      while (rs.next()) {
-        var id = rs.getInt("id");
-        mailboxes.add(new Mailbox(
-            id,
-            rs.getString("first_name"),
-            rs.getString("last_name"),
-            rs.getString("business_title"),
-            rs.getString("box_number"),
-            rs.getString("box_name"),
-            rs.getString("phone"),
-            rs.getString("email"),
-            findBusinessNames(conn, id),
-            date(rs.getString("end_date")),
-            findForwardingAddresses(conn, id),
-            rs.getString("notes"),
-            date(rs.getString("closed_date")),
-            rs.getObject("key_count") == null ? null : rs.getInt("key_count"),
-            rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents"),
-            rs.getInt("forwarding_only") != 0,
-            DepositOutcome.fromName(rs.getString("key_deposit_outcome"))));
+    try (Connection conn = Database.connect()) {
+      var businessNames = findAllBusinessNames(conn);
+      var forwardingAddresses = findAllForwardingAddresses(conn);
+      try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+        readMailboxes(rs, businessNames, forwardingAddresses, mailboxes);
       }
     }
 
     mailboxes.sort((a, b) -> BoxNumbers.ORDER.compare(a.getBoxNumber(), b.getBoxNumber()));
     return mailboxes;
+  }
+
+  /**
+   * Turns each row of a mailbox query into a {@link Mailbox}.
+   *
+   * @param rs the rows, from {@link #SELECT_ALL_SQL} or {@link #SELECT_OPEN_SQL}
+   * @param businessNames every box's alternate business names, by mailbox id
+   * @param forwardingAddresses every box's forwarding addresses, by mailbox id
+   * @param mailboxes the list to add the mailboxes to
+   * @throws SQLException if a row can't be read
+   */
+  private static void readMailboxes(ResultSet rs, Map<Integer, List<String>> businessNames,
+      Map<Integer, List<ForwardingAddress>> forwardingAddresses, List<Mailbox> mailboxes) throws SQLException {
+    while (rs.next()) {
+      var id = rs.getInt("id");
+      mailboxes.add(new Mailbox(
+          id,
+          rs.getString("first_name"),
+          rs.getString("last_name"),
+          rs.getString("business_title"),
+          rs.getString("box_number"),
+          rs.getString("box_name"),
+          rs.getString("phone"),
+          rs.getString("email"),
+          businessNames.get(id),
+          date(rs.getString("end_date")),
+          forwardingAddresses.get(id),
+          rs.getString("notes"),
+          date(rs.getString("closed_date")),
+          rs.getObject("key_count") == null ? null : rs.getInt("key_count"),
+          rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents"),
+          rs.getInt("forwarding_only") != 0,
+          DepositOutcome.fromName(rs.getString("key_deposit_outcome"))));
+    }
   }
 
   /**
@@ -455,9 +494,7 @@ public class MailboxRepository {
       stmt.setInt(1, mailboxId);
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          addresses.add(new ForwardingAddress(rs.getString("street"), rs.getString("unit"),
-              rs.getString("city"), rs.getString("state"), rs.getString("zip"), rs.getString("note"),
-              date(rs.getString("added_on"))));
+          addresses.add(forwardingAddress(rs));
         }
       }
     }
@@ -466,26 +503,56 @@ public class MailboxRepository {
   }
 
   /**
-   * Reads a mailbox's alternate business names.
+   * Reads every mailbox's alternate business names.
    *
    * @param conn the connection
-   * @param mailboxId the mailbox's id
-   * @return the names, in the order they were added
+   * @return each box's names in the order they were added, by mailbox id;
+   *     a box with none isn't in the map
    * @throws SQLException if they can't be read
    */
-  private List<String> findBusinessNames(Connection conn, int mailboxId) throws SQLException {
-    var names = new ArrayList<String>();
+  private Map<Integer, List<String>> findAllBusinessNames(Connection conn) throws SQLException {
+    var names = new HashMap<Integer, List<String>>();
 
-    try (PreparedStatement stmt = conn.prepareStatement(SELECT_BUSINESS_NAMES_SQL)) {
-      stmt.setInt(1, mailboxId);
-      try (ResultSet rs = stmt.executeQuery()) {
-        while (rs.next()) {
-          names.add(rs.getString("name"));
-        }
+    try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SELECT_ALL_BUSINESS_NAMES_SQL)) {
+      while (rs.next()) {
+        names.computeIfAbsent(rs.getInt("mailbox_id"), id -> new ArrayList<>()).add(rs.getString("name"));
       }
     }
 
     return names;
+  }
+
+  /**
+   * Reads the forwarding address in the current row of a query.
+   *
+   * @param rs the query, on a row with the address's columns
+   * @return the address
+   * @throws SQLException if a column can't be read
+   */
+  private static ForwardingAddress forwardingAddress(ResultSet rs) throws SQLException {
+    return new ForwardingAddress(rs.getString("street"), rs.getString("unit"), rs.getString("city"),
+        rs.getString("state"), rs.getString("zip"), rs.getString("note"), date(rs.getString("added_on")));
+  }
+
+  /**
+   * Reads every mailbox's forwarding addresses.
+   *
+   * @param conn the connection
+   * @return each box's addresses in the order they were added, by mailbox id;
+   *     a box with none isn't in the map
+   * @throws SQLException if they can't be read
+   */
+  private Map<Integer, List<ForwardingAddress>> findAllForwardingAddresses(Connection conn) throws SQLException {
+    var addresses = new HashMap<Integer, List<ForwardingAddress>>();
+
+    try (Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(SELECT_ALL_FORWARDING_ADDRESSES_SQL)) {
+      while (rs.next()) {
+        addresses.computeIfAbsent(rs.getInt("mailbox_id"), id -> new ArrayList<>()).add(forwardingAddress(rs));
+      }
+    }
+
+    return addresses;
   }
 
 }

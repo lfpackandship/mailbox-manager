@@ -331,6 +331,37 @@ class MailboxRepositoryTest {
         .map(Mailbox::getBoxNumber).collect(Collectors.toList()));
   }
 
+  @Test
+  void eachBoxGetsOnlyItsOwnNamesAndAddresses() throws SQLException {
+    var first = new ForwardingAddress("1 First St", null, "Town", "IL", "60000", null);
+    var second = new ForwardingAddress("2 Second St", null, "Town", "IL", "60000", null);
+    var closed = new ForwardingAddress("3 Closed St", null, "Town", "IL", "60000", null);
+    var moved = new ForwardingAddress("4 Moved St", null, "Town", "IL", "60000", "new");
+    var firstId = repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "1", null, "", null,
+        List.of("First Co"), null, List.of(first)));
+    repository.insert(new Mailbox(0, "Bob", "Byte", null, "2", null, "", null,
+        List.of("Second Co"), null, List.of(second)));
+    var closedId = repository.insert(new Mailbox(0, "Cy", "Closed", null, "3", null, "", null,
+        List.of("Closed Co"), null, List.of(closed)));
+    repository.setClosedDate(closedId, LocalDate.of(2026, 1, 1));
+    // Saved again last, so its names and addresses come after the other boxes' in the tables.
+    repository.update(new Mailbox(firstId, "Ada", "Lovelace", null, "1", null, "", null,
+        List.of("First Co", "First Too"), null, List.of(first, moved)));
+
+    var all = repository.findAll();
+    assertEquals(List.of("First Co", "First Too"), all.get(0).getAlternateBusinessNames());
+    assertEquals(List.of(first, moved), all.get(0).getForwardingAddresses());
+    assertEquals(List.of("Second Co"), all.get(1).getAlternateBusinessNames());
+    assertEquals(List.of(second), all.get(1).getForwardingAddresses());
+    assertEquals(List.of("Closed Co"), all.get(2).getAlternateBusinessNames());
+    assertEquals(List.of(closed), all.get(2).getForwardingAddresses());
+
+    var open = repository.findOpen();
+    assertEquals(List.of("1", "2"), open.stream().map(Mailbox::getBoxNumber).collect(Collectors.toList()));
+    assertEquals(List.of(first, moved), open.get(0).getForwardingAddresses());
+    assertEquals(List.of("Second Co"), open.get(1).getAlternateBusinessNames());
+  }
+
   /** Makes a box with the given forwarding addresses. */
   private static Mailbox withForwarding(String boxNumber, List<ForwardingAddress> addresses) {
     return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null,
