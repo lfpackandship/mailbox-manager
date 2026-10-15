@@ -90,7 +90,8 @@ class MenuBarTest {
   void theMenusHoldWhatsDoneMostOften() {
     assertEquals(List.of("File", "Go", "Help"), FxTestSupport.call(() -> menuBar().getMenus().stream()
         .map(menu -> menu.getText()).collect(Collectors.toList())));
-    assertEquals(List.of("Print Price Sheet…", "Print Renewal Reminders…", "Forwarding", "Back Up Now…",
+    assertEquals(List.of("Print Price Sheet…", "Print Renewal Reminders…", "Forwarding", "Import Boxes…",
+        "Back Up Now…",
         "Restore a Backup…", "Settings", "Exit"), items("File"));
     assertEquals(List.of("Main Menu", "Add New Box", "Manage Boxes", "Find a Box", "Renewals", "Calendar",
         "Payments", "Box Inventory", "Prices…"), items("Go"));

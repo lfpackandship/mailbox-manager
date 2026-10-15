@@ -137,6 +137,7 @@ The menus at the top of the window are there on every screen:
 - **File** – **Print Price Sheet…** (⌘P on a Mac, Ctrl+P on Windows and
   Linux), **Print Renewal Reminders…** for every box past due or due soon,
   **Forwarding** (⌘6 or Ctrl+6, see [Forwarding labels](#forwarding-labels)),
+  **Import Boxes…** (see [Importing boxes](#importing-boxes-from-a-spreadsheet)),
   **Back Up Now…**, **Restore a Backup…**, **Settings**, and **Exit**.
 - **Go** – any screen, without going back to the main menu first: **Main
   Menu** (⌘0 or Ctrl+0), **Add New Box** (⌘N or Ctrl+N), **Manage Boxes**,
@@ -255,6 +256,29 @@ After 30 days it's erased for good, the next time the app starts. To erase
 one straight away, select it under Recently deleted and click **Delete
 Forever**. Either way, its payments stay on Payments, marked with the box
 number, such as "12 (deleted)", so the totals for past months never change.
+
+### Importing boxes from a spreadsheet
+
+To add many boxes at once, such as when first setting up the app, open
+**File → Import Boxes…**, or click **Import…** on Manage Boxes.
+
+1. Click **Save Template**. It puts **Mailbox Manager import template.xlsx**
+   in your Downloads folder (with a number added if one's already there).
+2. Open it in Excel, Google Sheets, or Numbers. Fill in one box per row,
+   under the grey example row. Only **Box Number**, in orange, is required;
+   the **Key** tab says what goes in each column. Save it as an Excel
+   workbook (.xlsx) or a CSV file. In Google Sheets or Numbers, download or
+   export it as Excel.
+3. Click **Choose File…** and pick it.
+
+Every row is checked the way Add New Box checks the form: the box number
+mustn't be rented to someone else or appear on two rows, must be in the
+[box inventory](#box-inventory) if that's set up, and phone numbers, emails,
+dates, keys, deposits, and forwarding addresses must make sense. Rows with
+problems are listed. Select one and click **Fix…** to correct it in the app,
+or **Skip** to leave it out; **Skip All** leaves them all out, after asking.
+Once none are left, **Import** adds the boxes, all at once. The example row,
+if left in, and blank rows are skipped.
 
 ### Box inventory
 

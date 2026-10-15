@@ -30,6 +30,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -414,6 +415,11 @@ public class ManageBoxesView {
     printBtn.setOnAction(e -> TableOutput.print(listTitle(showChoice.getValue(), searchField.getText()),
         List.of(new TableOutput.Section(null, table)), statusLabel));
 
+    var importBtn = new Button("Import…");
+    importBtn.setId("importBoxesButton");
+    importBtn.setTooltip(new Tooltip("Adds many boxes at once from a spreadsheet."));
+    importBtn.setOnAction(e -> ImportBoxesView.show(stage));
+
     var spreadsheetBtn = new Button("Save as Spreadsheet…");
     spreadsheetBtn.setId("spreadsheetButton");
     spreadsheetBtn.setOnAction(e -> TableOutput.run(statusLabel, () -> TableOutput.saveSpreadsheet(stage,
@@ -425,7 +431,7 @@ public class ManageBoxesView {
     HBox.setHgrow(spacer, Priority.ALWAYS);
 
     var layout = new VBox(10,
-        new HBox(10, backBtn, printBtn, spreadsheetBtn),
+        new HBox(10, backBtn, printBtn, spreadsheetBtn, importBtn),
         new HBox(10, searchField, showChoice),
         table,
         new HBox(10, viewBtn, editBtn, renewBtn, closeBtn, restoreBtn, spacer, deleteBtn, deleteForeverBtn),

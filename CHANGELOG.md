@@ -7,6 +7,14 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ### Added
 
+- **File → Import Boxes…**, also **Import…** on Manage Boxes, adds many boxes
+  at once from a spreadsheet. **Save Template** puts an Excel template in
+  Downloads, with the required Box Number column in orange and a Key tab
+  saying what goes in each column. Fill it in with Excel, Google Sheets, or
+  Numbers, save it as Excel or CSV, and choose it. Rows with problems, such
+  as a box already rented or a phone number that's too short, are listed to
+  fix in the app or skip, one at a time or all at once; then **Import** adds
+  the rest.
 - **Dated Notes** on Edit Box keep a history of what happens with a box,
   such as "Called about late payment", each with the day it happened, which
   can be an earlier day than today. Notes can be edited or removed, are listed

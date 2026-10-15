@@ -258,6 +258,9 @@ public final class AppWindow {
     // Opens a screen, like the Go menu, so unsaved changes are asked about first.
     var forwardingItem = goItem("Forwarding", "Shortcut+6", () -> ForwardingView.show(stage));
 
+    // Opens a screen, like the Go menu, so unsaved changes are asked about first.
+    var importItem = goItem("Import Boxes…", null, () -> ImportBoxesView.show(stage));
+
     var backUpItem = new MenuItem("Back Up Now…");
     backUpItem.setOnAction(e -> {
       try {
@@ -283,7 +286,7 @@ public final class AppWindow {
 
     var fileMenu = new Menu("File");
     fileMenu.getItems().addAll(priceSheetItem, remindersItem, new SeparatorMenuItem(), forwardingItem,
-        new SeparatorMenuItem(),
+        importItem, new SeparatorMenuItem(),
         backUpItem, restoreItem, new SeparatorMenuItem(),
         settingsItem, new SeparatorMenuItem(), exitItem);
 
