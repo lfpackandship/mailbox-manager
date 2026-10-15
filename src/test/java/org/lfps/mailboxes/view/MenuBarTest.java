@@ -6,9 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -38,6 +40,7 @@ import org.lfps.mailboxes.model.Mailbox;
 class MenuBarTest {
 
   private final Function<Window, File> realChooseFolder = SettingsView.chooseFolder;
+  private final BiFunction<Window, Path, Path> realChooseCopyFolder = SettingsView.chooseCopyFolder;
 
   private final Predicate<String> realConfirm = RestoreView.confirm;
 
@@ -76,6 +79,7 @@ class MenuBarTest {
       }
     });
     SettingsView.chooseFolder = realChooseFolder;
+    SettingsView.chooseCopyFolder = realChooseCopyFolder;
     RestoreView.confirm = realConfirm;
   }
 
@@ -173,7 +177,7 @@ class MenuBarTest {
   @Test
   void backUpNowSavesABackupWhereChosen() throws Exception {
     var folder = Files.createTempDirectory(Database.dataDir(), "usb");
-    SettingsView.chooseFolder = owner -> folder.toFile();
+    SettingsView.chooseCopyFolder = (owner, secondFolder) -> folder;
 
     FxTestSupport.run(() -> item("File", "Back Up Now…").fire());
 

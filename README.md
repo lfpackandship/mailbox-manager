@@ -412,10 +412,14 @@ the computer itself fails. To keep copies somewhere else:
   Each daily backup is copied there too, and old copies are deleted the same
   way. If the folder isn't available when the app starts (for example, the
   USB drive is unplugged), the app shows a warning and tries again next time.
-- **Whenever you like:** click **Back Up Now…** and pick a folder. It saves a
-  backup named with the date and time, such as
-  `mailboxes-backup-2026-09-26-143005.db`. These are never deleted
-  automatically.
+- **Whenever you like:** click **Back Up Now…**. It saves a backup named
+  with the date and time, such as `mailboxes-backup-2026-09-26-143005.db`,
+  in the backups folder, where **Restore a Backup…** lists it. It then asks
+  whether to save a copy somewhere else too: **Downloads**, ready to drag
+  onto a USB drive or send to someone, the folder set as **Also copy backups
+  to** if there is one, or any folder with **Choose Folder…**. Click **No
+  Thanks** to keep just the one in the backups folder. Backups saved this
+  way are never deleted automatically, wherever they are.
 
 ### Backing up to Google Drive
 

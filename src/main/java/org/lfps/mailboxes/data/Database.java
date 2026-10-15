@@ -167,13 +167,15 @@ public class Database {
    * Saves a backup of the current data into the given folder, named with the
    * date and time (for example {@code mailboxes-backup-2026-09-26-143005.db}).
    *
-   * @param folder the folder to save into, such as a USB drive
+   * @param folder the folder to save into, such as the {@code backups}
+   *     folder; it's created if it doesn't exist yet
    * @return the backup file written
    * @throws RuntimeException if the backup cannot be written
    */
   public static Path exportBackup(Path folder) {
     var target = folder.resolve("mailboxes-backup-" + LocalDateTime.now().format(TIMESTAMP) + ".db");
     try {
+      Files.createDirectories(folder);
       writeCopy(target);
       return target;
     } catch (IOException | SQLException e) {

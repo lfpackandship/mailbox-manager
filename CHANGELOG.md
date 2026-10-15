@@ -7,6 +7,11 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ### Changed
 
+- **Back Up Now…** saves the backup in the backups folder first, so
+  **Restore a Backup…** lists it, then asks whether to save a copy somewhere
+  else too: **Downloads**, ready to drag onto a USB drive or send to someone,
+  the second backup folder if one is set, or any folder. Before, it asked for
+  a folder and saved the backup only there.
 - Manage Boxes, Renewals, the Calendar, Payments, and the other screens that
   list boxes open faster in a shop with many boxes and a long rental history.
 

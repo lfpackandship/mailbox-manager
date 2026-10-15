@@ -261,10 +261,7 @@ public final class AppWindow {
     var backUpItem = new MenuItem("Back Up Now…");
     backUpItem.setOnAction(e -> {
       try {
-        var message = SettingsView.backUpNow(stage);
-        if (message != null) {
-          inform(stage, AlertType.INFORMATION, "Backup saved", message);
-        }
+        inform(stage, AlertType.INFORMATION, "Backup saved", SettingsView.backUpNow(stage));
       } catch (IllegalStateException ex) {
         inform(stage, AlertType.ERROR, "Backup not saved", ex.getMessage());
       }

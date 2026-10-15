@@ -1,17 +1,26 @@
 package org.lfps.mailboxes.view;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.time.DayOfWeek;
 import java.time.format.TextStyle;
 import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -54,6 +63,15 @@ public class SettingsView {
    * a real folder dialog.
    */
   static Function<Window, File> chooseFolder = owner -> new DirectoryChooser().showDialog(owner);
+
+  /**
+   * After Back Up Now saves a backup, asks where else to put a copy: the
+   * second backup folder passed in (or {@code null} if none is set),
+   * Downloads, or a folder chosen with {@link #chooseFolder}. Returns the
+   * folder, or {@code null} for no copy. Replaceable so tests can answer
+   * without a real dialog.
+   */
+  static BiFunction<Window, Path, Path> chooseCopyFolder = SettingsView::askWhereToCopy;
 
   /** The open settings window, or {@code null} if none is open. */
   private static Stage window;
@@ -191,10 +209,7 @@ public class SettingsView {
     backUpNowBtn.setId("backUpNowButton");
     backUpNowBtn.setOnAction(e -> {
       try {
-        var message = backUpNow(stage);
-        if (message != null) {
-          showSuccess(resultLabel, message);
-        }
+        showSuccess(resultLabel, backUpNow(stage));
       } catch (IllegalStateException ex) {
         showError(resultLabel, ex.getMessage());
       }
@@ -387,23 +402,116 @@ public class SettingsView {
   }
 
   /**
-   * Asks for a folder, such as a USB drive, and saves a backup there.
+   * Saves a backup to the app's backups folder, where Restore a Backup lists
+   * it, then asks whether to put a copy somewhere else too, such as
+   * Downloads, to drag onto a USB drive or send to someone. Neither copy is
+   * ever deleted automatically.
    *
-   * @param owner the window the folder dialog belongs to
-   * @return a message saying where it was saved, or {@code null} if cancelled
-   * @throws IllegalStateException if it couldn't be saved, with a message
-   *     suitable for showing to the user
+   * @param owner the window the dialogs belong to
+   * @return a message saying where the backup and any copy were saved
+   * @throws IllegalStateException if the backup or the copy couldn't be
+   *     saved, with a message suitable for showing to the user that says
+   *     whether the backup itself was saved
    */
   static String backUpNow(Window owner) {
-    var folder = chooseFolder.apply(owner);
-    if (folder == null) {
-      return null;
-    }
+    Path saved;
     try {
-      return "Saved a backup to " + Database.exportBackup(folder.toPath());
+      saved = Database.exportBackup(Database.backupDir());
     } catch (RuntimeException e) {
       throw new IllegalStateException("Couldn't save the backup: " + Errors.rootMessage(e), e);
     }
+    var message = "Saved a backup to " + saved;
+
+    var folder = chooseCopyFolder.apply(owner, secondBackupFolder());
+    if (folder == null) {
+      return message;
+    }
+    if (!Files.isDirectory(folder)) {
+      throw new IllegalStateException(message + ", but the folder " + folder + " can't be found, so no copy "
+          + "was saved there. If it's on a removable or network drive, check that it's connected.");
+    }
+    var copy = folder.resolve(saved.getFileName());
+    try {
+      Files.copy(saved, copy);
+    } catch (IOException e) {
+      throw new IllegalStateException(message + ", but couldn't save a copy to " + folder + ": "
+          + Errors.rootMessage(e), e);
+    }
+    return message + ", and a copy to " + copy;
+  }
+
+  /**
+   * Returns the folder set as Also copy backups to on the Backups tab, as
+   * last saved.
+   *
+   * @return the folder, or {@code null} if none is set or the setting can't
+   *     be read
+   */
+  private static Path secondBackupFolder() {
+    try {
+      var setting = new SettingsRepository().get(Setting.SECOND_BACKUP_FOLDER).trim();
+      return setting.isEmpty() ? null : Paths.get(setting);
+    } catch (SQLException e) {
+      // Only means that choice isn't offered; Downloads and Choose Folder still are.
+      return null;
+    }
+  }
+
+  /**
+   * Returns the user's Downloads folder, such as C:\Users\Shop\Downloads.
+   *
+   * @return the Downloads folder in the user's home folder
+   */
+  static Path downloadsFolder() {
+    return Paths.get(System.getProperty("user.home")).resolve("Downloads");
+  }
+
+  /**
+   * Asks where to put a copy of the backup just saved, with a button for
+   * Downloads, one for the second backup folder if one is set, Choose
+   * Folder, and No Thanks.
+   *
+   * @param owner the window the dialog belongs to
+   * @param secondFolder the folder set as Also copy backups to, or
+   *     {@code null} if none is set
+   * @return the folder to copy to, or {@code null} for No Thanks, closing the
+   *     dialog, or cancelling the folder dialog
+   */
+  private static Path askWhereToCopy(Window owner, Path secondFolder) {
+    var downloads = new ButtonType("Downloads");
+    // Named by the folder itself, such as "Backups", since a whole path can be too long for a button.
+    var second = secondFolder == null ? null
+        : new ButtonType(secondFolder.getFileName() == null ? secondFolder.toString()
+            : secondFolder.getFileName().toString());
+    var choose = new ButtonType("Choose Folder…");
+    var noThanks = new ButtonType("No Thanks", ButtonData.CANCEL_CLOSE);
+
+    var alert = new Alert(AlertType.CONFIRMATION);
+    alert.initOwner(owner);
+    alert.setTitle("Backup Saved");
+    alert.setHeaderText("The backup is saved.");
+    alert.setContentText("Also save a copy somewhere else, such as to drag onto a USB drive or send to someone?"
+        + (secondFolder == null ? "" : "\n\n" + second.getText() + " is your second backup folder, "
+            + secondFolder + "."));
+    if (second == null) {
+      alert.getButtonTypes().setAll(downloads, choose, noThanks);
+    } else {
+      alert.getButtonTypes().setAll(downloads, second, choose, noThanks);
+    }
+    AppWindow.applyTextSize(alert);
+
+    var answer = alert.showAndWait().orElse(noThanks);
+    if (answer == downloads) {
+      return downloadsFolder();
+    }
+    if (answer == second) {
+      return secondFolder;
+    }
+    if (answer == choose) {
+      var folder = chooseFolder.apply(owner);
+      return folder == null ? null : folder.toPath();
+    }
+    return null;
   }
 
   /**
