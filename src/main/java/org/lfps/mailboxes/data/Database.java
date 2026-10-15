@@ -245,7 +245,8 @@ public class Database {
    * they don't already exist, and migrates older databases that predate the
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
    * {@code key_count}, {@code key_deposit_cents}, {@code forwarding_only},
-   * {@code key_deposit_outcome}, and {@code deleted_on} columns of
+   * {@code key_deposit_outcome}, {@code deleted_on}, {@code hold_from},
+   * {@code hold_until}, and {@code hold_note} columns of
    * {@code mailboxes}, the {@code added_on} column of
    * {@code forwarding_addresses}, and the {@code out_of_service} and
    * {@code out_of_service_reason} columns of {@code box_inventory}. Also adds the
@@ -270,7 +271,10 @@ public class Database {
         + "key_deposit_cents INTEGER, "
         + "forwarding_only INTEGER NOT NULL DEFAULT 0, "
         + "key_deposit_outcome TEXT, "
-        + "deleted_on TEXT)";
+        + "deleted_on TEXT, "
+        + "hold_from TEXT, "
+        + "hold_until TEXT, "
+        + "hold_note TEXT)";
 
     var createBusinessNames = "CREATE TABLE IF NOT EXISTS business_names ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -366,7 +370,7 @@ public class Database {
 
       for (var column : List.of("box_name TEXT", "end_date TEXT", "notes TEXT", "closed_date TEXT",
           "key_count INTEGER", "key_deposit_cents INTEGER", "forwarding_only INTEGER NOT NULL DEFAULT 0",
-          "key_deposit_outcome TEXT", "deleted_on TEXT")) {
+          "key_deposit_outcome TEXT", "deleted_on TEXT", "hold_from TEXT", "hold_until TEXT", "hold_note TEXT")) {
         try {
           stmt.execute("ALTER TABLE mailboxes ADD COLUMN " + column);
         } catch (SQLException alreadyMigrated) {

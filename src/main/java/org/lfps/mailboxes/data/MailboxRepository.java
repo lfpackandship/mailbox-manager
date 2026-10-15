@@ -13,6 +13,7 @@ import java.util.Map;
 
 import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.ForwardingAddress;
+import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
 import org.lfps.mailboxes.util.BoxNumbers;
@@ -32,13 +33,14 @@ public class MailboxRepository {
   /** Adds a mailbox. */
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
       + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date, notes, "
-      + "closed_date, key_count, key_deposit_cents, forwarding_only, key_deposit_outcome) "
-      + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      + "closed_date, key_count, key_deposit_cents, forwarding_only, key_deposit_outcome, hold_from, hold_until, "
+      + "hold_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   /** Reads mailboxes' details; a WHERE clause picks which. */
   private static final String SELECT_COLUMNS_SQL = "SELECT id, first_name, last_name, "
       + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date, key_count, "
-      + "key_deposit_cents, forwarding_only, key_deposit_outcome, deleted_on FROM mailboxes";
+      + "key_deposit_cents, forwarding_only, key_deposit_outcome, deleted_on, hold_from, hold_until, hold_note "
+      + "FROM mailboxes";
 
   /** Reads every mailbox that hasn't been deleted, open or closed. */
   private static final String SELECT_ALL_SQL = SELECT_COLUMNS_SQL + " WHERE deleted_on IS NULL";
@@ -52,8 +54,8 @@ public class MailboxRepository {
   /** Replaces a mailbox's details. */
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
       + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ?, notes = ?, "
-      + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ?, key_deposit_outcome = ? "
-      + "WHERE id = ?";
+      + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ?, key_deposit_outcome = ?, "
+      + "hold_from = ?, hold_until = ?, hold_note = ? WHERE id = ?";
 
   /** Checks whether another open, rented box that isn't deleted has a box number. */
   private static final String BOX_NUMBER_TAKEN_SQL = "SELECT 1 FROM mailboxes "
@@ -253,7 +255,8 @@ public class MailboxRepository {
           rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents"),
           rs.getInt("forwarding_only") != 0,
           DepositOutcome.fromName(rs.getString("key_deposit_outcome")),
-          date(rs.getString("deleted_on"))));
+          date(rs.getString("deleted_on")),
+          mailHold(rs)));
     }
   }
 
@@ -270,7 +273,7 @@ public class MailboxRepository {
       try {
         try (PreparedStatement stmt = conn.prepareStatement(UPDATE_SQL)) {
           bindMailboxFields(stmt, mailbox);
-          stmt.setInt(15, mailbox.getId());
+          stmt.setInt(18, mailbox.getId());
           stmt.executeUpdate();
         }
         deleteBusinessNames(conn, mailbox.getId());
@@ -487,8 +490,9 @@ public class MailboxRepository {
   }
 
   /**
-   * Fills in a mailbox's details as the first 14 parameters of an insert or
-   * update.
+   * Fills in a mailbox's details as the first 17 parameters of an insert or
+   * update. A mail hold that has ended isn't saved, so it's cleared the next
+   * time the box is saved.
    *
    * @param stmt the insert or update
    * @param mailbox the mailbox
@@ -509,6 +513,27 @@ public class MailboxRepository {
     stmt.setObject(12, mailbox.getKeyDepositCents());
     stmt.setInt(13, mailbox.isForwardingOnly() ? 1 : 0);
     stmt.setString(14, mailbox.getKeyDepositOutcome() == null ? null : mailbox.getKeyDepositOutcome().name());
+    var hold = mailbox.getMailHold(LocalDate.now());
+    stmt.setString(15, hold == null ? null : hold.getFrom().toString());
+    stmt.setString(16, hold == null ? null : hold.getUntil().toString());
+    stmt.setString(17, hold == null ? null : hold.getNote());
+  }
+
+  /**
+   * Reads the mail hold in the current row of a mailbox query.
+   *
+   * @param rs the query, on a row with the hold's columns
+   * @return the hold, or {@code null} if there's none or it was stored
+   *     without both of its days
+   * @throws SQLException if a column can't be read
+   */
+  private static MailHold mailHold(ResultSet rs) throws SQLException {
+    var from = date(rs.getString("hold_from"));
+    var until = date(rs.getString("hold_until"));
+    if (from == null || until == null || until.isBefore(from)) {
+      return null;
+    }
+    return new MailHold(from, until, rs.getString("hold_note"));
   }
 
   /**

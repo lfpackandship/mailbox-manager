@@ -234,7 +234,7 @@ public class RenewalsView {
     var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
     boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
     boxNumberCol.setComparator(BoxNumbers.ORDER);
-    BoxLabels.markForwarding(boxNumberCol);
+    BoxLabels.markBoxNumbers(boxNumberCol);
 
     var phoneCol = new TableColumn<Mailbox, String>("Phone");
     phoneCol.setCellValueFactory(cell -> new SimpleStringProperty(

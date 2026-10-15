@@ -33,6 +33,7 @@ import org.lfps.mailboxes.data.RentalHistoryRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.RentalPeriod;
 
 /**
@@ -176,6 +177,29 @@ class ManageBoxesActionsTest {
         .collect(Collectors.toList()));
     assertEquals(1, new RentalHistoryRepository().findForMailbox(adaId).size());
     assertEquals(List.of("9"), boxNumbersShown());
+  }
+
+  @Test
+  void boxesWhoseMailIsHeldAreMarkedAndCanBeListed() throws SQLException {
+    var today = LocalDate.now();
+    var ada = find(adaId);
+    mailboxes.update(ada.withMailHold(new MailHold(today, today.plusDays(3), "on vacation")));
+    var later = mailboxes.findOpen().stream().filter(m -> m.getBoxNumber().equals("9")).findFirst().orElseThrow();
+    mailboxes.update(later.withMailHold(new MailHold(today.plusDays(1), today.plusDays(3), null)));
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+
+    FxTestSupport.run(() -> showChoice().setValue(ManageBoxesView.Show.HOLDING));
+    assertEquals(List.of("10"), boxNumbersShown());
+    var held = find(adaId);
+    assertEquals("10 (holding)", BoxLabels.boxNumber(held, today));
+    assertEquals("9", BoxLabels.boxNumber(later, today));
+
+    FxTestSupport.run(() -> BoxDetailsView.show(mainWindow, held, () -> { }, () -> { }));
+    var details = FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w.getScene() != null && w.getScene().lookup("#detailMailHold") != null)
+        .findFirst().orElseThrow());
+    assertTrue(FxTestSupport.call(() -> ((Label) details.getScene().lookup("#detailMailHold")).getText())
+        .startsWith("Holding mail "));
   }
 
   @Test

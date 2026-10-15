@@ -335,6 +335,20 @@ added is saved with the box anyway. The **Forwarding Addresses** and
 **Alternate Business Names** sections fold up to save room; click the heading
 to open one. Each heading says how many there are.
 
+### Holding mail
+
+When a box holder asks the shop to hold their mail, such as while they're
+on vacation, open **Mail Hold** on Add New Box or Edit Box. Choose the first
+day under **From** and the last under **Until**, add a note if it helps,
+such as "forward it all on the 20th", and click **Save**. While the hold is
+on, the box's details say so at the top, and Manage Boxes and Renewals show
+the box number as, for example, "12 (holding)". **Holding mail** in the menu
+next to the search on Manage Boxes lists just those boxes. A hold set for
+later days shows on the box's details as "Will hold mail …" until it starts.
+
+The hold ends by itself after its last day; there's nothing to remove. To
+end one sooner, click **Clear** in the Mail Hold section and save.
+
 ### Forwarding labels
 
 To print a mailing label for forwarding a holder's mail, open the box's

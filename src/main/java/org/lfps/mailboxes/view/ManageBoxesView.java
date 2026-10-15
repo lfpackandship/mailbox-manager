@@ -53,6 +53,8 @@ public class ManageBoxesView {
     OPEN("Open boxes"),
     /** Open boxes that are forwarding only. */
     FORWARDING("Forwarding only"),
+    /** Open boxes whose mail is being held today. */
+    HOLDING("Holding mail"),
     /** Boxes that have been closed. */
     CLOSED("Closed boxes"),
     /** Every box, open or closed. */
@@ -85,6 +87,9 @@ public class ManageBoxesView {
       }
       if (this == FORWARDING) {
         return !mailbox.isClosed() && mailbox.isForwardingOnly();
+      }
+      if (this == HOLDING) {
+        return !mailbox.isClosed() && mailbox.isHoldingMailOn(LocalDate.now());
       }
       return this == ALL || mailbox.isClosed() == (this == CLOSED);
     }
@@ -151,7 +156,7 @@ public class ManageBoxesView {
     var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
     boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
     boxNumberCol.setComparator(BoxNumbers.ORDER);
-    BoxLabels.markForwarding(boxNumberCol);
+    BoxLabels.markBoxNumbers(boxNumberCol);
 
     var nameCol = new TableColumn<Mailbox, String>("Name");
     nameCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getFullName()));
@@ -566,6 +571,9 @@ public class ManageBoxesView {
     mailbox.getForwardingAddresses().forEach(address -> haystack.append(address).append('\n'));
     if (mailbox.isForwardingOnly()) {
       haystack.append("forwarding only\n");
+    }
+    if (mailbox.isHoldingMailOn(LocalDate.now())) {
+      haystack.append("holding mail\n");
     }
     labelNumbers.forEach(number -> haystack.append(number).append('\n'));
     var text = haystack.toString().toLowerCase();

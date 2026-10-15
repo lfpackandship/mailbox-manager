@@ -207,10 +207,11 @@ class ForwardingAddressesTest {
   }
 
   @Test
-  void onAddNewBoxBothSectionsStartFoldedUp() {
+  void onAddNewBoxEverySectionStartsFoldedUp() {
     FxTestSupport.run(() -> AddBoxView.show(mainWindow));
 
-    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses"), FxTestSupport.call(this::sectionTitles));
+    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses", "Mail Hold"),
+        FxTestSupport.call(this::sectionTitles));
     assertTrue(FxTestSupport.call(() -> sections().stream().noneMatch(TitledPane::isExpanded)));
   }
 
@@ -226,9 +227,9 @@ class ForwardingAddressesTest {
       button("addForwardingButton").fire();
     });
 
-    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses (2)"),
+    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses (2)", "Mail Hold"),
         FxTestSupport.call(this::sectionTitles));
-    assertEquals(List.of(false, true), FxTestSupport.call(() -> sections().stream()
+    assertEquals(List.of(false, true, false), FxTestSupport.call(() -> sections().stream()
         .map(TitledPane::isExpanded).collect(Collectors.toList())));
   }
 

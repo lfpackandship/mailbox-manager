@@ -7,6 +7,11 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ### Added
 
+- **Mail Hold** on Add New Box and Edit Box holds a box holder's mail from
+  one day through another, such as while they're on vacation, with a note on
+  what to do with it. While it's on, the box's details say so and Manage
+  Boxes and Renewals mark the box "(holding)"; **Holding mail** on Manage
+  Boxes lists those boxes. It ends by itself after the last day.
 - A line under the main menu's buttons sums up the shop: the open boxes, the
   empty ones (once the box inventory is set up), and the money taken this
   month, such as "212 open boxes · 14 empty · $3,480.00 taken in October".

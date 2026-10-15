@@ -81,6 +81,11 @@ final class BoxDetailsView {
     if (mailbox.isClosed()) {
       rows.add(row("Closed", "detailClosed", mailbox.getClosedDate().format(fullDate)));
     }
+    // At the top while there is one, since it changes what's done with the mail.
+    var hold = mailbox.getMailHold(today);
+    if (hold != null) {
+      rows.add(row("Mail hold", "detailMailHold", hold.describe(today)));
+    }
     rows.addAll(List.of(
         row("Holder", "detailHolder", orNone(mailbox.getFullName())),
         row("Business title", "detailBusinessTitle", orNone(mailbox.getBusinessTitle())),

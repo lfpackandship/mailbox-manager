@@ -1,6 +1,7 @@
 package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 import javafx.beans.binding.Bindings;
 import javafx.collections.ObservableList;
@@ -21,6 +22,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.MailboxRepository;
+import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
 import org.lfps.mailboxes.util.Validators;
@@ -83,6 +85,8 @@ public class EditBoxView {
     outcomeField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
 
     var notesField = notesField();
+    // A hold that has ended is left out, so saving clears it.
+    var holdEditor = new MailHoldEditor(mailbox.getMailHold(LocalDate.now()));
     notesField.setText(orEmpty(mailbox.getNotes()));
 
     hints(firstNameField, lastNameField, businessTitleField, boxNumberField, boxNameField, phoneField, emailField);
@@ -99,6 +103,7 @@ public class EditBoxView {
         forwardingOnlyBox.selectedProperty(), notesField.textProperty(), outcomeField.valueProperty());
     businessNamesEditor.watchFor(changes);
     forwardingEditor.watchFor(changes);
+    holdEditor.watchFor(changes);
 
     var saveBtn = new Button("Save");
     var resultLabel = new Label();
@@ -162,6 +167,13 @@ public class EditBoxView {
         errors.append(ex.getMessage()).append('\n');
         problems.mark(keys.depositField);
       }
+      MailHold hold = null;
+      try {
+        hold = holdEditor.getHold();
+      } catch (IllegalArgumentException ex) {
+        errors.append(ex.getMessage()).append('\n');
+        problems.mark(holdEditor.problemField());
+      }
 
       if (errors.length() > 0) {
         resultLabel.setStyle("-fx-text-fill: red;");
@@ -178,7 +190,8 @@ public class EditBoxView {
           businessTitleField.getText(), boxNumberField.getText(), boxNameField.getText(), phone, email,
           businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses(),
           notesField.getText(), mailbox.getClosedDate(), keyCount, keyDeposit, forwardingOnly,
-          mailbox.isClosed() ? KeyFields.outcomeAt(outcomeField.getSelectionModel().getSelectedIndex()) : null);
+          mailbox.isClosed() ? KeyFields.outcomeAt(outcomeField.getSelectionModel().getSelectedIndex()) : null)
+          .withMailHold(hold);
 
       try {
         repository.update(updated);
@@ -214,6 +227,7 @@ public class EditBoxView {
     }
     grid.add(namesSection, 0, row++, 4, 1);
     grid.add(forwardingSection, 0, row++, 4, 1);
+    grid.add(holdEditor.section(), 0, row++, 4, 1);
     grid.add(new Label("Notes:"), 0, row++, 4, 1);
     grid.add(notesField, 0, row, 4, 1);
 

@@ -11,9 +11,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 import javafx.scene.control.Button;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -27,6 +29,7 @@ import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.model.MailHold;
 
 /**
  * UI tests for the Edit Box form's notes, closed boxes, and box number
@@ -230,6 +233,72 @@ class EditBoxViewTest {
     });
 
     assertFalse(FxTestSupport.call(phone::getStyle).contains("#c62828"));
+  }
+
+  @Test
+  void savesAMailHold() throws SQLException {
+    var today = LocalDate.now();
+    edit("1");
+    FxTestSupport.run(() -> {
+      holdField("#holdFromField").setValue(today);
+      holdField("#holdUntilField").setValue(today.plusDays(7));
+      textField("#holdNoteField").setText("forward it all on Friday");
+      save();
+    });
+
+    assertTrue(done);
+    assertEquals(new MailHold(today, today.plusDays(7), "forward it all on Friday"), find("1").getMailHold(today));
+  }
+
+  @Test
+  void aMailHoldNeedsBothDays() throws SQLException {
+    edit("1");
+    FxTestSupport.run(() -> {
+      holdField("#holdFromField").setValue(LocalDate.now());
+      save();
+    });
+
+    assertEquals("A mail hold needs both a From and an Until date.", result());
+    assertTrue(FxTestSupport.call(() -> ((TitledPane) mainWindow.getScene().getRoot().lookup("#mailHoldSection"))
+        .isExpanded()));
+    assertNull(find("1").getMailHold(LocalDate.now()));
+  }
+
+  @Test
+  void aMailHoldThatsOverStartsEmptyAndIsClearedBySaving() throws SQLException {
+    var id = find("1").getId();
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("UPDATE mailboxes SET hold_from = '2020-01-01', hold_until = '2020-01-05' WHERE id = " + id);
+    }
+    edit("1");
+
+    assertNull(FxTestSupport.call(() -> holdField("#holdFromField").getValue()));
+    assertEquals("Mail Hold", FxTestSupport.call(() -> ((TitledPane) mainWindow.getScene().getRoot()
+        .lookup("#mailHoldSection")).getText()));
+    FxTestSupport.run(this::save);
+    try (var conn = Database.connect(); var stmt = conn.createStatement();
+        var rs = stmt.executeQuery("SELECT hold_from FROM mailboxes WHERE id = " + id)) {
+      rs.next();
+      assertNull(rs.getString(1));
+    }
+  }
+
+  @Test
+  void clearEndsAMailHold() throws SQLException {
+    var today = LocalDate.now();
+    mailboxes.update(find("1").withMailHold(new MailHold(today, today.plusDays(3), null)));
+    edit("1");
+    FxTestSupport.run(() -> {
+      ((Button) mainWindow.getScene().getRoot().lookup("#clearHoldButton")).fire();
+      save();
+    });
+
+    assertNull(find("1").getMailHold(today));
+  }
+
+  /** Returns one of the Mail Hold section's date fields on Edit Box. */
+  private DatePicker holdField(String selector) {
+    return (DatePicker) mainWindow.getScene().getRoot().lookup(selector);
   }
 
   /** Opens Edit Box for a box. */

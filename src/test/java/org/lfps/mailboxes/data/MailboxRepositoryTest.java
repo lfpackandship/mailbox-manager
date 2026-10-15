@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.ForwardingAddress;
+import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.Mailbox;
 
 /**
@@ -415,6 +416,25 @@ class MailboxRepositoryTest {
         var rs = stmt.executeQuery("SELECT COUNT(*) FROM business_names")) {
       rs.next();
       assertEquals(0, rs.getInt(1));
+    }
+  }
+
+  @Test
+  void aMailHoldRoundTripsAndOneThatsOverIsClearedWhenSaved() throws SQLException {
+    var today = LocalDate.now();
+    var hold = new MailHold(today, today.plusDays(5), "forward on the 20th");
+    var id = repository.insert(mailbox("12", List.of(), null).withMailHold(hold));
+
+    var saved = repository.findAll().get(0);
+    assertEquals(hold, saved.getMailHold(today));
+
+    repository.update(saved.withMailHold(new MailHold(today.minusDays(9), today.minusDays(2), "old")));
+    try (var conn = Database.connect(); var stmt = conn.createStatement();
+        var rs = stmt.executeQuery("SELECT hold_from, hold_until, hold_note FROM mailboxes WHERE id = " + id)) {
+      rs.next();
+      assertNull(rs.getString("hold_from"));
+      assertNull(rs.getString("hold_until"));
+      assertNull(rs.getString("hold_note"));
     }
   }
 
