@@ -95,8 +95,8 @@ The main menu has six screens:
   for a box, including its rental history, double-click it, or select it and
   click **View** or press Enter; the details open in their own window with
   **Edit** and **Renew…** buttons. Select a row to edit, renew, close, or
-  delete it. The menu next to the search field shows closed boxes instead, or
-  all boxes. **Print…** prints the list as shown, and **Save as
+  delete it. The menu next to the search field shows closed boxes instead,
+  all boxes, or [recently deleted](#deleting-a-box) ones. **Print…** prints the list as shown, and **Save as
   Spreadsheet…** saves it as a file Excel or Google Sheets opens, with
   everything recorded for each box.
 - **Renewals** – open boxes that are past due, and those due within the next
@@ -237,8 +237,19 @@ find it. To bring it back, select it there and click **Reopen**. That only
 works if its number hasn't been given to someone else since; if it has, edit
 the closed box's number first.
 
-**Delete** erases a box and its history for good. Use it for boxes entered by
-mistake.
+### Deleting a box
+
+**Delete** is for boxes entered by mistake; if the holder has given up the
+box, close it instead. A deleted box disappears from every list and its
+number can be given to someone else, but for 30 days it's kept under
+**Recently deleted** in the menu next to the search field on Manage Boxes.
+Select it there and click **Restore** to bring it back as it was, as long as
+its number hasn't been given to someone else in the meantime.
+
+After 30 days it's erased for good, the next time the app starts. To erase
+one straight away, select it under Recently deleted and click **Delete
+Forever**. Either way, its payments stay on Payments, marked with the box
+number, such as "12 (deleted)", so the totals for past months never change.
 
 ### Box inventory
 

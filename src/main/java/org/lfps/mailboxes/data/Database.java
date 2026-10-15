@@ -240,12 +240,13 @@ public class Database {
   /**
    * Creates the {@code mailboxes}, {@code business_names},
    * {@code forwarding_addresses}, {@code rental_periods},
-   * {@code box_inventory}, {@code prices}, {@code box_sizes}, {@code settings}, and
-   * {@code labels} tables if
+   * {@code box_inventory}, {@code prices}, {@code box_sizes}, {@code settings},
+   * {@code labels}, and {@code erased_boxes} tables if
    * they don't already exist, and migrates older databases that predate the
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
    * {@code key_count}, {@code key_deposit_cents}, {@code forwarding_only},
-   * and {@code key_deposit_outcome} columns of {@code mailboxes} and the
+   * {@code key_deposit_outcome}, and {@code deleted_on} columns of
+   * {@code mailboxes} and the
    * {@code added_on} column of {@code forwarding_addresses}. Also adds the
    * indexes that keep loading boxes and payments fast, if they're missing.
    *
@@ -267,7 +268,8 @@ public class Database {
         + "key_count INTEGER, "
         + "key_deposit_cents INTEGER, "
         + "forwarding_only INTEGER NOT NULL DEFAULT 0, "
-        + "key_deposit_outcome TEXT)";
+        + "key_deposit_outcome TEXT, "
+        + "deleted_on TEXT)";
 
     var createBusinessNames = "CREATE TABLE IF NOT EXISTS business_names ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -338,6 +340,12 @@ public class Database {
         + "address TEXT NOT NULL, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
+    // The number of each box erased for good from Recently deleted, so its
+    // payments, which are kept, can still say which box they were for.
+    var createErasedBoxes = "CREATE TABLE IF NOT EXISTS erased_boxes ("
+        + "mailbox_id INTEGER PRIMARY KEY, "
+        + "box_number TEXT NOT NULL)";
+
     try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
       stmt.execute(createMailboxes);
       stmt.execute(createBusinessNames);
@@ -349,10 +357,11 @@ public class Database {
       stmt.execute(createBoxSizes);
       stmt.execute(createSettings);
       stmt.execute(createLabels);
+      stmt.execute(createErasedBoxes);
 
       for (var column : List.of("box_name TEXT", "end_date TEXT", "notes TEXT", "closed_date TEXT",
           "key_count INTEGER", "key_deposit_cents INTEGER", "forwarding_only INTEGER NOT NULL DEFAULT 0",
-          "key_deposit_outcome TEXT")) {
+          "key_deposit_outcome TEXT", "deleted_on TEXT")) {
         try {
           stmt.execute("ALTER TABLE mailboxes ADD COLUMN " + column);
         } catch (SQLException alreadyMigrated) {

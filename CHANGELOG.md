@@ -13,6 +13,12 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ### Changed
 
+- **Delete** on Manage Boxes no longer erases a box straight away. It moves
+  to **Recently deleted**, a new choice in the menu next to the search, where
+  **Restore** brings it back for 30 days. After that it's erased for good;
+  **Delete Forever** erases it sooner. A deleted box's payments stay on
+  Payments, marked "(deleted)", even once it's erased. Before, deleting a box
+  erased its payments too.
 - **Back Up Now…** saves the backup in the backups folder first, so
   **Restore a Backup…** lists it, then asks whether to save a copy somewhere
   else too: **Downloads**, ready to drag onto a USB drive or send to someone,

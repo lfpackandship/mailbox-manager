@@ -35,13 +35,19 @@ public class MailboxRepository {
       + "closed_date, key_count, key_deposit_cents, forwarding_only, key_deposit_outcome) "
       + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-  /** Reads every mailbox. */
-  private static final String SELECT_ALL_SQL = "SELECT id, first_name, last_name, "
+  /** Reads mailboxes' details; a WHERE clause picks which. */
+  private static final String SELECT_COLUMNS_SQL = "SELECT id, first_name, last_name, "
       + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date, key_count, "
-      + "key_deposit_cents, forwarding_only, key_deposit_outcome FROM mailboxes";
+      + "key_deposit_cents, forwarding_only, key_deposit_outcome, deleted_on FROM mailboxes";
+
+  /** Reads every mailbox that hasn't been deleted, open or closed. */
+  private static final String SELECT_ALL_SQL = SELECT_COLUMNS_SQL + " WHERE deleted_on IS NULL";
 
   /** Reads every open mailbox's details; see {@link Mailbox#isClosed()}. */
-  private static final String SELECT_OPEN_SQL = SELECT_ALL_SQL + " WHERE closed_date IS NULL";
+  private static final String SELECT_OPEN_SQL = SELECT_ALL_SQL + " AND closed_date IS NULL";
+
+  /** Reads every deleted mailbox, as listed under Recently deleted. */
+  private static final String SELECT_DELETED_SQL = SELECT_COLUMNS_SQL + " WHERE deleted_on IS NOT NULL";
 
   /** Replaces a mailbox's details. */
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
@@ -49,20 +55,30 @@ public class MailboxRepository {
       + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ?, key_deposit_outcome = ? "
       + "WHERE id = ?";
 
-  /** Checks whether another open, rented box has a box number. */
+  /** Checks whether another open, rented box that isn't deleted has a box number. */
   private static final String BOX_NUMBER_TAKEN_SQL = "SELECT 1 FROM mailboxes "
       + "WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? AND closed_date IS NULL AND forwarding_only = 0 "
-      + "LIMIT 1";
+      + "AND deleted_on IS NULL LIMIT 1";
 
   /** Closes or reopens a mailbox, and records what happened to its key deposit. */
   private static final String SET_CLOSED_DATE_SQL =
       "UPDATE mailboxes SET closed_date = ?, key_deposit_outcome = ? WHERE id = ?";
 
-  /** Deletes a mailbox. */
-  private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
+  /** Moves a mailbox to Recently deleted, or restores it. */
+  private static final String SET_DELETED_ON_SQL = "UPDATE mailboxes SET deleted_on = ? WHERE id = ?";
 
-  /** Deletes a mailbox's rental history. */
-  private static final String DELETE_RENTAL_PERIODS_SQL = "DELETE FROM rental_periods WHERE mailbox_id = ?";
+  /** Reads the deleted mailboxes that are due to be erased for good. */
+  private static final String SELECT_DELETED_BEFORE_SQL = "SELECT id FROM mailboxes WHERE deleted_on < ?";
+
+  /** Remembers the number of a mailbox about to be erased for good, for its payments. */
+  private static final String INSERT_ERASED_SQL = "INSERT OR REPLACE INTO erased_boxes (mailbox_id, box_number) "
+      + "SELECT id, box_number FROM mailboxes WHERE id = ?";
+
+  /** Reads the numbers of the mailboxes erased for good. */
+  private static final String SELECT_ERASED_SQL = "SELECT mailbox_id, box_number FROM erased_boxes";
+
+  /** Erases a mailbox for good. */
+  private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
 
   /** Deletes the records of a mailbox's printed forwarding labels. */
   private static final String DELETE_LABELS_SQL = "DELETE FROM labels WHERE mailbox_id = ?";
@@ -159,13 +175,25 @@ public class MailboxRepository {
   /**
    * Returns every mailbox, open and closed, ordered by box number (see
    * {@link BoxNumbers#ORDER}), with its alternate business names and
-   * forwarding addresses loaded.
+   * forwarding addresses loaded. Deleted boxes are left out; see
+   * {@link #findDeleted()}.
    *
-   * @return all mailboxes in the database
+   * @return all mailboxes in the database that haven't been deleted
    * @throws SQLException if the query fails
    */
   public List<Mailbox> findAll() throws SQLException {
     return find(SELECT_ALL_SQL);
+  }
+
+  /**
+   * Returns the boxes listed under Recently deleted on Manage Boxes: those
+   * deleted but not yet restored or erased for good, ordered by box number.
+   *
+   * @return the deleted mailboxes
+   * @throws SQLException if the query fails
+   */
+  public List<Mailbox> findDeleted() throws SQLException {
+    return find(SELECT_DELETED_SQL);
   }
 
   /**
@@ -174,7 +202,8 @@ public class MailboxRepository {
    * are read in one query each, rather than two queries per box, which
    * would take thousands of queries in a large shop.
    *
-   * @param sql {@link #SELECT_ALL_SQL} or {@link #SELECT_OPEN_SQL}
+   * @param sql {@link #SELECT_ALL_SQL}, {@link #SELECT_OPEN_SQL}, or
+   *     {@link #SELECT_DELETED_SQL}
    * @return the mailboxes it finds
    * @throws SQLException if the query fails
    */
@@ -196,7 +225,7 @@ public class MailboxRepository {
   /**
    * Turns each row of a mailbox query into a {@link Mailbox}.
    *
-   * @param rs the rows, from {@link #SELECT_ALL_SQL} or {@link #SELECT_OPEN_SQL}
+   * @param rs the rows, from a query starting with {@link #SELECT_COLUMNS_SQL}
    * @param businessNames every box's alternate business names, by mailbox id
    * @param forwardingAddresses every box's forwarding addresses, by mailbox id
    * @param mailboxes the list to add the mailboxes to
@@ -223,7 +252,8 @@ public class MailboxRepository {
           rs.getObject("key_count") == null ? null : rs.getInt("key_count"),
           rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents"),
           rs.getInt("forwarding_only") != 0,
-          DepositOutcome.fromName(rs.getString("key_deposit_outcome"))));
+          DepositOutcome.fromName(rs.getString("key_deposit_outcome")),
+          date(rs.getString("deleted_on"))));
     }
   }
 
@@ -259,7 +289,7 @@ public class MailboxRepository {
 
   /**
    * Checks whether another open mailbox already uses the given box number,
-   * ignoring surrounding whitespace and letter case. Closed and
+   * ignoring surrounding whitespace and letter case. Closed, deleted, and
    * forwarding-only boxes don't count, so a number can be reused once its
    * holder leaves or switches to having their mail forwarded.
    *
@@ -313,36 +343,146 @@ public class MailboxRepository {
   }
 
   /**
-   * Permanently deletes a mailbox with its alternate business names,
-   * forwarding addresses, rental history, and the records of its printed
-   * forwarding labels.
+   * Deletes a box, which moves it to Recently deleted on Manage Boxes. It
+   * disappears from every other list and frees its box number, but nothing
+   * recorded for it is erased until {@link #eraseDeletedBefore} runs 30
+   * days later, so it can be restored until then.
    *
    * @param id the id of the mailbox to delete
-   * @throws SQLException if the delete fails
+   * @param deletedOn the day it's deleted, normally today
+   * @throws SQLException if the update fails
    */
-  public void delete(int id) throws SQLException {
+  public void delete(int id, LocalDate deletedOn) throws SQLException {
+    setDeletedOn(id, deletedOn);
+  }
+
+  /**
+   * Brings a deleted box back from Recently deleted, as it was when deleted.
+   * Callers check first that its box number hasn't been given to someone
+   * else, as when reopening a closed box.
+   *
+   * @param id the id of the mailbox to restore
+   * @throws SQLException if the update fails
+   */
+  public void restore(int id) throws SQLException {
+    setDeletedOn(id, null);
+  }
+
+  /**
+   * Records the day a box was deleted.
+   *
+   * @param id the id of the mailbox
+   * @param deletedOn the day, or {@code null} if it isn't deleted
+   * @throws SQLException if the update fails
+   */
+  private void setDeletedOn(int id, LocalDate deletedOn) throws SQLException {
+    try (Connection conn = Database.connect();
+        PreparedStatement stmt = conn.prepareStatement(SET_DELETED_ON_SQL)) {
+      stmt.setString(1, deletedOn == null ? null : deletedOn.toString());
+      stmt.setInt(2, id);
+      stmt.executeUpdate();
+    }
+  }
+
+  /**
+   * Erases a box for good, with its alternate business names, forwarding
+   * addresses, and the records of its printed forwarding labels. Its rental
+   * history is kept, so Payments still adds up for the days it paid, and its
+   * box number is remembered for those payments (see
+   * {@link #findErasedBoxNumbers()}).
+   *
+   * @param id the id of the mailbox to erase
+   * @throws SQLException if it can't be erased; nothing is erased then
+   */
+  public void eraseForever(int id) throws SQLException {
     try (Connection conn = Database.connect()) {
       conn.setAutoCommit(false);
       try {
-        deleteBusinessNames(conn, id);
-        deleteForwardingAddresses(conn, id);
-        try (PreparedStatement stmt = conn.prepareStatement(DELETE_RENTAL_PERIODS_SQL)) {
-          stmt.setInt(1, id);
-          stmt.executeUpdate();
-        }
-        try (PreparedStatement stmt = conn.prepareStatement(DELETE_LABELS_SQL)) {
-          stmt.setInt(1, id);
-          stmt.executeUpdate();
-        }
-        try (PreparedStatement stmt = conn.prepareStatement(DELETE_SQL)) {
-          stmt.setInt(1, id);
-          stmt.executeUpdate();
-        }
+        erase(conn, id);
         conn.commit();
       } catch (SQLException e) {
         conn.rollback();
         throw e;
       }
+    }
+  }
+
+  /**
+   * Erases for good the boxes deleted before a day, as the app does when it
+   * starts with those deleted more than 30 days ago. See
+   * {@link #eraseForever(int)} for what's erased and what's kept.
+   *
+   * @param cutoff boxes deleted before this day are erased
+   * @return how many boxes were erased
+   * @throws SQLException if they can't be erased; none are erased then
+   */
+  public int eraseDeletedBefore(LocalDate cutoff) throws SQLException {
+    try (Connection conn = Database.connect()) {
+      conn.setAutoCommit(false);
+      try {
+        var ids = new ArrayList<Integer>();
+        try (PreparedStatement stmt = conn.prepareStatement(SELECT_DELETED_BEFORE_SQL)) {
+          stmt.setString(1, cutoff.toString());
+          try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+              ids.add(rs.getInt("id"));
+            }
+          }
+        }
+        for (var id : ids) {
+          erase(conn, id);
+        }
+        conn.commit();
+        return ids.size();
+      } catch (SQLException e) {
+        conn.rollback();
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Returns the box number of each box erased for good, for showing its
+   * payments, which are kept.
+   *
+   * @return each erased box's number, by its old mailbox id
+   * @throws SQLException if they can't be read
+   */
+  public Map<Integer, String> findErasedBoxNumbers() throws SQLException {
+    var numbers = new HashMap<Integer, String>();
+
+    try (Connection conn = Database.connect();
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(SELECT_ERASED_SQL)) {
+      while (rs.next()) {
+        numbers.put(rs.getInt("mailbox_id"), rs.getString("box_number"));
+      }
+    }
+
+    return numbers;
+  }
+
+  /**
+   * Erases a box for good; see {@link #eraseForever(int)}.
+   *
+   * @param conn the connection, in a transaction
+   * @param id the id of the mailbox to erase
+   * @throws SQLException if it can't be erased
+   */
+  private void erase(Connection conn, int id) throws SQLException {
+    try (PreparedStatement stmt = conn.prepareStatement(INSERT_ERASED_SQL)) {
+      stmt.setInt(1, id);
+      stmt.executeUpdate();
+    }
+    deleteBusinessNames(conn, id);
+    deleteForwardingAddresses(conn, id);
+    try (PreparedStatement stmt = conn.prepareStatement(DELETE_LABELS_SQL)) {
+      stmt.setInt(1, id);
+      stmt.executeUpdate();
+    }
+    try (PreparedStatement stmt = conn.prepareStatement(DELETE_SQL)) {
+      stmt.setInt(1, id);
+      stmt.executeUpdate();
     }
   }
 

@@ -37,6 +37,7 @@ class MailboxRepositoryTest {
       stmt.execute("DELETE FROM rental_periods");
       stmt.execute("DELETE FROM box_inventory");
       stmt.execute("DELETE FROM mailboxes");
+      stmt.execute("DELETE FROM erased_boxes");
     }
   }
 
@@ -90,12 +91,12 @@ class MailboxRepositoryTest {
   }
 
   @Test
-  void deleteRemovesMailboxAndItsAlternateNames() throws SQLException {
+  void eraseForeverRemovesMailboxAndItsAlternateNames() throws SQLException {
     repository.insert(mailbox("210", List.of("Gone"), null));
     repository.insert(mailbox("211", List.of("Stays"), null));
     var toDelete = repository.findAll().get(0);
 
-    repository.delete(toDelete.getId());
+    repository.eraseForever(toDelete.getId());
 
     var all = repository.findAll();
     assertEquals(1, all.size());
@@ -130,13 +131,13 @@ class MailboxRepositoryTest {
   }
 
   @Test
-  void deleteRemovesForwardingAddresses() throws SQLException {
+  void eraseForeverRemovesForwardingAddresses() throws SQLException {
     repository.insert(withForwarding("210",
         List.of(new ForwardingAddress("1 Gone St", null, "Anytown", "TX", "75001", null))));
     repository.insert(withForwarding("211",
         List.of(new ForwardingAddress("2 Kept St", null, "Anytown", "TX", "75001", null))));
 
-    repository.delete(repository.findAll().get(0).getId());
+    repository.eraseForever(repository.findAll().get(0).getId());
 
     try (var conn = Database.connect(); var stmt = conn.createStatement();
         var rs = stmt.executeQuery("SELECT street FROM forwarding_addresses")) {
@@ -360,6 +361,61 @@ class MailboxRepositoryTest {
     assertEquals(List.of("1", "2"), open.stream().map(Mailbox::getBoxNumber).collect(Collectors.toList()));
     assertEquals(List.of(first, moved), open.get(0).getForwardingAddresses());
     assertEquals(List.of("Second Co"), open.get(1).getAlternateBusinessNames());
+  }
+
+  @Test
+  void aDeletedBoxIsOnlyFoundAmongTheDeletedUntilRestored() throws SQLException {
+    var address = new ForwardingAddress("1 Elm St", null, "Town", "IL", "60000", null);
+    var id = repository.insert(new Mailbox(0, "Ada", "Lovelace", null, "12", null, "", null,
+        List.of("Engines Ltd"), null, List.of(address)));
+
+    repository.delete(id, LocalDate.of(2026, 10, 15));
+
+    assertEquals(List.of(), repository.findAll());
+    assertEquals(List.of(), repository.findOpen());
+    var deleted = repository.findDeleted();
+    assertEquals(1, deleted.size());
+    assertEquals(LocalDate.of(2026, 10, 15), deleted.get(0).getDeletedOn());
+    assertTrue(deleted.get(0).isDeleted());
+    assertEquals(List.of("Engines Ltd"), deleted.get(0).getAlternateBusinessNames());
+    assertEquals(List.of(address), deleted.get(0).getForwardingAddresses());
+
+    repository.restore(id);
+
+    assertEquals(List.of(), repository.findDeleted());
+    var restored = repository.findOpen().get(0);
+    assertFalse(restored.isDeleted());
+    assertEquals(List.of(address), restored.getForwardingAddresses());
+  }
+
+  @Test
+  void aDeletedBoxDoesNotHoldItsNumber() throws SQLException {
+    var id = repository.insert(mailbox("12", List.of(), null));
+
+    repository.delete(id, LocalDate.of(2026, 10, 15));
+
+    assertFalse(repository.isBoxNumberTaken("12", 0));
+  }
+
+  @Test
+  void onlyBoxesDeletedBeforeTheCutoffAreErasedAndTheirNumbersRemembered() throws SQLException {
+    var old = repository.insert(mailbox("12", List.of("Old Co"), null));
+    var recent = repository.insert(mailbox("13", List.of(), null));
+    var open = repository.insert(mailbox("14", List.of(), null));
+    repository.delete(old, LocalDate.of(2026, 9, 1));
+    repository.delete(recent, LocalDate.of(2026, 10, 1));
+
+    assertEquals(1, repository.eraseDeletedBefore(LocalDate.of(2026, 9, 15)));
+
+    assertEquals(List.of(recent), repository.findDeleted().stream().map(Mailbox::getId)
+        .collect(Collectors.toList()));
+    assertEquals(List.of(open), repository.findAll().stream().map(Mailbox::getId).collect(Collectors.toList()));
+    assertEquals(java.util.Map.of(old, "12"), repository.findErasedBoxNumbers());
+    try (var conn = Database.connect(); var stmt = conn.createStatement();
+        var rs = stmt.executeQuery("SELECT COUNT(*) FROM business_names")) {
+      rs.next();
+      assertEquals(0, rs.getInt(1));
+    }
   }
 
   /** Makes a box with the given forwarding addresses. */

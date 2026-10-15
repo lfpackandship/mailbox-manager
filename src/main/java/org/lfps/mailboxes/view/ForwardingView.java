@@ -262,14 +262,17 @@ public class ForwardingView {
 
   /**
    * Returns a row for each printed label, in the order given, with the box it
-   * was for.
+   * was for. Labels for a box that isn't in {@code mailboxes}, such as one in
+   * Recently deleted, are left out.
    *
    * @param labels the labels, newest first
-   * @param mailboxes every box, by id
+   * @param mailboxes every box that hasn't been deleted, by id
    * @return the rows
    */
   static List<LabelRow> labelRows(List<PrintedLabel> labels, Map<Integer, Mailbox> mailboxes) {
+    // A deleted box's labels are left out until it's restored, like its addresses.
     return labels.stream()
+        .filter(label -> mailboxes.containsKey(label.getMailboxId()))
         .map(label -> new LabelRow(label, mailboxes.get(label.getMailboxId())))
         .collect(Collectors.toList());
   }

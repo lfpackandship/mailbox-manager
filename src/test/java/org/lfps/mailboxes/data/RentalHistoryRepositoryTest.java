@@ -160,16 +160,15 @@ class RentalHistoryRepositoryTest {
   }
 
   @Test
-  void deletingABoxDeletesItsHistory() throws SQLException {
+  void erasingABoxKeepsItsHistoryForPayments() throws SQLException {
     var gone = mailboxes.insert(box("210", JAN_1));
-    var kept = mailboxes.insert(box("211", JAN_1));
     history.renew(gone, period(JAN_1, JAN_1, JAN_1.plusMonths(1)));
-    history.renew(kept, period(JAN_1, JAN_1, JAN_1.plusMonths(1)));
 
-    mailboxes.delete(gone);
+    mailboxes.delete(gone, JAN_1);
+    mailboxes.eraseForever(gone);
 
-    assertEquals(List.of(), history.findForMailbox(gone));
-    assertEquals(1, history.findForMailbox(kept).size());
+    assertEquals(1, history.findForMailbox(gone).size());
+    assertEquals(1, history.findRecordedBetween(JAN_1, JAN_1).size());
   }
 
   /** Makes a rental history entry paid for by card. */

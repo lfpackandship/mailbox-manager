@@ -154,6 +154,24 @@ class ForwardingViewTest {
   }
 
   @Test
+  void aDeletedBoxsLabelsAndAddressesAreLeftOutUntilItsRestored() throws SQLException {
+    var id = mailboxes.insert(saved("Ada", "300", null, HOME));
+    labels.record(id, List.of("Ada Lovelace", "1 Elm St", "Town, IL 60000"), LocalDateTime.of(2026, 10, 6, 9, 0));
+    mailboxes.delete(id, LocalDate.of(2026, 10, 7));
+    show();
+
+    assertEquals(0, FxTestSupport.call(() -> addressTable().getItems().size()));
+    FxTestSupport.run(() -> tabs().getSelectionModel().select(1));
+    assertEquals(0, FxTestSupport.call(() -> labelTable().getItems().size()));
+
+    mailboxes.restore(id);
+    show();
+    assertEquals(1, FxTestSupport.call(() -> addressTable().getItems().size()));
+    FxTestSupport.run(() -> tabs().getSelectionModel().select(1));
+    assertEquals(1, FxTestSupport.call(() -> labelTable().getItems().size()));
+  }
+
+  @Test
   void reprintingKeepsTheNumberAndAddressAndRecordsNothingNew() throws SQLException {
     var id = mailboxes.insert(saved("Ada", "300", null, HOME));
     labels.record(id, List.of("Ada Lovelace", "9 Old Rd", "Town, IL 60000"), LocalDateTime.of(2026, 10, 6, 9, 0));
