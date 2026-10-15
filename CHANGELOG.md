@@ -7,6 +7,9 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ### Added
 
+- A line under the main menu's buttons sums up the shop: the open boxes, the
+  empty ones (once the box inventory is set up), and the money taken this
+  month, such as "212 open boxes · 14 empty · $3,480.00 taken in October".
 - **Out of Service…** on Box Inventory marks boxes that can't be rented for
   now, such as one with a broken lock, with an optional reason. They aren't
   counted as empty or offered by **Choose…** on Add New Box, and typing one's

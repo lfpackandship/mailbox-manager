@@ -125,6 +125,11 @@ The main menu has six screens:
 - **Box Inventory** – every box you have, and whether it's rented or empty.
   See [Box inventory](#box-inventory).
 
+A line under the buttons sums up the shop: how many boxes are open, how many
+are empty (once the [box inventory](#box-inventory) is set up), and the money
+taken this month, as on Payments, such as `212 open boxes · 14 empty ·
+$3,480.00 taken in October`.
+
 ### The menu bar
 
 The menus at the top of the window are there on every screen:

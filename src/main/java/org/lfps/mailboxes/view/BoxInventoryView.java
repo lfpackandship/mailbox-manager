@@ -418,10 +418,7 @@ public class BoxInventoryView {
         info.show();
         return;
       }
-      var holders = holdersByBoxNumber();
-      empty = inventory.findAll().stream()
-          .filter(box -> !box.isOutOfService() && !holders.containsKey(BoxNumbers.key(box.getBoxNumber())))
-          .collect(Collectors.toList());
+      empty = emptyBoxes();
     } catch (SQLException e) {
       var failed = new Alert(AlertType.ERROR, "Failed to load the box inventory: " + e.getMessage());
       failed.initOwner(owner);
@@ -480,6 +477,22 @@ public class BoxInventoryView {
     stage.setTitle("Choose an Empty Box");
     stage.setScene(new Scene(content));
     AppWindow.showWithinScreen(stage);
+  }
+
+  /**
+   * Returns the boxes in the inventory that are ready to rent: no one has
+   * them and they aren't out of service. These are the boxes Choose… offers
+   * and the main menu counts as empty.
+   *
+   * @return the empty boxes, in box number order, or none if the inventory
+   *     hasn't been set up
+   * @throws SQLException if the boxes can't be read
+   */
+  static List<InventoryBox> emptyBoxes() throws SQLException {
+    var holders = holdersByBoxNumber();
+    return new BoxInventoryRepository().findAll().stream()
+        .filter(box -> !box.isOutOfService() && !holders.containsKey(BoxNumbers.key(box.getBoxNumber())))
+        .collect(Collectors.toList());
   }
 
   /**

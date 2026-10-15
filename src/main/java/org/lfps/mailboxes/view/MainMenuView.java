@@ -2,6 +2,10 @@ package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.Locale;
+import java.util.Objects;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -12,17 +16,23 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import org.lfps.mailboxes.data.BoxInventoryRepository;
 import org.lfps.mailboxes.data.MailboxRepository;
+import org.lfps.mailboxes.data.RentalHistoryRepository;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
+import org.lfps.mailboxes.model.RentalPeriod;
+import org.lfps.mailboxes.util.Money;
 
 /**
  * The application's main menu: a grid linking to Add New Box, Manage Boxes,
  * Renewals, Calendar, Payments, and Box Inventory. Small bubbles on the
  * Renewals button count the boxes past due and due soon, so there's a hint
- * without anything in the way.
+ * without anything in the way, and a line under the buttons counts the open
+ * and empty boxes and the money taken this month.
  */
 public class MainMenuView {
 
@@ -63,7 +73,44 @@ public class MainMenuView {
     grid.add(paymentsBtn, 0, 2);
     grid.add(inventoryBtn, 1, 2);
 
-    AppWindow.show(stage, grid);
+    var summary = new Label(summary(LocalDate.now()));
+    summary.setId("mainMenuSummary");
+    summary.setWrapText(true);
+    var layout = new VBox(summary.getText().isEmpty() ? 0 : 4, grid, summary);
+    layout.setAlignment(Pos.CENTER);
+
+    AppWindow.show(stage, layout);
+  }
+
+  /**
+   * Sums up the shop at a glance for the line under the main menu's buttons,
+   * such as "212 open boxes · 14 empty · $3,480.00 taken in October". The
+   * open boxes are those on Manage Boxes, forwarding-only ones included; the
+   * empty ones are as on Box Inventory, and left out until it's set up; and
+   * the money is the This Month total on Payments.
+   *
+   * @param today today, whose month the money is for
+   * @return the summary, or an empty string if the data can't be read (the
+   *     main menu still opens, and the other screens show the problem)
+   */
+  static String summary(LocalDate today) {
+    try {
+      var open = new MailboxRepository().findOpen().size();
+      var parts = new ArrayList<String>();
+      parts.add(open + (open == 1 ? " open box" : " open boxes"));
+      if (!new BoxInventoryRepository().isEmpty()) {
+        parts.add(BoxInventoryView.emptyBoxes().size() + " empty");
+      }
+      var cents = new RentalHistoryRepository().findRecordedBetween(today.withDayOfMonth(1), today).stream()
+          .map(RentalPeriod::getAmountCents)
+          .filter(Objects::nonNull)
+          .mapToLong(Long::longValue)
+          .sum();
+      parts.add(Money.format(cents) + " taken in " + today.getMonth().getDisplayName(TextStyle.FULL, Locale.US));
+      return String.join(" · ", parts);
+    } catch (SQLException | RuntimeException e) {
+      return "";
+    }
   }
 
   /**
