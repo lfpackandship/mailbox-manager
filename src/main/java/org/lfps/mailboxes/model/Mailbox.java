@@ -97,6 +97,13 @@ public final class Mailbox {
   private final MailHold mailHold;
 
   /**
+   * Things that happened with the box, each with its day, newest first;
+   * never {@code null}. Separate from {@link #getNotes()}, which is one note
+   * rewritten as things change.
+   */
+  private final List<DatedNote> datedNotes;
+
+  /**
    * Creates an open mailbox record with no notes.
    *
    * @param id the database id, or {@code 0} for a not-yet-persisted mailbox
@@ -245,7 +252,7 @@ public final class Mailbox {
       DepositOutcome keyDepositOutcome) {
     this(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email, alternateBusinessNames, endDate,
         forwardingAddresses, notes, closedDate, keyCount, keyDepositCents, forwardingOnly, keyDepositOutcome, null,
-        null);
+        null, null);
   }
 
   /**
@@ -279,12 +286,14 @@ public final class Mailbox {
    *     hasn't been; see {@link #isDeleted()}
    * @param mailHold the hold on the holder's mail, or {@code null} if
    *     there's none
+   * @param datedNotes things that happened with the box, in any order;
+   *     {@code null} is treated as none
    */
   public Mailbox(int id, String firstName, String lastName, String businessTitle,
       String boxNumber, String boxName, String phone, String email,
       List<String> alternateBusinessNames, LocalDate endDate, List<ForwardingAddress> forwardingAddresses,
       String notes, LocalDate closedDate, Integer keyCount, Long keyDepositCents, boolean forwardingOnly,
-      DepositOutcome keyDepositOutcome, LocalDate deletedOn, MailHold mailHold) {
+      DepositOutcome keyDepositOutcome, LocalDate deletedOn, MailHold mailHold, List<DatedNote> datedNotes) {
     this.id = id;
     this.firstName = firstName;
     this.lastName = lastName;
@@ -308,6 +317,9 @@ public final class Mailbox {
     this.keyDepositOutcome = keyDepositOutcome;
     this.deletedOn = deletedOn;
     this.mailHold = mailHold;
+    var sortedNotes = datedNotes == null ? new ArrayList<DatedNote>() : new ArrayList<>(datedNotes);
+    sortedNotes.sort(DatedNote.NEWEST_FIRST);
+    this.datedNotes = Collections.unmodifiableList(sortedNotes);
   }
 
   /**
@@ -522,6 +534,27 @@ public final class Mailbox {
   }
 
   /**
+   * Returns the things that happened with the box, each with its day.
+   *
+   * @return the dated notes, newest first; empty if there are none
+   */
+  public List<DatedNote> getDatedNotes() {
+    return datedNotes;
+  }
+
+  /**
+   * Returns a copy of this mailbox with different dated notes.
+   *
+   * @param newDatedNotes the notes, in any order; {@code null} for none
+   * @return the updated copy
+   */
+  public Mailbox withDatedNotes(List<DatedNote> newDatedNotes) {
+    return new Mailbox(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email,
+        alternateBusinessNames, endDate, forwardingAddresses, notes, closedDate, keyCount, keyDepositCents,
+        forwardingOnly, keyDepositOutcome, deletedOn, mailHold, newDatedNotes);
+  }
+
+  /**
    * Returns a copy of this mailbox with a different hold on its mail.
    *
    * @param newMailHold the hold, or {@code null} for none
@@ -530,7 +563,7 @@ public final class Mailbox {
   public Mailbox withMailHold(MailHold newMailHold) {
     return new Mailbox(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email,
         alternateBusinessNames, endDate, forwardingAddresses, notes, closedDate, keyCount, keyDepositCents,
-        forwardingOnly, keyDepositOutcome, deletedOn, newMailHold);
+        forwardingOnly, keyDepositOutcome, deletedOn, newMailHold, datedNotes);
   }
 
   /**
@@ -542,7 +575,7 @@ public final class Mailbox {
   public Mailbox withEndDate(LocalDate newEndDate) {
     return new Mailbox(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email,
         alternateBusinessNames, newEndDate, forwardingAddresses, notes, closedDate, keyCount, keyDepositCents,
-        forwardingOnly, keyDepositOutcome, deletedOn, mailHold);
+        forwardingOnly, keyDepositOutcome, deletedOn, mailHold, datedNotes);
   }
 
   /**
@@ -556,7 +589,7 @@ public final class Mailbox {
   public Mailbox withClosedDate(LocalDate newClosedDate) {
     return new Mailbox(id, firstName, lastName, businessTitle, boxNumber, boxName, phone, email,
         alternateBusinessNames, endDate, forwardingAddresses, notes, newClosedDate, keyCount, keyDepositCents,
-        forwardingOnly, newClosedDate == null ? null : keyDepositOutcome, deletedOn, mailHold);
+        forwardingOnly, newClosedDate == null ? null : keyDepositOutcome, deletedOn, mailHold, datedNotes);
   }
 
   /**

@@ -87,6 +87,9 @@ public class EditBoxView {
     var notesField = notesField();
     // A hold that has ended is left out, so saving clears it.
     var holdEditor = new MailHoldEditor(mailbox.getMailHold(LocalDate.now()));
+    var datedNotesEditor = new DatedNotesEditor();
+    datedNotesEditor.setNotes(mailbox.getDatedNotes());
+    var datedNotesSection = section("Dated Notes", datedNotesEditor, datedNotesEditor.entries());
     notesField.setText(orEmpty(mailbox.getNotes()));
 
     hints(firstNameField, lastNameField, businessTitleField, boxNumberField, boxNameField, phoneField, emailField);
@@ -104,6 +107,7 @@ public class EditBoxView {
     businessNamesEditor.watchFor(changes);
     forwardingEditor.watchFor(changes);
     holdEditor.watchFor(changes);
+    datedNotesEditor.watchFor(changes);
 
     var saveBtn = new Button("Save");
     var resultLabel = new Label();
@@ -118,6 +122,11 @@ public class EditBoxView {
       // A name or address typed but not added with its Add button is saved
       // too, rather than quietly left out.
       businessNamesEditor.addTyped();
+      var datedNoteProblem = datedNotesEditor.addTypedBeforeSaving();
+      if (datedNoteProblem != null) {
+        errors.append(datedNoteProblem).append('\n');
+        datedNotesSection.setExpanded(true);
+      }
       var forwardingProblem = forwardingEditor.addTypedBeforeSaving();
       if (forwardingProblem != null) {
         errors.append(forwardingProblem).append('\n');
@@ -191,7 +200,7 @@ public class EditBoxView {
           businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses(),
           notesField.getText(), mailbox.getClosedDate(), keyCount, keyDeposit, forwardingOnly,
           mailbox.isClosed() ? KeyFields.outcomeAt(outcomeField.getSelectionModel().getSelectedIndex()) : null)
-          .withMailHold(hold);
+          .withMailHold(hold).withDatedNotes(datedNotesEditor.getNotes());
 
       try {
         repository.update(updated);
@@ -229,7 +238,8 @@ public class EditBoxView {
     grid.add(forwardingSection, 0, row++, 4, 1);
     grid.add(holdEditor.section(), 0, row++, 4, 1);
     grid.add(new Label("Notes:"), 0, row++, 4, 1);
-    grid.add(notesField, 0, row, 4, 1);
+    grid.add(notesField, 0, row++, 4, 1);
+    grid.add(datedNotesSection, 0, row, 4, 1);
 
     var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));

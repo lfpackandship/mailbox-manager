@@ -494,6 +494,10 @@ public class ManageBoxesView {
     var notesCol = new TableColumn<Mailbox, String>("Notes");
     notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
 
+    var datedNotesCol = new TableColumn<Mailbox, String>("Dated Notes");
+    datedNotesCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getDatedNotes()
+        .stream().map(String::valueOf).collect(Collectors.joining("; "))));
+
     var closedCol = new TableColumn<Mailbox, LocalDate>("Closed");
     closedCol.setCellValueFactory(new PropertyValueFactory<>("closedDate"));
     TableOutput.showDates(closedCol);
@@ -503,7 +507,7 @@ public class ManageBoxesView {
         cell.getValue().isForwardingOnly() ? "Yes" : ""));
 
     var columns = List.<TableColumn<Mailbox, ?>>of(boxNameCol, emailCol, endDateCol, forwardingOnlyCol,
-        alternateNamesCol, forwardingCol, keysCol, depositCol, outcomeCol, notesCol, closedCol);
+        alternateNamesCol, forwardingCol, keysCol, depositCol, outcomeCol, notesCol, datedNotesCol, closedCol);
     columns.forEach(column -> column.setVisible(false));
     return columns;
   }
@@ -533,8 +537,8 @@ public class ManageBoxesView {
   /**
    * Checks whether a mailbox matches every word of a search query. Each word
    * may appear, case-insensitively, in any text field, alternate business name,
-   * forwarding address (including its note), or the notes; a word made of
-   * digits also matches the phone number ignoring its formatting.
+   * forwarding address (including its note), the notes, or a dated note; a
+   * word made of digits also matches the phone number ignoring its formatting.
    *
    * @param mailbox the box
    * @param query the search
@@ -569,6 +573,7 @@ public class ManageBoxesView {
     }
     mailbox.getAlternateBusinessNames().forEach(name -> haystack.append(name).append('\n'));
     mailbox.getForwardingAddresses().forEach(address -> haystack.append(address).append('\n'));
+    mailbox.getDatedNotes().forEach(note -> haystack.append(note.getText()).append('\n'));
     if (mailbox.isForwardingOnly()) {
       haystack.append("forwarding only\n");
     }

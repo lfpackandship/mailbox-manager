@@ -88,7 +88,7 @@ The main menu has six screens:
   holder's name, business title, and phone, with a search field, which has
   the cursor in it when the screen opens. Search
   matches any part of a name, business name, box number, box name, phone
-  number, email, forwarding address (including its note), the notes, or the
+  number, email, forwarding address (including its note), the notes or dated notes, or the
   number of a [forwarding label](#forwarding-labels) printed for the box, and
   phone numbers match with or without formatting. **Ctrl+F** (⌘F on a Mac)
   comes here from any screen, ready to search. To see everything recorded
@@ -334,6 +334,18 @@ addresses; the notes help staff pick the right one. An address typed but not
 added is saved with the box anyway. The **Forwarding Addresses** and
 **Alternate Business Names** sections fold up to save room; click the heading
 to open one. Each heading says how many there are.
+
+### Dated notes
+
+Besides the **Notes** box, which is rewritten as things change, Edit Box has
+a **Dated Notes** section for keeping a history of what happens with a box,
+such as "Called about late payment". Type the note and click **Add Note**;
+it's dated today unless you choose an earlier day first, for something that
+happened before. To change a note, select it and click **Edit**, which puts
+it back in the fields to change and add again; **Remove** deletes it.
+Nothing is saved until you click **Save**. The box's details list the dated
+notes newest first. Add New Box doesn't have them, since a new box has no
+history yet.
 
 ### Holding mail
 

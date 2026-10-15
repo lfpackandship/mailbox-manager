@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.lfps.mailboxes.model.DepositOutcome;
+import org.lfps.mailboxes.model.DatedNote;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.Mailbox;
@@ -39,6 +40,7 @@ class MailboxRepositoryTest {
       stmt.execute("DELETE FROM box_inventory");
       stmt.execute("DELETE FROM mailboxes");
       stmt.execute("DELETE FROM erased_boxes");
+      stmt.execute("DELETE FROM dated_notes");
     }
   }
 
@@ -435,6 +437,29 @@ class MailboxRepositoryTest {
       assertNull(rs.getString("hold_from"));
       assertNull(rs.getString("hold_until"));
       assertNull(rs.getString("hold_note"));
+    }
+  }
+
+  @Test
+  void datedNotesAreSavedPerBoxReplacedOnUpdateAndErasedWithTheBox() throws SQLException {
+    var called = new DatedNote(LocalDate.of(2026, 10, 15), "Called about late payment");
+    var key = new DatedNote(LocalDate.of(2026, 9, 2), "Picked up spare key");
+    var first = repository.insert(mailbox("1", List.of(), null).withDatedNotes(List.of(key, called)));
+    var second = repository.insert(mailbox("2", List.of(), null).withDatedNotes(List.of(key)));
+
+    var all = repository.findAll();
+    assertEquals(List.of(called, key), all.get(0).getDatedNotes());
+    assertEquals(List.of(key), all.get(1).getDatedNotes());
+
+    repository.update(all.get(0).withDatedNotes(List.of(called)));
+    assertEquals(List.of(called), repository.findAll().get(0).getDatedNotes());
+
+    repository.eraseForever(first);
+    try (var conn = Database.connect(); var stmt = conn.createStatement();
+        var rs = stmt.executeQuery("SELECT mailbox_id FROM dated_notes")) {
+      assertTrue(rs.next());
+      assertEquals(second, rs.getInt(1));
+      assertFalse(rs.next());
     }
   }
 

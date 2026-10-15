@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.lfps.mailboxes.model.DatedNote;
 import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.MailHold;
@@ -106,6 +107,16 @@ public class MailboxRepository {
       "SELECT street, unit, city, state, zip, note, added_on "
       + "FROM forwarding_addresses WHERE mailbox_id = ? ORDER BY id";
 
+  /** Adds a dated note to a mailbox. */
+  private static final String INSERT_DATED_NOTE_SQL =
+      "INSERT INTO dated_notes (mailbox_id, noted_on, text) VALUES (?, ?, ?)";
+
+  /** Reads every mailbox's dated notes. */
+  private static final String SELECT_ALL_DATED_NOTES_SQL = "SELECT mailbox_id, noted_on, text FROM dated_notes";
+
+  /** Deletes a mailbox's dated notes. */
+  private static final String DELETE_DATED_NOTES_SQL = "DELETE FROM dated_notes WHERE mailbox_id = ?";
+
   /** Reads every mailbox's forwarding addresses, in the order they were added. */
   private static final String SELECT_ALL_FORWARDING_ADDRESSES_SQL =
       "SELECT mailbox_id, street, unit, city, state, zip, note, added_on "
@@ -116,8 +127,8 @@ public class MailboxRepository {
       "DELETE FROM forwarding_addresses WHERE mailbox_id = ?";
 
   /**
-   * Inserts a new mailbox along with its alternate business names and
-   * forwarding addresses.
+   * Inserts a new mailbox along with its alternate business names,
+   * forwarding addresses, and dated notes.
    *
    * @param mailbox the mailbox to persist; its id is ignored
    * @return the new mailbox's id
@@ -129,7 +140,8 @@ public class MailboxRepository {
 
   /**
    * Inserts a new mailbox along with its alternate business names,
-   * forwarding addresses, and the first entry in its rental history.
+   * forwarding addresses, dated notes, and the first entry in its rental
+   * history.
    *
    * @param mailbox the mailbox to persist; its id is ignored
    * @param firstPeriod the rental being paid for now, or {@code null} to
@@ -152,6 +164,7 @@ public class MailboxRepository {
         }
         insertBusinessNames(conn, mailboxId, mailbox.getAlternateBusinessNames());
         insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses(), List.of());
+        insertDatedNotes(conn, mailboxId, mailbox.getDatedNotes());
         if (firstPeriod != null) {
           RentalHistoryRepository.insert(conn, mailboxId, firstPeriod);
         }
@@ -215,8 +228,9 @@ public class MailboxRepository {
     try (Connection conn = Database.connect()) {
       var businessNames = findAllBusinessNames(conn);
       var forwardingAddresses = findAllForwardingAddresses(conn);
+      var datedNotes = findAllDatedNotes(conn);
       try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
-        readMailboxes(rs, businessNames, forwardingAddresses, mailboxes);
+        readMailboxes(rs, businessNames, forwardingAddresses, datedNotes, mailboxes);
       }
     }
 
@@ -230,11 +244,13 @@ public class MailboxRepository {
    * @param rs the rows, from a query starting with {@link #SELECT_COLUMNS_SQL}
    * @param businessNames every box's alternate business names, by mailbox id
    * @param forwardingAddresses every box's forwarding addresses, by mailbox id
+   * @param datedNotes every box's dated notes, by mailbox id
    * @param mailboxes the list to add the mailboxes to
    * @throws SQLException if a row can't be read
    */
   private static void readMailboxes(ResultSet rs, Map<Integer, List<String>> businessNames,
-      Map<Integer, List<ForwardingAddress>> forwardingAddresses, List<Mailbox> mailboxes) throws SQLException {
+      Map<Integer, List<ForwardingAddress>> forwardingAddresses, Map<Integer, List<DatedNote>> datedNotes,
+      List<Mailbox> mailboxes) throws SQLException {
     while (rs.next()) {
       var id = rs.getInt("id");
       mailboxes.add(new Mailbox(
@@ -256,13 +272,14 @@ public class MailboxRepository {
           rs.getInt("forwarding_only") != 0,
           DepositOutcome.fromName(rs.getString("key_deposit_outcome")),
           date(rs.getString("deleted_on")),
-          mailHold(rs)));
+          mailHold(rs),
+          datedNotes.get(id)));
     }
   }
 
   /**
-   * Updates an existing mailbox and replaces its alternate business names
-   * and forwarding addresses.
+   * Updates an existing mailbox and replaces its alternate business names,
+   * forwarding addresses, and dated notes.
    *
    * @param mailbox the mailbox to save, identified by {@link Mailbox#getId()}
    * @throws SQLException if the update fails
@@ -282,6 +299,8 @@ public class MailboxRepository {
         var previous = findForwardingAddresses(conn, mailbox.getId());
         deleteForwardingAddresses(conn, mailbox.getId());
         insertForwardingAddresses(conn, mailbox.getId(), mailbox.getForwardingAddresses(), previous);
+        deleteDatedNotes(conn, mailbox.getId());
+        insertDatedNotes(conn, mailbox.getId(), mailbox.getDatedNotes());
         conn.commit();
       } catch (SQLException e) {
         conn.rollback();
@@ -389,7 +408,7 @@ public class MailboxRepository {
 
   /**
    * Erases a box for good, with its alternate business names, forwarding
-   * addresses, and the records of its printed forwarding labels. Its rental
+   * addresses, dated notes, and the records of its printed forwarding labels. Its rental
    * history is kept, so Payments still adds up for the days it paid, and its
    * box number is remembered for those payments (see
    * {@link #findErasedBoxNumbers()}).
@@ -478,6 +497,7 @@ public class MailboxRepository {
       stmt.executeUpdate();
     }
     deleteBusinessNames(conn, id);
+    deleteDatedNotes(conn, id);
     deleteForwardingAddresses(conn, id);
     try (PreparedStatement stmt = conn.prepareStatement(DELETE_LABELS_SQL)) {
       stmt.setInt(1, id);
@@ -628,6 +648,61 @@ public class MailboxRepository {
       }
     }
     return address.getAddedOn() != null ? address.getAddedOn() : LocalDate.now();
+  }
+
+  /**
+   * Adds dated notes to a mailbox.
+   *
+   * @param conn the connection, which may be in a transaction
+   * @param mailboxId the mailbox's id
+   * @param notes the notes
+   * @throws SQLException if they can't be added
+   */
+  private void insertDatedNotes(Connection conn, int mailboxId, List<DatedNote> notes) throws SQLException {
+    try (PreparedStatement stmt = conn.prepareStatement(INSERT_DATED_NOTE_SQL)) {
+      for (var note : notes) {
+        stmt.setInt(1, mailboxId);
+        stmt.setString(2, note.getDate().toString());
+        stmt.setString(3, note.getText());
+        stmt.addBatch();
+      }
+      stmt.executeBatch();
+    }
+  }
+
+  /**
+   * Deletes a mailbox's dated notes.
+   *
+   * @param conn the connection, which may be in a transaction
+   * @param mailboxId the mailbox's id
+   * @throws SQLException if they can't be deleted
+   */
+  private void deleteDatedNotes(Connection conn, int mailboxId) throws SQLException {
+    try (PreparedStatement stmt = conn.prepareStatement(DELETE_DATED_NOTES_SQL)) {
+      stmt.setInt(1, mailboxId);
+      stmt.executeUpdate();
+    }
+  }
+
+  /**
+   * Reads every mailbox's dated notes.
+   *
+   * @param conn the connection
+   * @return each box's notes, by mailbox id; a box with none isn't in the
+   *     map. {@link Mailbox} puts them newest first.
+   * @throws SQLException if they can't be read
+   */
+  private Map<Integer, List<DatedNote>> findAllDatedNotes(Connection conn) throws SQLException {
+    var notes = new HashMap<Integer, List<DatedNote>>();
+
+    try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SELECT_ALL_DATED_NOTES_SQL)) {
+      while (rs.next()) {
+        notes.computeIfAbsent(rs.getInt("mailbox_id"), id -> new ArrayList<>())
+            .add(new DatedNote(date(rs.getString("noted_on")), rs.getString("text")));
+      }
+    }
+
+    return notes;
   }
 
   /**

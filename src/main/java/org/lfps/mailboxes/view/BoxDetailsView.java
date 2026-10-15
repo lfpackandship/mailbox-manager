@@ -100,6 +100,7 @@ final class BoxDetailsView {
             mailbox.getKeyDepositOutcome()))),
         row("Forwarding addresses", "detailForwarding", lines(mailbox.getForwardingAddresses())),
         row("Notes", "detailNotes", orNone(mailbox.getNotes())),
+        row("Dated notes", "detailDatedNotes", lines(mailbox.getDatedNotes())),
         row("Rental history", "detailHistory", history)));
     for (var i = 0; i < rows.size(); i++) {
       grid.addRow(i, rows.get(i));

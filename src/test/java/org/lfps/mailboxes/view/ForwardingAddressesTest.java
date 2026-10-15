@@ -227,9 +227,9 @@ class ForwardingAddressesTest {
       button("addForwardingButton").fire();
     });
 
-    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses (2)", "Mail Hold"),
+    assertEquals(List.of("Alternate Business Names", "Forwarding Addresses (2)", "Mail Hold", "Dated Notes"),
         FxTestSupport.call(this::sectionTitles));
-    assertEquals(List.of(false, true, false), FxTestSupport.call(() -> sections().stream()
+    assertEquals(List.of(false, true, false, false), FxTestSupport.call(() -> sections().stream()
         .map(TitledPane::isExpanded).collect(Collectors.toList())));
   }
 

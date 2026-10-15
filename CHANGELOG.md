@@ -7,6 +7,11 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ### Added
 
+- **Dated Notes** on Edit Box keep a history of what happens with a box,
+  such as "Called about late payment", each with the day it happened, which
+  can be an earlier day than today. Notes can be edited or removed, are listed
+  newest first in the box's details, and are found by the search on Manage
+  Boxes. The **Notes** box stays as it was.
 - **Mail Hold** on Add New Box and Edit Box holds a box holder's mail from
   one day through another, such as while they're on vacation, with a note on
   what to do with it. While it's on, the box's details say so and Manage

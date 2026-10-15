@@ -241,7 +241,7 @@ public class Database {
    * Creates the {@code mailboxes}, {@code business_names},
    * {@code forwarding_addresses}, {@code rental_periods},
    * {@code box_inventory}, {@code prices}, {@code box_sizes}, {@code settings},
-   * {@code labels}, and {@code erased_boxes} tables if
+   * {@code labels}, {@code erased_boxes}, and {@code dated_notes} tables if
    * they don't already exist, and migrates older databases that predate the
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
    * {@code key_count}, {@code key_deposit_cents}, {@code forwarding_only},
@@ -349,6 +349,14 @@ public class Database {
         + "address TEXT NOT NULL, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
+    // Things that happened with a box, each with its day; see DatedNote.
+    var createDatedNotes = "CREATE TABLE IF NOT EXISTS dated_notes ("
+        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        + "mailbox_id INTEGER NOT NULL, "
+        + "noted_on TEXT NOT NULL, "
+        + "text TEXT NOT NULL, "
+        + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
+
     // The number of each box erased for good from Recently deleted, so its
     // payments, which are kept, can still say which box they were for.
     var createErasedBoxes = "CREATE TABLE IF NOT EXISTS erased_boxes ("
@@ -367,6 +375,7 @@ public class Database {
       stmt.execute(createSettings);
       stmt.execute(createLabels);
       stmt.execute(createErasedBoxes);
+      stmt.execute(createDatedNotes);
 
       for (var column : List.of("box_name TEXT", "end_date TEXT", "notes TEXT", "closed_date TEXT",
           "key_count INTEGER", "key_deposit_cents INTEGER", "forwarding_only INTEGER NOT NULL DEFAULT 0",
@@ -397,6 +406,7 @@ public class Database {
       stmt.execute("CREATE INDEX IF NOT EXISTS business_names_mailbox ON business_names (mailbox_id)");
       stmt.execute("CREATE INDEX IF NOT EXISTS forwarding_addresses_mailbox ON forwarding_addresses (mailbox_id)");
       stmt.execute("CREATE INDEX IF NOT EXISTS rental_periods_mailbox ON rental_periods (mailbox_id)");
+      stmt.execute("CREATE INDEX IF NOT EXISTS dated_notes_mailbox ON dated_notes (mailbox_id)");
       // For the Payments screen, which looks entries up by the day they were paid.
       stmt.execute("CREATE INDEX IF NOT EXISTS rental_periods_recorded_on ON rental_periods (recorded_on)");
     } catch (SQLException e) {
