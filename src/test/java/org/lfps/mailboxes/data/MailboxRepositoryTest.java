@@ -463,6 +463,18 @@ class MailboxRepositoryTest {
     }
   }
 
+  @Test
+  void insertAllAddsEveryBoxWithItsNamesAndAddresses() throws SQLException {
+    var address = new ForwardingAddress("1 Elm St", null, "Town", "IL", "60000", null);
+    repository.insertAll(List.of(mailbox("7", List.of("Seven Co"), null),
+        withForwarding("3", List.of(address))));
+
+    var all = repository.findAll();
+    assertEquals(List.of("3", "7"), all.stream().map(Mailbox::getBoxNumber).collect(Collectors.toList()));
+    assertEquals(List.of(address), all.get(0).getForwardingAddresses());
+    assertEquals(List.of("Seven Co"), all.get(1).getAlternateBusinessNames());
+  }
+
   /** Makes a box with the given forwarding addresses. */
   private static Mailbox withForwarding(String boxNumber, List<ForwardingAddress> addresses) {
     return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null,

@@ -153,18 +153,7 @@ public class MailboxRepository {
     try (Connection conn = Database.connect()) {
       conn.setAutoCommit(false);
       try {
-        int mailboxId;
-        try (PreparedStatement stmt = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
-          bindMailboxFields(stmt, mailbox);
-          stmt.executeUpdate();
-          try (ResultSet keys = stmt.getGeneratedKeys()) {
-            keys.next();
-            mailboxId = keys.getInt(1);
-          }
-        }
-        insertBusinessNames(conn, mailboxId, mailbox.getAlternateBusinessNames());
-        insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses(), List.of());
-        insertDatedNotes(conn, mailboxId, mailbox.getDatedNotes());
+        var mailboxId = insert(conn, mailbox);
         if (firstPeriod != null) {
           RentalHistoryRepository.insert(conn, mailboxId, firstPeriod);
         }
@@ -175,6 +164,53 @@ public class MailboxRepository {
         throw e;
       }
     }
+  }
+
+  /**
+   * Inserts many new mailboxes at once, as File → Import Boxes does, all or
+   * nothing: if one can't be added, none are.
+   *
+   * @param mailboxes the mailboxes to persist; their ids are ignored
+   * @throws SQLException if they can't be added; nothing is added then
+   */
+  public void insertAll(List<Mailbox> mailboxes) throws SQLException {
+    try (Connection conn = Database.connect()) {
+      conn.setAutoCommit(false);
+      try {
+        for (var mailbox : mailboxes) {
+          insert(conn, mailbox);
+        }
+        conn.commit();
+      } catch (SQLException e) {
+        conn.rollback();
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Inserts a new mailbox with its alternate business names, forwarding
+   * addresses, and dated notes.
+   *
+   * @param conn the connection, in a transaction
+   * @param mailbox the mailbox; its id is ignored
+   * @return the new mailbox's id
+   * @throws SQLException if it can't be added
+   */
+  private int insert(Connection conn, Mailbox mailbox) throws SQLException {
+    int mailboxId;
+    try (PreparedStatement stmt = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
+      bindMailboxFields(stmt, mailbox);
+      stmt.executeUpdate();
+      try (ResultSet keys = stmt.getGeneratedKeys()) {
+        keys.next();
+        mailboxId = keys.getInt(1);
+      }
+    }
+    insertBusinessNames(conn, mailboxId, mailbox.getAlternateBusinessNames());
+    insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses(), List.of());
+    insertDatedNotes(conn, mailboxId, mailbox.getDatedNotes());
+    return mailboxId;
   }
 
   /**
