@@ -138,8 +138,9 @@ The menus at the top of the window are there on every screen:
   **Find a Box** (⌘F or Ctrl+F, which opens Manage Boxes ready to search),
   **Renewals**, **Calendar**, **Payments**, and **Box Inventory** (⌘1 to ⌘5,
   or Ctrl+1 to Ctrl+5), and the **Prices…** window.
-- **Help** – **Show Data Folder**, and **About Mailbox Manager**, which says
-  which version is installed.
+- **Help** – **Keyboard Shortcuts**, which lists every shortcut in the app,
+  **Show Data Folder**, and **About Mailbox Manager**, which says which
+  version is installed.
 
 ### Renewing a box
 

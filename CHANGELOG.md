@@ -5,6 +5,12 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ## Unreleased
 
+### Added
+
+- **Help → Keyboard Shortcuts** lists every keyboard shortcut in the app:
+  those on the File and Go menus, and keys such as Enter and Esc that work in
+  lists and windows.
+
 ### Changed
 
 - **Back Up Now…** saves the backup in the backups folder first, so
