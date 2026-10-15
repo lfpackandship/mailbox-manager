@@ -233,6 +233,22 @@ class DatabaseTest {
   }
 
   @Test
+  void upgradesABoxInventoryFromBeforeOutOfService() throws SQLException {
+    Database.prepareDataDir();
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("CREATE TABLE box_inventory (box_number TEXT PRIMARY KEY COLLATE NOCASE, size TEXT)");
+      stmt.execute("INSERT INTO box_inventory (box_number, size) VALUES ('7', 'Small')");
+    }
+
+    Database.initSchema();
+
+    var inventory = new BoxInventoryRepository();
+    assertFalse(inventory.find("7").isOutOfService());
+    inventory.setOutOfService(java.util.List.of("7"), "broken lock");
+    assertEquals("broken lock", inventory.find("7").getOutOfServiceReason());
+  }
+
+  @Test
   void upgradedDatabaseLooksUpBoxDetailsAndPaymentsByIndex() throws SQLException {
     Database.prepareDataDir();
     // The tables as 1.10 made them, without indexes.

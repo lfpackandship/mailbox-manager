@@ -10,6 +10,7 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -45,8 +46,9 @@ import org.lfps.mailboxes.util.BoxNumbers;
 /**
  * The box inventory: every physical box, whether it's rented or empty, with
  * tools to add boxes (singly or in ranges such as 1-200), set their sizes,
- * and remove them. Once the inventory is set up, Add New Box and Edit Box only
- * accept box numbers in it, and Add New Box can choose an empty box.
+ * mark them out of service (such as with a broken lock), and remove them.
+ * Once the inventory is set up, Add New Box and Edit Box only accept box
+ * numbers in it, and Add New Box can choose an empty box that's in service.
  */
 public class BoxInventoryView {
 
@@ -54,10 +56,12 @@ public class BoxInventoryView {
   enum Show {
     /** Every box in the inventory. */
     ALL("All boxes"),
-    /** Boxes no one is renting. */
+    /** Boxes no one is renting that are in service, ready to rent. */
     EMPTY("Empty boxes"),
     /** Boxes someone is renting. */
-    RENTED("Rented boxes");
+    RENTED("Rented boxes"),
+    /** Boxes out of service, rented or not. */
+    OUT_OF_SERVICE("Out of service");
 
     /** What the choice is called in the menu. */
     private final String label;
@@ -78,7 +82,16 @@ public class BoxInventoryView {
      * @return {@code true} if it's shown
      */
     boolean includes(Row row) {
-      return this == ALL || (row.holder == null) == (this == EMPTY);
+      switch (this) {
+        case EMPTY:
+          return row.isEmpty();
+        case RENTED:
+          return row.holder != null;
+        case OUT_OF_SERVICE:
+          return row.box.isOutOfService();
+        default:
+          return true;
+      }
     }
 
     @Override
@@ -107,6 +120,31 @@ public class BoxInventoryView {
     Row(InventoryBox box, Mailbox holder) {
       this.box = box;
       this.holder = holder;
+    }
+
+    /**
+     * Returns whether the box is ready to rent: no one has it, and it isn't
+     * out of service.
+     *
+     * @return {@code true} if it's empty
+     */
+    boolean isEmpty() {
+      return holder == null && !box.isOutOfService();
+    }
+
+    /**
+     * Describes the box for the Status column, such as "Empty", "Rented",
+     * "Out of service: broken lock", or "Rented, out of service".
+     *
+     * @return the status
+     */
+    String status() {
+      var outOfService = box.describeOutOfService();
+      if (holder != null) {
+        return outOfService.isEmpty() ? "Rented" : "Rented, " + outOfService;
+      }
+      return outOfService.isEmpty() ? "Empty"
+          : Character.toUpperCase(outOfService.charAt(0)) + outOfService.substring(1);
     }
 
   }
@@ -152,12 +190,15 @@ public class BoxInventoryView {
       statusLabel.setText("Failed to load the box inventory: " + e.getMessage());
     }
 
+    // Each box is counted once: a rented box that's out of service counts as rented.
     var rented = rows.stream().filter(r -> r.holder != null).count();
+    var empty = rows.stream().filter(Row::isEmpty).count();
+    var outOfService = rows.size() - rented - empty;
     var summary = new Label(rows.isEmpty()
         ? "The box inventory hasn't been set up yet. Add the boxes you have below. After that, Add New Box "
             + "can choose an empty box for you, and box numbers that aren't in the inventory are caught."
-        : rows.size() + (rows.size() == 1 ? " box: " : " boxes: ") + rented + " rented, "
-            + (rows.size() - rented) + " empty.");
+        : rows.size() + (rows.size() == 1 ? " box: " : " boxes: ") + rented + " rented, " + empty + " empty"
+            + (outOfService == 0 ? "" : ", " + outOfService + " out of service") + ".");
     summary.setId("inventorySummary");
     summary.setWrapText(true);
     summary.setStyle("-fx-font-weight: bold;");
@@ -178,7 +219,7 @@ public class BoxInventoryView {
     sizeCol.setCellValueFactory(cell -> new SimpleStringProperty(orEmpty(cell.getValue().box.getSize())));
 
     var statusCol = new TableColumn<Row, String>("Status");
-    statusCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().holder == null ? "Empty" : "Rented"));
+    statusCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().status()));
 
     var holderCol = new TableColumn<Row, String>("Rented By");
     holderCol.setCellValueFactory(cell -> new SimpleStringProperty(
@@ -223,6 +264,42 @@ public class BoxInventoryView {
         reload.accept("");
       } catch (SQLException ex) {
         error(statusLabel, "Failed to save the size: " + ex.getMessage());
+      }
+    });
+
+    var outOfServiceBtn = new Button("Out of Service…");
+    outOfServiceBtn.setId("outOfServiceButton");
+    outOfServiceBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+    outOfServiceBtn.setOnAction(e -> {
+      var numbers = boxNumbers(selected);
+      var reason = Dialogs.askText.ask(stage, "Out of Service", "Why " + (numbers.size() == 1 ? "is " : "are ")
+          + describe(numbers) + " out of service? For example, broken lock. You can leave it blank. Anyone renting "
+          + (numbers.size() == 1 ? "it keeps it." : "one keeps it."),
+          numbers.size() == 1 ? orEmpty(selected.get(0).box.getOutOfServiceReason()) : "");
+      if (reason.isEmpty()) {
+        return;
+      }
+      try {
+        inventory.setOutOfService(numbers, reason.get());
+        reload.accept("Marked " + describe(numbers) + " out of service.");
+      } catch (SQLException ex) {
+        error(statusLabel, "Failed to save: " + ex.getMessage());
+      }
+    });
+
+    var inServiceBtn = new Button("Back in Service");
+    inServiceBtn.setId("inServiceButton");
+    inServiceBtn.disableProperty().bind(Bindings.createBooleanBinding(
+        () -> selected.stream().noneMatch(row -> row.box.isOutOfService()), selected));
+    inServiceBtn.setOnAction(e -> {
+      var numbers = selected.stream().filter(row -> row.box.isOutOfService())
+          .map(row -> row.box.getBoxNumber()).collect(Collectors.toList());
+      try {
+        inventory.setInService(numbers);
+        reload.accept(Character.toUpperCase(describe(numbers).charAt(0)) + describe(numbers).substring(1)
+            + (numbers.size() == 1 ? " is" : " are") + " back in service.");
+      } catch (SQLException ex) {
+        error(statusLabel, "Failed to save: " + ex.getMessage());
       }
     });
 
@@ -312,7 +389,7 @@ public class BoxInventoryView {
     layout.getChildren().addAll(
         showChoice,
         table,
-        new HBox(10, setSizeBtn, removeBtn, pricesBtn),
+        new HBox(10, setSizeBtn, outOfServiceBtn, inServiceBtn, removeBtn, pricesBtn),
         addLabel,
         new HBox(10, addField, sizeField, addBtn),
         statusLabel);
@@ -343,7 +420,7 @@ public class BoxInventoryView {
       }
       var holders = holdersByBoxNumber();
       empty = inventory.findAll().stream()
-          .filter(box -> !holders.containsKey(BoxNumbers.key(box.getBoxNumber())))
+          .filter(box -> !box.isOutOfService() && !holders.containsKey(BoxNumbers.key(box.getBoxNumber())))
           .collect(Collectors.toList());
     } catch (SQLException e) {
       var failed = new Alert(AlertType.ERROR, "Failed to load the box inventory: " + e.getMessage());
@@ -424,8 +501,9 @@ public class BoxInventoryView {
 
   /**
    * Describes how many boxes of each size are empty, such as "Large: 2 of 5
-   * empty · Small: 30 of 35 empty · No size: 1 of 1 empty", with sizes in
-   * alphabetical order, ignoring letter case.
+   * empty, 1 out of service · Small: 30 of 35 empty · No size: 1 of 1
+   * empty", with sizes in alphabetical order, ignoring letter case. Only
+   * boxes no one is renting are counted as out of service here.
    *
    * @return the description, or an empty string if no box has a size
    * @param rows every box in the inventory
@@ -442,12 +520,15 @@ public class BoxInventoryView {
       var count = counts.computeIfAbsent(size == null ? "~" : size.toLowerCase(),
           key -> new SizeCount(size == null ? "No size" : size));
       count.total++;
-      if (row.holder == null) {
+      if (row.isEmpty()) {
         count.empty++;
+      } else if (row.holder == null) {
+        count.outOfService++;
       }
     }
     return counts.values().stream()
-        .map(count -> count.label + ": " + count.empty + " of " + count.total + " empty")
+        .map(count -> count.label + ": " + count.empty + " of " + count.total + " empty"
+            + (count.outOfService == 0 ? "" : ", " + count.outOfService + " out of service"))
         .collect(Collectors.joining(" · "));
   }
 
@@ -457,8 +538,11 @@ public class BoxInventoryView {
     /** The size, as shown, or "No size". */
     final String label;
 
-    /** How many boxes of the size are empty. */
+    /** How many boxes of the size are empty, and in service. */
     int empty;
+
+    /** How many boxes of the size no one is renting because they're out of service. */
+    int outOfService;
 
     /** How many boxes of the size there are. */
     int total;

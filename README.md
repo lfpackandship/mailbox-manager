@@ -270,7 +270,16 @@ Once the inventory has any boxes in it:
 Removing a box from the inventory doesn't affect anyone renting it.
 
 When boxes have sizes, the screen also shows how many of each size are empty,
-such as `Large: 2 of 5 empty · Small: 30 of 35 empty`.
+such as `Large: 2 of 5 empty, 1 out of service · Small: 30 of 35 empty`.
+
+A box that can't be rented for now, for example because of a broken lock,
+can be marked out of service: select it and click **Out of Service…**, and
+give a reason if you like. It isn't counted as empty, and **Choose…** on Add
+New Box doesn't offer it. Typing its number on Add New Box or Edit Box asks
+whether to use it anyway. Anyone already renting it keeps it, and its status
+shows, for example, "Rented, out of service: broken lock". **Back in
+Service** undoes it, and **Out of service** in the menu above the list shows
+just these boxes.
 
 ### Prices
 

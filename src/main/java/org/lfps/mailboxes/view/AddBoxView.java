@@ -203,6 +203,10 @@ public class AddBoxView {
         problems.focusFirst();
         return;
       }
+      // A forwarding-only box doesn't use the box itself.
+      if (!forwardingOnly && !BoxNumberChecks.confirmIfOutOfService(stage, boxNumber.getText())) {
+        return;
+      }
 
       var mailbox = new Mailbox(0, firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumber.getText(), boxNameField.getText(), phone, email,

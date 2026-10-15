@@ -48,6 +48,24 @@ class BoxInventoryRepositoryTest {
   }
 
   @Test
+  void marksBoxesOutOfServiceAndBackIgnoringCase() throws SQLException {
+    inventory.add(List.of("12A", "13"), "Small");
+
+    inventory.setOutOfService(List.of("12a"), "  broken lock ");
+    var box = inventory.find(" 12a ");
+    assertEquals("12A", box.getBoxNumber());
+    assertTrue(box.isOutOfService());
+    assertEquals("broken lock", box.getOutOfServiceReason());
+    assertEquals("Small", box.getSize());
+    assertFalse(inventory.find("13").isOutOfService());
+
+    inventory.setInService(List.of("12A"));
+    assertFalse(inventory.find("12A").isOutOfService());
+    assertNull(inventory.find("12A").getOutOfServiceReason());
+    assertNull(inventory.find("99"));
+  }
+
+  @Test
   void containsIgnoresCaseAndSpaces() throws SQLException {
     inventory.add(List.of("12A"), null);
     assertTrue(inventory.contains(" 12a "));

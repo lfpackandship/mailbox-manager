@@ -246,8 +246,9 @@ public class Database {
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
    * {@code key_count}, {@code key_deposit_cents}, {@code forwarding_only},
    * {@code key_deposit_outcome}, and {@code deleted_on} columns of
-   * {@code mailboxes} and the
-   * {@code added_on} column of {@code forwarding_addresses}. Also adds the
+   * {@code mailboxes}, the {@code added_on} column of
+   * {@code forwarding_addresses}, and the {@code out_of_service} and
+   * {@code out_of_service_reason} columns of {@code box_inventory}. Also adds the
    * indexes that keep loading boxes and payments fast, if they're missing.
    *
    * @throws RuntimeException if the schema cannot be initialized
@@ -300,9 +301,13 @@ public class Database {
         + "note TEXT, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
+    // A box out of service, such as one with a broken lock, isn't offered
+    // as empty; the reason is optional.
     var createBoxInventory = "CREATE TABLE IF NOT EXISTS box_inventory ("
         + "box_number TEXT PRIMARY KEY COLLATE NOCASE, "
-        + "size TEXT)";
+        + "size TEXT, "
+        + "out_of_service INTEGER NOT NULL DEFAULT 0, "
+        + "out_of_service_reason TEXT)";
 
     // The price of renting a box of a size for a number of months. An empty
     // size is the default price, for boxes with no size or no price of their own.
@@ -372,6 +377,13 @@ public class Database {
         stmt.execute("ALTER TABLE forwarding_addresses ADD COLUMN added_on TEXT");
       } catch (SQLException alreadyMigrated) {
         // Added in 1.10; already there on a newer database.
+      }
+      for (var column : List.of("out_of_service INTEGER NOT NULL DEFAULT 0", "out_of_service_reason TEXT")) {
+        try {
+          stmt.execute("ALTER TABLE box_inventory ADD COLUMN " + column);
+        } catch (SQLException alreadyMigrated) {
+          // Added in 1.11; already there on a newer database.
+        }
       }
 
       // Without these, finding a box's names, addresses, or history reads

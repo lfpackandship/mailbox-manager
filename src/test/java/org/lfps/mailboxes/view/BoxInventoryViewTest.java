@@ -241,6 +241,142 @@ class BoxInventoryViewTest {
   }
 
   @Test
+  void outOfServiceAsksWhyAndShowsItForEmptyAndRentedBoxes() throws SQLException {
+    inventory.add(List.of("1", "2", "5"), null);
+    var questions = new ArrayList<String>();
+    Dialogs.askText = (owner, title, question, initial) -> {
+      questions.add(question);
+      return Optional.of(" broken lock ");
+    };
+    FxTestSupport.run(() -> BoxInventoryView.show(mainWindow));
+    FxTestSupport.run(() -> {
+      table().getSelectionModel().selectIndices(0, 2);
+      button("outOfServiceButton").fire();
+    });
+
+    assertEquals(List.of("Why are 2 boxes out of service? For example, broken lock. You can leave it blank. "
+        + "Anyone renting one keeps it."), questions);
+    assertEquals(List.of("Out of service: broken lock", "Empty", "Rented, out of service: broken lock"),
+        statuses());
+    assertEquals("3 boxes: 1 rented, 1 empty, 1 out of service.", text("inventorySummary"));
+    assertEquals("Marked 2 boxes out of service.", text("inventoryStatusLabel"));
+
+    FxTestSupport.run(() -> showChoice().setValue(BoxInventoryView.Show.OUT_OF_SERVICE));
+    assertEquals(List.of("1", "5"), boxNumbersShown());
+    FxTestSupport.run(() -> showChoice().setValue(BoxInventoryView.Show.EMPTY));
+    assertEquals(List.of("2"), boxNumbersShown());
+  }
+
+  @Test
+  void aBlankReasonIsAllowed() throws SQLException {
+    inventory.add(List.of("1"), null);
+    Dialogs.askText = (owner, title, question, initial) -> Optional.of("");
+    FxTestSupport.run(() -> BoxInventoryView.show(mainWindow));
+    FxTestSupport.run(() -> {
+      table().getSelectionModel().select(0);
+      button("outOfServiceButton").fire();
+    });
+
+    assertEquals(List.of("Out of service"), statuses());
+  }
+
+  @Test
+  void backInServiceOnlyWorksOnBoxesOutOfServiceAndForgetsTheReason() throws SQLException {
+    inventory.add(List.of("1", "2"), null);
+    inventory.setOutOfService(List.of("1"), "broken lock");
+    FxTestSupport.run(() -> BoxInventoryView.show(mainWindow));
+
+    FxTestSupport.run(() -> table().getSelectionModel().select(1));
+    assertTrue(FxTestSupport.call(() -> button("inServiceButton").isDisabled()));
+    FxTestSupport.run(() -> {
+      table().getSelectionModel().selectIndices(0, 1);
+      button("inServiceButton").fire();
+    });
+
+    assertEquals(List.of("Empty", "Empty"), statuses());
+    assertEquals("Box 1 is back in service.", text("inventoryStatusLabel"));
+    assertNull(inventory.find("1").getOutOfServiceReason());
+  }
+
+  @Test
+  void chooseDoesNotOfferBoxesOutOfService() throws SQLException {
+    inventory.add(List.of("3", "4"), null);
+    inventory.setOutOfService(List.of("3"), null);
+    FxTestSupport.run(() -> {
+      AddBoxView.show(mainWindow);
+      button("chooseBoxButton").fire();
+    });
+
+    var chooser = FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w instanceof Stage && w.getScene() != null && w.getScene().lookup("#emptyBoxList") != null)
+        .findFirst()
+        .orElseThrow());
+    @SuppressWarnings("unchecked")
+    var list = FxTestSupport.call(() -> (ListView<InventoryBox>) chooser.getScene().lookup("#emptyBoxList"));
+    assertEquals(List.of("4"), FxTestSupport.call(() -> list.getItems().stream()
+        .map(InventoryBox::getBoxNumber).collect(Collectors.toList())));
+  }
+
+  @Test
+  void sizeCountsLeaveOutBoxesOutOfService() throws SQLException {
+    inventory.add(List.of("1", "2", "5"), "Large");
+    inventory.setOutOfService(List.of("1", "5"), null);
+    FxTestSupport.run(() -> BoxInventoryView.show(mainWindow));
+
+    // Box 5 is rented, so it counts as rented rather than out of service.
+    assertEquals("Large: 1 of 3 empty, 1 out of service", text("inventorySizeCounts"));
+  }
+
+  @Test
+  void addNewBoxAsksBeforeUsingABoxOutOfService() throws SQLException {
+    inventory.add(List.of("1"), null);
+    inventory.setOutOfService(List.of("1"), "broken lock");
+    var questions = new ArrayList<String>();
+    var useIt = new boolean[] { false };
+    Dialogs.confirm = (owner, question, details, yesButton, noButton) -> {
+      questions.add(question + " | " + yesButton + " / " + noButton);
+      return useIt[0];
+    };
+    FxTestSupport.run(() -> {
+      AddBoxView.show(mainWindow);
+      fieldWithPrompt("310 (required)").setText("1");
+      buttonLabeled("Save").fire();
+    });
+
+    assertEquals(List.of("Box 1 is out of service: broken lock. | Use It Anyway / Go Back"), questions);
+    assertEquals(2, new MailboxRepository().findAll().size());
+
+    useIt[0] = true;
+    FxTestSupport.run(() -> buttonLabeled("Save").fire());
+    assertEquals(3, new MailboxRepository().findAll().size());
+  }
+
+  @Test
+  void editBoxOnlyAsksWhenMovingIntoABoxOutOfService() throws SQLException {
+    inventory.add(List.of("5", "7"), null);
+    inventory.setOutOfService(List.of("5", "7"), null);
+    var questions = new ArrayList<String>();
+    Dialogs.confirm = (owner, question, details, yesButton, noButton) -> {
+      questions.add(question);
+      return true;
+    };
+    var ada = new MailboxRepository().findOpen().get(0);
+
+    FxTestSupport.run(() -> {
+      EditBoxView.show(mainWindow, ada, () -> { });
+      buttonLabeled("Save").fire();
+    });
+    assertEquals(List.of(), questions);
+
+    FxTestSupport.run(() -> {
+      EditBoxView.show(mainWindow, ada, () -> { });
+      fieldWithPrompt("310 (required)").setText("7");
+      buttonLabeled("Save").fire();
+    });
+    assertEquals(List.of("Box 7 is out of service."), questions);
+  }
+
+  @Test
   void removeAsksThenRemovesTheSelectedBoxes() throws SQLException {
     inventory.add(List.of("1", "2", "3"), null);
     var questions = new ArrayList<String>();
@@ -335,6 +471,13 @@ class BoxInventoryViewTest {
   /** Returns the size of each box in the inventory, in box number order. */
   private List<String> sizes() throws SQLException {
     return inventory.findAll().stream().map(InventoryBox::getSize).collect(Collectors.toList());
+  }
+
+  /** Returns the Status column of each box in the table, as shown. */
+  private List<String> statuses() {
+    return FxTestSupport.call(() -> table().getItems().stream()
+        .map(BoxInventoryView.Row::status)
+        .collect(Collectors.toList()));
   }
 
   /** Returns the box numbers in the table, as shown. */

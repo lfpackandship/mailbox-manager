@@ -120,14 +120,15 @@ public class EditBoxView {
       }
 
       var forwardingOnly = forwardingOnlyBox.isSelected();
+      // Closed and forwarding-only boxes don't hold their numbers, so only
+      // check an open box whose number changed or that now holds it.
+      var takesBox = !boxNumberField.getText().isBlank() && !mailbox.isClosed() && !forwardingOnly
+          && (mailbox.isForwardingOnly()
+              || !BoxNumbers.key(boxNumberField.getText()).equals(BoxNumbers.key(mailbox.getBoxNumber())));
       if (boxNumberField.getText().isBlank()) {
         errors.append("Box number is required.\n");
         problems.mark(boxNumberField);
-      } else if (!mailbox.isClosed() && !forwardingOnly
-          && (mailbox.isForwardingOnly()
-              || !BoxNumbers.key(boxNumberField.getText()).equals(BoxNumbers.key(mailbox.getBoxNumber())))) {
-        // Closed and forwarding-only boxes don't hold their numbers, so only
-        // check an open box whose number changed or that now holds it.
+      } else if (takesBox) {
         var problem = BoxNumberChecks.problem(boxNumberField.getText(), mailbox.getId());
         if (!problem.isEmpty()) {
           errors.append(problem);
@@ -166,6 +167,10 @@ public class EditBoxView {
         resultLabel.setStyle("-fx-text-fill: red;");
         resultLabel.setText(errors.toString().trim());
         problems.focusFirst();
+        return;
+      }
+      // Asked only when the box is newly taken, not every time a box already in it is saved.
+      if (takesBox && !BoxNumberChecks.confirmIfOutOfService(stage, boxNumberField.getText())) {
         return;
       }
 

@@ -7,6 +7,11 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ### Added
 
+- **Out of Service…** on Box Inventory marks boxes that can't be rented for
+  now, such as one with a broken lock, with an optional reason. They aren't
+  counted as empty or offered by **Choose…** on Add New Box, and typing one's
+  number on Add New Box or Edit Box asks whether to use it anyway. **Back in
+  Service** undoes it.
 - **Help → Keyboard Shortcuts** lists every keyboard shortcut in the app:
   those on the File and Go menus, and keys such as Enter and Esc that work in
   lists and windows.
