@@ -96,9 +96,11 @@ The main menu has six screens:
   click **View** or press Enter; the details open in their own window with
   **Edit** and **Renew…** buttons. Select a row to edit, renew, close, or
   delete it. The menu next to the search field shows closed boxes instead,
-  all boxes, or [recently deleted](#deleting-a-box) ones. **Print…** prints the list as shown, and **Save as
+  all boxes, boxes [holding mail](#holding-mail), or
+  [recently deleted](#deleting-a-box) ones. **Print…** prints the list as shown, and **Save as
   Spreadsheet…** saves it as a file Excel or Google Sheets opens, with
-  everything recorded for each box.
+  everything recorded for each box. **Import…** adds many boxes at once from a
+  spreadsheet (see [Importing boxes](#importing-boxes-from-a-spreadsheet)).
 - **Renewals** – open boxes that are past due, and those due within the next
   30 days (adjustable in Settings), most urgent first. On the main menu, small
   bubbles on the Renewals button count them: red for past due, yellow for due
@@ -619,12 +621,15 @@ src/main/java/org/lfps/mailboxes/
                     LabelRepository (forwarding label numbers and records)
   drive/            Google Drive backups: DriveBackup (connect, upload, download),
                     GoogleDrive (talks to Google), DriveAccount (the saved sign-in)
-  model/            Mailbox, ForwardingAddress, RentalPeriod, InventoryBox, PrintedLabel, and
-                    DepositOutcome
+  importing/        Import Boxes: ImportTemplate (the .xlsx template), ImportReader (reads .xlsx
+                    and .csv), ImportCheck (checks each row), ImportRow, and ImportColumn
+  model/            Mailbox, ForwardingAddress, RentalPeriod, InventoryBox, PrintedLabel,
+                    DepositOutcome, DatedNote, and MailHold
   view/             one class per screen, plus AppWindow (menu bar, text size), SettingsView,
                     GoogleDriveRow, RestoreView, PriceSheet (the printed price sheet and
                     reminders), ForwardingLabel and ForwardingLabelView (forwarding labels),
-                    Printing, and TableOutput (printing and saving lists)
+                    DatedNotesEditor and MailHoldEditor (sections of Edit Box),
+                    KeyboardShortcutsView, Printing, and TableOutput (printing and saving lists)
   util/             input validation, box number sorting, money, rental lengths, error
                     messages, and runtime info
   Launcher.java     the entry point of the jar and installers, which hands off to App
