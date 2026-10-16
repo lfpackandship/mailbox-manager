@@ -23,7 +23,15 @@ public class BoxInventoryRepository {
   }
 
   /** Reads every box in the inventory. */
-  private static final String SELECT_ALL_SQL = "SELECT box_number, size FROM box_inventory";
+  private static final String SELECT_ALL_SQL =
+      "SELECT box_number, size, out_of_service, out_of_service_reason FROM box_inventory";
+
+  /** Reads one box. */
+  private static final String SELECT_ONE_SQL = SELECT_ALL_SQL + " WHERE box_number = ?";
+
+  /** Marks a box out of service, or back in service. */
+  private static final String SET_OUT_OF_SERVICE_SQL =
+      "UPDATE box_inventory SET out_of_service = ?, out_of_service_reason = ? WHERE box_number = ?";
 
   /** Adds a box, unless one with that number is already there. */
   private static final String INSERT_SQL = "INSERT OR IGNORE INTO box_inventory (box_number, size) VALUES (?, ?)";
@@ -60,11 +68,74 @@ public class BoxInventoryRepository {
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery(SELECT_ALL_SQL)) {
       while (rs.next()) {
-        boxes.add(new InventoryBox(rs.getString("box_number"), rs.getString("size")));
+        boxes.add(inventoryBox(rs));
       }
     }
     boxes.sort((a, b) -> BoxNumbers.ORDER.compare(a.getBoxNumber(), b.getBoxNumber()));
     return boxes;
+  }
+
+  /**
+   * Returns a box in the inventory, ignoring surrounding whitespace and
+   * letter case in the box number.
+   *
+   * @param boxNumber the box number to look up
+   * @return the box, or {@code null} if it isn't in the inventory
+   * @throws SQLException if the query fails
+   */
+  public InventoryBox find(String boxNumber) throws SQLException {
+    try (Connection conn = Database.connect();
+        PreparedStatement stmt = conn.prepareStatement(SELECT_ONE_SQL)) {
+      stmt.setString(1, boxNumber.trim());
+      try (ResultSet rs = stmt.executeQuery()) {
+        return rs.next() ? inventoryBox(rs) : null;
+      }
+    }
+  }
+
+  /**
+   * Reads the box in the current row of a query.
+   *
+   * @param rs the query, on a row from {@link #SELECT_ALL_SQL}
+   * @return the box
+   * @throws SQLException if a column can't be read
+   */
+  private static InventoryBox inventoryBox(ResultSet rs) throws SQLException {
+    return new InventoryBox(rs.getString("box_number"), rs.getString("size"), rs.getInt("out_of_service") != 0,
+        rs.getString("out_of_service_reason"));
+  }
+
+  /**
+   * Marks boxes out of service, such as with a broken lock, so Choose… on
+   * Add New Box doesn't offer them and they aren't counted as empty. Anyone
+   * renting one keeps it.
+   *
+   * @param boxNumbers the boxes
+   * @param reason why, such as "broken lock", or blank/null for no reason;
+   *     it replaces any reason already recorded
+   * @throws SQLException if they can't be marked; none are changed
+   */
+  public void setOutOfService(List<String> boxNumbers, String reason) throws SQLException {
+    var reasonValue = reason == null || reason.isBlank() ? null : reason.trim();
+    inTransaction(SET_OUT_OF_SERVICE_SQL, boxNumbers, (stmt, boxNumber) -> {
+      stmt.setInt(1, 1);
+      stmt.setString(2, reasonValue);
+      stmt.setString(3, boxNumber.trim());
+    });
+  }
+
+  /**
+   * Puts boxes back in service, forgetting why they were out of it.
+   *
+   * @param boxNumbers the boxes
+   * @throws SQLException if they can't be changed; none are changed
+   */
+  public void setInService(List<String> boxNumbers) throws SQLException {
+    inTransaction(SET_OUT_OF_SERVICE_SQL, boxNumbers, (stmt, boxNumber) -> {
+      stmt.setInt(1, 0);
+      stmt.setString(2, null);
+      stmt.setString(3, boxNumber.trim());
+    });
   }
 
   /**

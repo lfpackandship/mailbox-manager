@@ -10,12 +10,16 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -52,6 +56,7 @@ import org.lfps.mailboxes.model.Mailbox;
 class SettingsFeaturesTest {
 
   private static final Function<Window, File> REAL_CHOOSE_FOLDER = SettingsView.chooseFolder;
+  private static final BiFunction<Window, Path, Path> REAL_CHOOSE_COPY_FOLDER = SettingsView.chooseCopyFolder;
   private static final Function<Window, File> REAL_CHOOSE_FILE = RestoreView.chooseFile;
   private static final Predicate<String> REAL_CONFIRM = RestoreView.confirm;
 
@@ -95,6 +100,7 @@ class SettingsFeaturesTest {
   @AfterEach
   void closeAllWindows() throws IOException {
     SettingsView.chooseFolder = REAL_CHOOSE_FOLDER;
+    SettingsView.chooseCopyFolder = REAL_CHOOSE_COPY_FOLDER;
     RestoreView.chooseFile = REAL_CHOOSE_FILE;
     RestoreView.confirm = REAL_CONFIRM;
     FxTestSupport.run(() -> {
@@ -181,27 +187,68 @@ class SettingsFeaturesTest {
   // Backups
 
   @Test
-  void backUpNowSavesACopyToTheChosenFolder() throws IOException {
-    SettingsView.chooseFolder = owner -> elsewhere.toFile();
+  void backUpNowSavesABackupThatRestoreListsAndACopyWhereChosen() throws IOException {
+    SettingsView.chooseCopyFolder = (owner, secondFolder) -> elsewhere;
     var window = openSettings();
 
     FxTestSupport.run(() -> button(window, "backUpNowButton").fire());
 
-    var saved = fileNames(elsewhere);
+    var saved = fileNames(Database.backupDir());
     assertEquals(1, saved.size(), saved.toString());
     assertTrue(saved.get(0).startsWith("mailboxes-backup-"), saved.toString());
-    assertEquals("Saved a backup to " + elsewhere.resolve(saved.get(0)), resultText(window));
+    assertEquals(List.of(Database.backupDir().resolve(saved.get(0))), Database.listBackups());
+    assertEquals(saved, fileNames(elsewhere));
+    assertEquals("Saved a backup to " + Database.backupDir().resolve(saved.get(0)) + ", and a copy to "
+        + elsewhere.resolve(saved.get(0)), resultText(window));
   }
 
   @Test
-  void backUpNowDoesNothingIfNoFolderIsChosen() throws IOException {
-    SettingsView.chooseFolder = owner -> null;
+  void backUpNowStillSavesTheBackupWhenNoCopyIsWanted() throws IOException {
+    SettingsView.chooseCopyFolder = (owner, secondFolder) -> null;
     var window = openSettings();
 
     FxTestSupport.run(() -> button(window, "backUpNowButton").fire());
 
+    var saved = fileNames(Database.backupDir());
+    assertEquals(1, saved.size(), saved.toString());
     assertTrue(fileNames(elsewhere).isEmpty());
-    assertEquals("", resultText(window));
+    assertEquals("Saved a backup to " + Database.backupDir().resolve(saved.get(0)), resultText(window));
+  }
+
+  @Test
+  void backUpNowOffersTheSecondBackupFolderOnlyWhenOneIsSet() throws SQLException {
+    var offered = new ArrayList<Path>();
+    SettingsView.chooseCopyFolder = (owner, secondFolder) -> {
+      offered.add(secondFolder);
+      return null;
+    };
+    var window = openSettings();
+
+    FxTestSupport.run(() -> button(window, "backUpNowButton").fire());
+    settings.put(Setting.SECOND_BACKUP_FOLDER, elsewhere.toString());
+    FxTestSupport.run(() -> button(window, "backUpNowButton").fire());
+
+    assertEquals(Arrays.asList(null, elsewhere), offered);
+  }
+
+  @Test
+  void backUpNowToAMissingFolderSaysTheBackupIsStillSaved() throws IOException {
+    var unplugged = elsewhere.resolve("usb-drive");
+    SettingsView.chooseCopyFolder = (owner, secondFolder) -> unplugged;
+    var window = openSettings();
+
+    FxTestSupport.run(() -> button(window, "backUpNowButton").fire());
+
+    var saved = fileNames(Database.backupDir());
+    assertEquals(1, saved.size(), saved.toString());
+    assertEquals("Saved a backup to " + Database.backupDir().resolve(saved.get(0)) + ", but the folder "
+        + unplugged + " can't be found, so no copy was saved there. If it's on a removable or network drive, "
+        + "check that it's connected.", resultText(window));
+  }
+
+  @Test
+  void downloadsIsInTheUsersHomeFolder() {
+    assertEquals(Paths.get(System.getProperty("user.home"), "Downloads"), SettingsView.downloadsFolder());
   }
 
   @Test

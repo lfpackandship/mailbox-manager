@@ -167,13 +167,15 @@ public class Database {
    * Saves a backup of the current data into the given folder, named with the
    * date and time (for example {@code mailboxes-backup-2026-09-26-143005.db}).
    *
-   * @param folder the folder to save into, such as a USB drive
+   * @param folder the folder to save into, such as the {@code backups}
+   *     folder; it's created if it doesn't exist yet
    * @return the backup file written
    * @throws RuntimeException if the backup cannot be written
    */
   public static Path exportBackup(Path folder) {
     var target = folder.resolve("mailboxes-backup-" + LocalDateTime.now().format(TIMESTAMP) + ".db");
     try {
+      Files.createDirectories(folder);
       writeCopy(target);
       return target;
     } catch (IOException | SQLException e) {
@@ -238,13 +240,17 @@ public class Database {
   /**
    * Creates the {@code mailboxes}, {@code business_names},
    * {@code forwarding_addresses}, {@code rental_periods},
-   * {@code box_inventory}, {@code prices}, {@code box_sizes}, {@code settings}, and
-   * {@code labels} tables if
+   * {@code box_inventory}, {@code prices}, {@code box_sizes}, {@code settings},
+   * {@code labels}, {@code erased_boxes}, and {@code dated_notes} tables if
    * they don't already exist, and migrates older databases that predate the
    * {@code box_name}, {@code end_date}, {@code notes}, {@code closed_date},
    * {@code key_count}, {@code key_deposit_cents}, {@code forwarding_only},
-   * and {@code key_deposit_outcome} columns of {@code mailboxes} and the
-   * {@code added_on} column of {@code forwarding_addresses}.
+   * {@code key_deposit_outcome}, {@code deleted_on}, {@code hold_from},
+   * {@code hold_until}, and {@code hold_note} columns of
+   * {@code mailboxes}, the {@code added_on} column of
+   * {@code forwarding_addresses}, and the {@code out_of_service} and
+   * {@code out_of_service_reason} columns of {@code box_inventory}. Also adds the
+   * indexes that keep loading boxes and payments fast, if they're missing.
    *
    * @throws RuntimeException if the schema cannot be initialized
    */
@@ -264,7 +270,11 @@ public class Database {
         + "key_count INTEGER, "
         + "key_deposit_cents INTEGER, "
         + "forwarding_only INTEGER NOT NULL DEFAULT 0, "
-        + "key_deposit_outcome TEXT)";
+        + "key_deposit_outcome TEXT, "
+        + "deleted_on TEXT, "
+        + "hold_from TEXT, "
+        + "hold_until TEXT, "
+        + "hold_note TEXT)";
 
     var createBusinessNames = "CREATE TABLE IF NOT EXISTS business_names ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -295,9 +305,13 @@ public class Database {
         + "note TEXT, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
+    // A box out of service, such as one with a broken lock, isn't offered
+    // as empty; the reason is optional.
     var createBoxInventory = "CREATE TABLE IF NOT EXISTS box_inventory ("
         + "box_number TEXT PRIMARY KEY COLLATE NOCASE, "
-        + "size TEXT)";
+        + "size TEXT, "
+        + "out_of_service INTEGER NOT NULL DEFAULT 0, "
+        + "out_of_service_reason TEXT)";
 
     // The price of renting a box of a size for a number of months. An empty
     // size is the default price, for boxes with no size or no price of their own.
@@ -335,6 +349,20 @@ public class Database {
         + "address TEXT NOT NULL, "
         + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
 
+    // Things that happened with a box, each with its day; see DatedNote.
+    var createDatedNotes = "CREATE TABLE IF NOT EXISTS dated_notes ("
+        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        + "mailbox_id INTEGER NOT NULL, "
+        + "noted_on TEXT NOT NULL, "
+        + "text TEXT NOT NULL, "
+        + "FOREIGN KEY (mailbox_id) REFERENCES mailboxes(id))";
+
+    // The number of each box erased for good from Recently deleted, so its
+    // payments, which are kept, can still say which box they were for.
+    var createErasedBoxes = "CREATE TABLE IF NOT EXISTS erased_boxes ("
+        + "mailbox_id INTEGER PRIMARY KEY, "
+        + "box_number TEXT NOT NULL)";
+
     try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
       stmt.execute(createMailboxes);
       stmt.execute(createBusinessNames);
@@ -346,10 +374,12 @@ public class Database {
       stmt.execute(createBoxSizes);
       stmt.execute(createSettings);
       stmt.execute(createLabels);
+      stmt.execute(createErasedBoxes);
+      stmt.execute(createDatedNotes);
 
       for (var column : List.of("box_name TEXT", "end_date TEXT", "notes TEXT", "closed_date TEXT",
           "key_count INTEGER", "key_deposit_cents INTEGER", "forwarding_only INTEGER NOT NULL DEFAULT 0",
-          "key_deposit_outcome TEXT")) {
+          "key_deposit_outcome TEXT", "deleted_on TEXT", "hold_from TEXT", "hold_until TEXT", "hold_note TEXT")) {
         try {
           stmt.execute("ALTER TABLE mailboxes ADD COLUMN " + column);
         } catch (SQLException alreadyMigrated) {
@@ -361,6 +391,24 @@ public class Database {
       } catch (SQLException alreadyMigrated) {
         // Added in 1.10; already there on a newer database.
       }
+      for (var column : List.of("out_of_service INTEGER NOT NULL DEFAULT 0", "out_of_service_reason TEXT")) {
+        try {
+          stmt.execute("ALTER TABLE box_inventory ADD COLUMN " + column);
+        } catch (SQLException alreadyMigrated) {
+          // Added in 1.11; already there on a newer database.
+        }
+      }
+
+      // Without these, finding a box's names, addresses, or history reads
+      // the whole table each time, so loading every box slows down with the
+      // square of the number of boxes. Added in 1.11; older versions of the
+      // app still open a database that has them.
+      stmt.execute("CREATE INDEX IF NOT EXISTS business_names_mailbox ON business_names (mailbox_id)");
+      stmt.execute("CREATE INDEX IF NOT EXISTS forwarding_addresses_mailbox ON forwarding_addresses (mailbox_id)");
+      stmt.execute("CREATE INDEX IF NOT EXISTS rental_periods_mailbox ON rental_periods (mailbox_id)");
+      stmt.execute("CREATE INDEX IF NOT EXISTS dated_notes_mailbox ON dated_notes (mailbox_id)");
+      // For the Payments screen, which looks entries up by the day they were paid.
+      stmt.execute("CREATE INDEX IF NOT EXISTS rental_periods_recorded_on ON rental_periods (recorded_on)");
     } catch (SQLException e) {
       throw new RuntimeException("Failed to initialize database schema", e);
     }

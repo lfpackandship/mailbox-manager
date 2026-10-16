@@ -64,6 +64,7 @@ class PaymentsViewTest {
       stmt.execute("DELETE FROM business_names");
       stmt.execute("DELETE FROM forwarding_addresses");
       stmt.execute("DELETE FROM mailboxes");
+      stmt.execute("DELETE FROM erased_boxes");
     }
     mainWindow = FxTestSupport.call(() -> {
       var stage = new Stage();
@@ -94,6 +95,31 @@ class PaymentsViewTest {
 
     assertEquals("3 entries, $105.50 paid", text("paymentsTotal"));
     assertEquals(3, FxTestSupport.call(() -> table().getItems().size()));
+  }
+
+  @Test
+  void deletedAndErasedBoxesPaymentsStillCountButCantBeEdited() throws SQLException {
+    var open = mailboxes.insert(box("1", null));
+    var deleted = mailboxes.insert(box("2", null));
+    var erased = mailboxes.insert(box("3", null));
+    for (var id : List.of(open, deleted, erased)) {
+      history.renew(id, new RentalPeriod(0, 0, TODAY, TODAY, TODAY.plusMonths(1), 1000L, "Cash", null));
+    }
+    mailboxes.delete(deleted, TODAY);
+    mailboxes.delete(erased, TODAY);
+    mailboxes.eraseForever(erased);
+
+    FxTestSupport.run(() -> PaymentsView.show(mainWindow));
+
+    assertEquals("3 entries, $30.00 paid", text("paymentsTotal"));
+    assertEquals(List.of("1", "2 (deleted)", "3 (deleted)"), FxTestSupport.call(() -> table().getItems().stream()
+        .map(PaymentsView.Entry::boxNumber).sorted().collect(Collectors.toList())));
+    for (var boxNumber : List.of("2 (deleted)", "3 (deleted)")) {
+      FxTestSupport.run(() -> table().getSelectionModel().select(table().getItems().stream()
+          .filter(entry -> entry.boxNumber().equals(boxNumber)).findFirst().orElseThrow()));
+      assertTrue(FxTestSupport.call(() -> lookup("#paymentsEditButton").isDisabled()), boxNumber);
+      assertTrue(FxTestSupport.call(() -> lookup("#paymentsViewButton").isDisabled()), boxNumber);
+    }
   }
 
   @Test

@@ -53,19 +53,52 @@ public class PaymentsView {
     final RentalPeriod period;
 
     /**
-     * The box it belongs to, or {@code null} if the box was deleted.
+     * The box it belongs to, which may be in Recently deleted, or
+     * {@code null} if the box has been erased for good.
      */
     final Mailbox mailbox;
+
+    /**
+     * The number of the box it belonged to if that box has been erased for
+     * good, or {@code null} if it hasn't or the number isn't known, as for a
+     * box deleted before version 1.11.
+     */
+    final String erasedBoxNumber;
 
     /**
      * Makes an entry.
      *
      * @param period the rental history entry
-     * @param mailbox the box it belongs to
+     * @param mailbox the box it belongs to, or {@code null} if it's been erased
+     * @param erasedBoxNumber the erased box's number, or {@code null}
      */
-    Entry(RentalPeriod period, Mailbox mailbox) {
+    Entry(RentalPeriod period, Mailbox mailbox, String erasedBoxNumber) {
       this.period = period;
       this.mailbox = mailbox;
+      this.erasedBoxNumber = erasedBoxNumber;
+    }
+
+    /**
+     * Returns whether the entry's box can be looked at or changed: it's
+     * neither erased nor in Recently deleted.
+     *
+     * @return {@code true} if the box can be viewed and the entry edited
+     */
+    boolean hasBox() {
+      return mailbox != null && !mailbox.isDeleted();
+    }
+
+    /**
+     * Returns the box number to show, such as "12", or "12 (deleted)" for a
+     * box that's been deleted or erased, since its payments are kept.
+     *
+     * @return the box number, or an empty string if it isn't known
+     */
+    String boxNumber() {
+      if (mailbox != null) {
+        return mailbox.getBoxNumber() + (mailbox.isDeleted() ? " (deleted)" : "");
+      }
+      return erasedBoxNumber == null ? "" : erasedBoxNumber + " (deleted)";
     }
 
   }
@@ -93,13 +126,17 @@ public class PaymentsView {
     var depositsHeld = "";
     var depositsKept = "";
     try {
-      var allMailboxes = new MailboxRepository().findAll();
+      var repository = new MailboxRepository();
+      var allMailboxes = repository.findAll();
       depositsHeld = depositsHeld(allMailboxes);
+      // A deleted box's payments and kept deposit were still taken in, so they still count.
+      allMailboxes.addAll(repository.findDeleted());
       depositsKept = depositsKept(allMailboxes, from, to);
       var mailboxes = allMailboxes.stream()
           .collect(Collectors.toMap(Mailbox::getId, Function.identity()));
+      var erased = repository.findErasedBoxNumbers();
       for (var period : new RentalHistoryRepository().findRecordedBetween(from, to)) {
-        entries.add(new Entry(period, mailboxes.get(period.getMailboxId())));
+        entries.add(new Entry(period, mailboxes.get(period.getMailboxId()), erased.get(period.getMailboxId())));
       }
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
@@ -154,8 +191,7 @@ public class PaymentsView {
     TableOutput.showDates(dateCol);
 
     var boxCol = new TableColumn<Entry, String>("Box");
-    boxCol.setCellValueFactory(cell -> new SimpleStringProperty(
-        cell.getValue().mailbox == null ? "" : cell.getValue().mailbox.getBoxNumber()));
+    boxCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().boxNumber()));
     boxCol.setComparator(BoxNumbers.ORDER);
 
     var nameCol = new TableColumn<Entry, String>("Name");
@@ -207,7 +243,7 @@ public class PaymentsView {
 
     Runnable viewSelected = () -> {
       var entry = table.getSelectionModel().getSelectedItem();
-      if (entry != null && entry.mailbox != null) {
+      if (entry != null && entry.hasBox()) {
         BoxDetailsView.show(stage, entry.mailbox, () -> EditBoxView.show(stage, entry.mailbox, refresh), refresh);
       }
     };
@@ -223,18 +259,19 @@ public class PaymentsView {
 
     var viewBtn = new Button("View Box");
     viewBtn.setId("paymentsViewButton");
-    viewBtn.disableProperty().bind(selection.isNull());
+    viewBtn.disableProperty().bind(Bindings.createBooleanBinding(
+        () -> selection.get() == null || !selection.get().hasBox(), selection));
     viewBtn.setOnAction(e -> viewSelected.run());
 
-    // Fixes an entry recorded wrongly. A box that's been deleted has no
-    // history left, but an entry without a box can't be edited either way.
+    // Fixes an entry recorded wrongly. Editing one can move its box's end
+    // date, so a deleted box's entries can't be edited until it's restored.
     var editBtn = new Button("Edit Entry…");
     editBtn.setId("paymentsEditButton");
     editBtn.disableProperty().bind(Bindings.createBooleanBinding(
-        () -> selection.get() == null || selection.get().mailbox == null, selection));
+        () -> selection.get() == null || !selection.get().hasBox(), selection));
     editBtn.setOnAction(e -> {
       var entry = table.getSelectionModel().getSelectedItem();
-      if (entry != null && entry.mailbox != null) {
+      if (entry != null && entry.hasBox()) {
         RenewBoxView.edit(stage, entry.mailbox, entry.period, refresh);
       }
     });

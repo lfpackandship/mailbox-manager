@@ -258,13 +258,13 @@ public final class AppWindow {
     // Opens a screen, like the Go menu, so unsaved changes are asked about first.
     var forwardingItem = goItem("Forwarding", "Shortcut+6", () -> ForwardingView.show(stage));
 
+    // Opens a screen, like the Go menu, so unsaved changes are asked about first.
+    var importItem = goItem("Import Boxes…", null, () -> ImportBoxesView.show(stage));
+
     var backUpItem = new MenuItem("Back Up Now…");
     backUpItem.setOnAction(e -> {
       try {
-        var message = SettingsView.backUpNow(stage);
-        if (message != null) {
-          inform(stage, AlertType.INFORMATION, "Backup saved", message);
-        }
+        inform(stage, AlertType.INFORMATION, "Backup saved", SettingsView.backUpNow(stage));
       } catch (IllegalStateException ex) {
         inform(stage, AlertType.ERROR, "Backup not saved", ex.getMessage());
       }
@@ -286,7 +286,7 @@ public final class AppWindow {
 
     var fileMenu = new Menu("File");
     fileMenu.getItems().addAll(priceSheetItem, remindersItem, new SeparatorMenuItem(), forwardingItem,
-        new SeparatorMenuItem(),
+        importItem, new SeparatorMenuItem(),
         backUpItem, restoreItem, new SeparatorMenuItem(),
         settingsItem, new SeparatorMenuItem(), exitItem);
 
@@ -315,10 +315,15 @@ public final class AppWindow {
             + "Your data is kept in " + Database.dataDir() + "\n\n"
             + "Java " + SystemInfo.javaVersion() + ", JavaFX " + SystemInfo.javafxVersion()));
 
-    var helpMenu = new Menu("Help");
-    helpMenu.getItems().addAll(dataFolderItem, new SeparatorMenuItem(), aboutItem);
+    var shortcutsItem = new MenuItem("Keyboard Shortcuts");
 
-    return new MenuBar(fileMenu, goMenu, helpMenu);
+    var helpMenu = new Menu("Help");
+    helpMenu.getItems().addAll(shortcutsItem, dataFolderItem, new SeparatorMenuItem(), aboutItem);
+
+    var menuBar = new MenuBar(fileMenu, goMenu, helpMenu);
+    // Lists the shortcuts of every menu, so one added to a menu later shows up too.
+    shortcutsItem.setOnAction(e -> KeyboardShortcutsView.show(stage, menuBar.getMenus()));
+    return menuBar;
   }
 
   /**

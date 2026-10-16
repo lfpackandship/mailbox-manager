@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.MailboxRepository;
+import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
 import org.lfps.mailboxes.util.Validators;
@@ -100,6 +101,7 @@ public class AddBoxView {
     });
 
     var notesField = EditBoxView.notesField();
+    var holdEditor = new MailHoldEditor(null);
 
     EditBoxView.hints(firstNameField, lastNameField, businessTitleField, boxNumber, boxNameField, phoneField,
         emailField);
@@ -120,6 +122,7 @@ public class AddBoxView {
         forwardingOnlyBox.selectedProperty(), notesField.textProperty());
     businessNamesEditor.watchFor(changes);
     forwardingEditor.watchFor(changes);
+    holdEditor.watchFor(changes);
 
     var saveBtn = new Button("Save");
     var resultLabel = new Label(saved);
@@ -196,6 +199,13 @@ public class AddBoxView {
         errors.append(ex.getMessage()).append('\n');
         problems.mark(keys.depositField);
       }
+      MailHold hold = null;
+      try {
+        hold = holdEditor.getHold();
+      } catch (IllegalArgumentException ex) {
+        errors.append(ex.getMessage()).append('\n');
+        problems.mark(holdEditor.problemField());
+      }
 
       if (errors.length() > 0) {
         resultLabel.setStyle("-fx-text-fill: red;");
@@ -203,11 +213,15 @@ public class AddBoxView {
         problems.focusFirst();
         return;
       }
+      // A forwarding-only box doesn't use the box itself.
+      if (!forwardingOnly && !BoxNumberChecks.confirmIfOutOfService(stage, boxNumber.getText())) {
+        return;
+      }
 
       var mailbox = new Mailbox(0, firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumber.getText(), boxNameField.getText(), phone, email,
           businessNamesEditor.getNames(), endDate, forwardingEditor.getAddresses(), notesField.getText(), null,
-          keyCount, keyDeposit, forwardingOnly);
+          keyCount, keyDeposit, forwardingOnly).withMailHold(hold);
       var rental = hasRental ? new RentalPeriod(0, 0, today, today, endDate, amount, payment.method(), null) : null;
 
       try {
@@ -243,8 +257,9 @@ public class AddBoxView {
     grid.addRow(7, new Label("Keys:"), keys.countField, new Label("Key Deposit:"), keys.depositField);
     grid.add(namesSection, 0, 8, 4, 1);
     grid.add(forwardingSection, 0, 9, 4, 1);
-    grid.add(new Label("Notes:"), 0, 10, 4, 1);
-    grid.add(notesField, 0, 11, 4, 1);
+    grid.add(holdEditor.section(), 0, 10, 4, 1);
+    grid.add(new Label("Notes:"), 0, 11, 4, 1);
+    grid.add(notesField, 0, 12, 4, 1);
 
     var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));

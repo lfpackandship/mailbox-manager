@@ -1,5 +1,7 @@
 package org.lfps.mailboxes;
 
+import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +14,7 @@ import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.Database;
+import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.drive.DriveBackup;
 import org.lfps.mailboxes.drive.DriveException;
 import org.lfps.mailboxes.drive.DriveException.Problem;
@@ -34,7 +37,22 @@ public class App extends Application {
   }
 
   /**
-   * Locates the database, initializes its schema, takes the daily backup and
+   * Erases for good the boxes deleted more than 30 days ago, which until then
+   * are kept under Recently deleted on Manage Boxes to be restored. Their
+   * payments are kept. If it fails, they're simply erased the next time the
+   * app starts, so the user isn't troubled with it.
+   */
+  private static void eraseOldDeletedBoxes() {
+    try {
+      new MailboxRepository().eraseDeletedBefore(LocalDate.now().minusDays(30));
+    } catch (SQLException e) {
+      // Tried again at the next start.
+    }
+  }
+
+  /**
+   * Locates the database, initializes its schema, erases boxes deleted more
+   * than 30 days ago, takes the daily backup and
    * copies it to the second backup folder if one is set, and shows the main
    * menu where the window was when the app last closed, then uploads the
    * backup to Google Drive in the background if it's connected. A backup
@@ -48,6 +66,7 @@ public class App extends Application {
     AppWindow.init(getHostServices());
     Database.prepareDataDir();
     Database.initSchema();
+    eraseOldDeletedBoxes();
 
     var backupProblems = new ArrayList<String>();
     try {

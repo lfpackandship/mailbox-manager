@@ -23,12 +23,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -41,6 +43,8 @@ import javafx.stage.Stage;
  * actions to view the full entry (also by double-clicking a row or pressing
  * Enter), edit, renew, close, reopen, or delete it. Open boxes are shown by
  * default; forwarding-only or closed ones can be shown instead, or all.
+ * Deleted boxes are shown under Recently deleted, where they can be restored
+ * or erased for good.
  */
 public class ManageBoxesView {
 
@@ -50,10 +54,14 @@ public class ManageBoxesView {
     OPEN("Open boxes"),
     /** Open boxes that are forwarding only. */
     FORWARDING("Forwarding only"),
+    /** Open boxes whose mail is being held today. */
+    HOLDING("Holding mail"),
     /** Boxes that have been closed. */
     CLOSED("Closed boxes"),
     /** Every box, open or closed. */
-    ALL("All boxes");
+    ALL("All boxes"),
+    /** Boxes deleted in the last 30 days, which can be restored. */
+    DELETED("Recently deleted");
 
     /** What the choice is called in the menu. */
     private final String label;
@@ -74,8 +82,15 @@ public class ManageBoxesView {
      * @return {@code true} if it's shown
      */
     boolean includes(Mailbox mailbox) {
+      // Deleted boxes are only listed under Recently deleted, not even under All boxes.
+      if (this == DELETED || mailbox.isDeleted()) {
+        return this == DELETED && mailbox.isDeleted();
+      }
       if (this == FORWARDING) {
         return !mailbox.isClosed() && mailbox.isForwardingOnly();
+      }
+      if (this == HOLDING) {
+        return !mailbox.isClosed() && mailbox.isHoldingMailOn(LocalDate.now());
       }
       return this == ALL || mailbox.isClosed() == (this == CLOSED);
     }
@@ -142,7 +157,7 @@ public class ManageBoxesView {
     var boxNumberCol = new TableColumn<Mailbox, String>("Box Number");
     boxNumberCol.setCellValueFactory(new PropertyValueFactory<>("boxNumber"));
     boxNumberCol.setComparator(BoxNumbers.ORDER);
-    BoxLabels.markForwarding(boxNumberCol);
+    BoxLabels.markBoxNumbers(boxNumberCol);
 
     var nameCol = new TableColumn<Mailbox, String>("Name");
     nameCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getFullName()));
@@ -168,11 +183,35 @@ public class ManageBoxesView {
     // Hidden, but saved in the spreadsheet so it has everything recorded.
     table.getColumns().addAll(hiddenColumns());
 
+    var showChoice = new ChoiceBox<Show>();
+    showChoice.setId("showChoice");
+    showChoice.getItems().setAll(Show.values());
+    showChoice.setValue(initialShow);
+    var deletedShown = Bindings.createBooleanBinding(() -> showChoice.getValue() == Show.DELETED,
+        showChoice.valueProperty());
+
+    // Only in the table under Recently deleted, where it's what matters
+    // most. It's taken out otherwise, rather than hidden, since a saved
+    // spreadsheet has the hidden columns too.
+    var deletedCol = new TableColumn<Mailbox, LocalDate>("Deleted");
+    deletedCol.setId("deletedColumn");
+    deletedCol.setCellValueFactory(new PropertyValueFactory<>("deletedOn"));
+    TableOutput.showDates(deletedCol);
+    Runnable placeDeletedColumn = () -> {
+      table.getColumns().remove(deletedCol);
+      if (deletedShown.get()) {
+        table.getColumns().add(1, deletedCol);
+      }
+    };
+    showChoice.valueProperty().addListener((obs, oldShow, newShow) -> placeDeletedColumn.run());
+    placeDeletedColumn.run();
+
     var allMailboxes = FXCollections.<Mailbox>observableArrayList();
     // Each box's forwarding label numbers, so a search for one finds its box.
     Map<Integer, List<String>> labelNumbers = new HashMap<>();
     try {
       allMailboxes.setAll(repository.findAll());
+      allMailboxes.addAll(repository.findDeleted());
       for (var label : new LabelRepository().findAll()) {
         labelNumbers.computeIfAbsent(label.getMailboxId(), id -> new ArrayList<>()).add(label.getNumber());
       }
@@ -193,11 +232,6 @@ public class ManageBoxesView {
         + "or label number");
     HBox.setHgrow(searchField, Priority.ALWAYS);
 
-    var showChoice = new ChoiceBox<Show>();
-    showChoice.setId("showChoice");
-    showChoice.getItems().setAll(Show.values());
-    showChoice.setValue(initialShow);
-
     Runnable filter = () -> mailboxes.setPredicate(
         m -> showChoice.getValue().includes(m)
             && matches(m, searchField.getText(), labelNumbers.getOrDefault(m.getId(), List.of())));
@@ -209,7 +243,12 @@ public class ManageBoxesView {
     Runnable refresh = () -> show(stage, searchField.getText(), showChoice.getValue());
     Consumer<Mailbox> edit = mailbox -> EditBoxView.show(stage, mailbox, refresh);
     Consumer<Mailbox> renew = mailbox -> RenewBoxView.show(stage, mailbox, refresh);
-    Consumer<Mailbox> view = mailbox -> BoxDetailsView.show(stage, mailbox, () -> edit.accept(mailbox), refresh);
+    // A deleted box has to be restored before it can be looked at or changed.
+    Consumer<Mailbox> view = mailbox -> {
+      if (!mailbox.isDeleted()) {
+        BoxDetailsView.show(stage, mailbox, () -> edit.accept(mailbox), refresh);
+      }
+    };
     var selection = table.getSelectionModel().selectedItemProperty();
 
     BoxDetailsView.openOnDoubleClickOrEnter(table, view);
@@ -288,14 +327,15 @@ public class ManageBoxesView {
       if (selected == null) {
         return;
       }
-      if (!Dialogs.confirm.ask(stage, "Permanently delete box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
-          "Everything recorded for it, including its rental history, will be erased. This can't be undone. "
-              + "If the holder has given up the box, close it instead to keep the record.",
-          "Delete Forever", "Cancel")) {
+      if (!Dialogs.confirm.ask(stage, "Delete box " + selected.getBoxNumber() + BoxLabels.forHolder(selected) + "?",
+          "It moves to Recently deleted, in the menu next to the search, where it can be restored for "
+              + "30 days. After that it's erased for good. Its payments stay on Payments either way. If the "
+              + "holder has given up the box, close it instead to keep the record.",
+          "Delete", "Cancel")) {
         return;
       }
       try {
-        repository.delete(selected.getId());
+        repository.delete(selected.getId(), LocalDate.now());
         BoxDetailsView.close();
         refresh.run();
       } catch (SQLException ex) {
@@ -304,6 +344,69 @@ public class ManageBoxesView {
       }
     });
 
+    var restoreBtn = new Button("Restore");
+    restoreBtn.setId("restoreButton");
+    restoreBtn.disableProperty().bind(selection.isNull());
+    restoreBtn.setOnAction(e -> {
+      var selected = table.getSelectionModel().getSelectedItem();
+      if (selected == null) {
+        return;
+      }
+      try {
+        // As when reopening: an open, rented box can't come back into a number given to someone else.
+        if (!selected.isClosed() && !selected.isForwardingOnly()
+            && repository.isBoxNumberTaken(selected.getBoxNumber(), selected.getId())) {
+          statusLabel.setStyle("-fx-text-fill: red;");
+          statusLabel.setText("Box " + selected.getBoxNumber().trim() + " has been given to someone else, so "
+              + BoxLabels.holderOr(selected, "its holder") + " can't be restored in it until that box is "
+              + "closed.");
+          return;
+        }
+        repository.restore(selected.getId());
+        refresh.run();
+      } catch (SQLException ex) {
+        statusLabel.setStyle("-fx-text-fill: red;");
+        statusLabel.setText("Failed to restore: " + ex.getMessage());
+      }
+    });
+
+    var deleteForeverBtn = new Button("Delete Forever");
+    deleteForeverBtn.setId("deleteForeverButton");
+    deleteForeverBtn.disableProperty().bind(selection.isNull());
+    deleteForeverBtn.setOnAction(e -> {
+      var selected = table.getSelectionModel().getSelectedItem();
+      if (selected == null) {
+        return;
+      }
+      if (!Dialogs.confirm.ask(stage, "Erase box " + selected.getBoxNumber() + BoxLabels.forHolder(selected)
+          + " for good?", "Everything recorded for it is erased now instead of in 30 days, and it can't be "
+              + "restored. Its payments stay on Payments.", "Delete Forever", "Cancel")) {
+        return;
+      }
+      try {
+        repository.eraseForever(selected.getId());
+        refresh.run();
+      } catch (SQLException ex) {
+        statusLabel.setStyle("-fx-text-fill: red;");
+        statusLabel.setText("Failed to delete: " + ex.getMessage());
+      }
+    });
+
+    var deletedNote = new Label("Deleted boxes are erased for good 30 days after they're deleted. Their payments "
+        + "stay on Payments.");
+    deletedNote.setId("deletedNote");
+    deletedNote.setWrapText(true);
+
+    // Under Recently deleted, only restoring or erasing a box makes sense.
+    for (var button : List.of(viewBtn, editBtn, renewBtn, closeBtn, deleteBtn)) {
+      button.visibleProperty().bind(deletedShown.not());
+      button.managedProperty().bind(deletedShown.not());
+    }
+    for (var node : List.<Node>of(restoreBtn, deleteForeverBtn, deletedNote)) {
+      node.visibleProperty().bind(deletedShown);
+      node.managedProperty().bind(deletedShown);
+    }
+
     var backBtn = new Button("Back");
     backBtn.setOnAction(e -> MainMenuView.show(stage));
 
@@ -311,6 +414,11 @@ public class ManageBoxesView {
     printBtn.setId("printListButton");
     printBtn.setOnAction(e -> TableOutput.print(listTitle(showChoice.getValue(), searchField.getText()),
         List.of(new TableOutput.Section(null, table)), statusLabel));
+
+    var importBtn = new Button("Import…");
+    importBtn.setId("importBoxesButton");
+    importBtn.setTooltip(new Tooltip("Adds many boxes at once from a spreadsheet."));
+    importBtn.setOnAction(e -> ImportBoxesView.show(stage));
 
     var spreadsheetBtn = new Button("Save as Spreadsheet…");
     spreadsheetBtn.setId("spreadsheetButton");
@@ -323,10 +431,11 @@ public class ManageBoxesView {
     HBox.setHgrow(spacer, Priority.ALWAYS);
 
     var layout = new VBox(10,
-        new HBox(10, backBtn, printBtn, spreadsheetBtn),
+        new HBox(10, backBtn, printBtn, spreadsheetBtn, importBtn),
         new HBox(10, searchField, showChoice),
         table,
-        new HBox(10, viewBtn, editBtn, renewBtn, closeBtn, spacer, deleteBtn),
+        new HBox(10, viewBtn, editBtn, renewBtn, closeBtn, restoreBtn, spacer, deleteBtn, deleteForeverBtn),
+        deletedNote,
         statusLabel);
     layout.setPadding(new Insets(20));
 
@@ -391,6 +500,10 @@ public class ManageBoxesView {
     var notesCol = new TableColumn<Mailbox, String>("Notes");
     notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
 
+    var datedNotesCol = new TableColumn<Mailbox, String>("Dated Notes");
+    datedNotesCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getDatedNotes()
+        .stream().map(String::valueOf).collect(Collectors.joining("; "))));
+
     var closedCol = new TableColumn<Mailbox, LocalDate>("Closed");
     closedCol.setCellValueFactory(new PropertyValueFactory<>("closedDate"));
     TableOutput.showDates(closedCol);
@@ -400,7 +513,7 @@ public class ManageBoxesView {
         cell.getValue().isForwardingOnly() ? "Yes" : ""));
 
     var columns = List.<TableColumn<Mailbox, ?>>of(boxNameCol, emailCol, endDateCol, forwardingOnlyCol,
-        alternateNamesCol, forwardingCol, keysCol, depositCol, outcomeCol, notesCol, closedCol);
+        alternateNamesCol, forwardingCol, keysCol, depositCol, outcomeCol, notesCol, datedNotesCol, closedCol);
     columns.forEach(column -> column.setVisible(false));
     return columns;
   }
@@ -430,8 +543,8 @@ public class ManageBoxesView {
   /**
    * Checks whether a mailbox matches every word of a search query. Each word
    * may appear, case-insensitively, in any text field, alternate business name,
-   * forwarding address (including its note), or the notes; a word made of
-   * digits also matches the phone number ignoring its formatting.
+   * forwarding address (including its note), the notes, or a dated note; a
+   * word made of digits also matches the phone number ignoring its formatting.
    *
    * @param mailbox the box
    * @param query the search
@@ -466,8 +579,12 @@ public class ManageBoxesView {
     }
     mailbox.getAlternateBusinessNames().forEach(name -> haystack.append(name).append('\n'));
     mailbox.getForwardingAddresses().forEach(address -> haystack.append(address).append('\n'));
+    mailbox.getDatedNotes().forEach(note -> haystack.append(note.getText()).append('\n'));
     if (mailbox.isForwardingOnly()) {
       haystack.append("forwarding only\n");
+    }
+    if (mailbox.isHoldingMailOn(LocalDate.now())) {
+      haystack.append("holding mail\n");
     }
     labelNumbers.forEach(number -> haystack.append(number).append('\n'));
     var text = haystack.toString().toLowerCase();

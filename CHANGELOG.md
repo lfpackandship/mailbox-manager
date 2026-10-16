@@ -3,6 +3,56 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## 1.11.0 – 2026-10-16
+
+### Added
+
+- **File → Import Boxes…**, also **Import…** on Manage Boxes, adds many boxes
+  at once from a spreadsheet. **Save Template** puts an Excel template in
+  Downloads, with the required Box Number column in orange and a Key tab
+  saying what goes in each column. Fill it in with Excel, Google Sheets, or
+  Numbers, save it as Excel or CSV, and choose it. Rows with problems, such
+  as a box already rented or a phone number that's too short, are listed to
+  fix in the app or skip, one at a time or all at once; then **Import** adds
+  the rest.
+- **Dated Notes** on Edit Box keep a history of what happens with a box,
+  such as "Called about late payment", each with the day it happened, which
+  can be an earlier day than today. Notes can be edited or removed, are listed
+  newest first in the box's details, and are found by the search on Manage
+  Boxes. The **Notes** box stays as it was.
+- **Mail Hold** on Add New Box and Edit Box holds a box holder's mail from
+  one day through another, such as while they're on vacation, with a note on
+  what to do with it. While it's on, the box's details say so and Manage
+  Boxes and Renewals mark the box "(holding)"; **Holding mail** on Manage
+  Boxes lists those boxes. It ends by itself after the last day.
+- A line under the main menu's buttons sums up the shop: the open boxes, the
+  empty ones (once the box inventory is set up), and the money taken this
+  month, such as "212 open boxes · 14 empty · $3,480.00 taken in October".
+- **Out of Service…** on Box Inventory marks boxes that can't be rented for
+  now, such as one with a broken lock, with an optional reason. They aren't
+  counted as empty or offered by **Choose…** on Add New Box, and typing one's
+  number on Add New Box or Edit Box asks whether to use it anyway. **Back in
+  Service** undoes it.
+- **Help → Keyboard Shortcuts** lists every keyboard shortcut in the app:
+  those on the File and Go menus, and keys such as Enter and Esc that work in
+  lists and windows.
+
+### Changed
+
+- **Delete** on Manage Boxes no longer erases a box straight away. It moves
+  to **Recently deleted**, a new choice in the menu next to the search, where
+  **Restore** brings it back for 30 days. After that it's erased for good;
+  **Delete Forever** erases it sooner. A deleted box's payments stay on
+  Payments, marked "(deleted)", even once it's erased. Before, deleting a box
+  erased its payments too.
+- **Back Up Now…** saves the backup in the backups folder first, so
+  **Restore a Backup…** lists it, then asks whether to save a copy somewhere
+  else too: **Downloads**, ready to drag onto a USB drive or send to someone,
+  the second backup folder if one is set, or any folder. Before, it asked for
+  a folder and saved the backup only there.
+- Manage Boxes, Renewals, the Calendar, Payments, and the other screens that
+  list boxes open faster in a shop with many boxes and a long rental history.
+
 ## 1.10.1 – 2026-10-07
 
 ### Fixed

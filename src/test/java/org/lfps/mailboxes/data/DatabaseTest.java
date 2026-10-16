@@ -232,6 +232,68 @@ class DatabaseTest {
     assertEquals("3 x 5 x 14", new PriceRepository().findDescriptions().get("small"));
   }
 
+  @Test
+  void upgradesABoxInventoryFromBeforeOutOfService() throws SQLException {
+    Database.prepareDataDir();
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("CREATE TABLE box_inventory (box_number TEXT PRIMARY KEY COLLATE NOCASE, size TEXT)");
+      stmt.execute("INSERT INTO box_inventory (box_number, size) VALUES ('7', 'Small')");
+    }
+
+    Database.initSchema();
+
+    var inventory = new BoxInventoryRepository();
+    assertFalse(inventory.find("7").isOutOfService());
+    inventory.setOutOfService(java.util.List.of("7"), "broken lock");
+    assertEquals("broken lock", inventory.find("7").getOutOfServiceReason());
+  }
+
+  @Test
+  void upgradedDatabaseLooksUpBoxDetailsAndPaymentsByIndex() throws SQLException {
+    Database.prepareDataDir();
+    // The tables as 1.10 made them, without indexes.
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("CREATE TABLE business_names (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+          + "mailbox_id INTEGER NOT NULL, name TEXT NOT NULL)");
+      stmt.execute("CREATE TABLE forwarding_addresses (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+          + "mailbox_id INTEGER NOT NULL, street TEXT NOT NULL, unit TEXT, city TEXT NOT NULL, "
+          + "state TEXT NOT NULL, zip TEXT NOT NULL, note TEXT, added_on TEXT)");
+      stmt.execute("CREATE TABLE rental_periods (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+          + "mailbox_id INTEGER NOT NULL, recorded_on TEXT NOT NULL, start_date TEXT NOT NULL, "
+          + "end_date TEXT NOT NULL, amount_cents INTEGER, payment_method TEXT, note TEXT)");
+    }
+
+    Database.initSchema();
+
+    assertTrue(queryPlan("SELECT name FROM business_names WHERE mailbox_id = 1")
+        .contains("business_names_mailbox"));
+    assertTrue(queryPlan("SELECT street FROM forwarding_addresses WHERE mailbox_id = 1")
+        .contains("forwarding_addresses_mailbox"));
+    assertTrue(queryPlan("SELECT note FROM rental_periods WHERE mailbox_id = 1")
+        .contains("rental_periods_mailbox"));
+    assertTrue(queryPlan("SELECT note FROM rental_periods WHERE recorded_on BETWEEN '2026-01-01' AND '2026-12-31'")
+        .contains("rental_periods_recorded_on"));
+  }
+
+  /**
+   * Returns how SQLite would run a query, such as
+   * "SEARCH business_names USING INDEX business_names_mailbox (mailbox_id=?)".
+   *
+   * @param sql the query
+   * @return each step of SQLite's plan, one per line
+   * @throws SQLException if the query can't be planned
+   */
+  private static String queryPlan(String sql) throws SQLException {
+    var plan = new StringBuilder();
+    try (var conn = Database.connect(); var stmt = conn.createStatement();
+        var rs = stmt.executeQuery("EXPLAIN QUERY PLAN " + sql)) {
+      while (rs.next()) {
+        plan.append(rs.getString("detail")).append('\n');
+      }
+    }
+    return plan.toString();
+  }
+
   private static java.util.List<String> listBackups() throws IOException {
     try (Stream<Path> files = Files.list(BACKUP_DIR)) {
       return files.map(p -> p.getFileName().toString())

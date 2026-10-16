@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
@@ -32,6 +33,7 @@ import org.lfps.mailboxes.data.RentalHistoryRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.RentalPeriod;
 
 /**
@@ -70,6 +72,7 @@ class ManageBoxesActionsTest {
       stmt.execute("DELETE FROM business_names");
       stmt.execute("DELETE FROM forwarding_addresses");
       stmt.execute("DELETE FROM mailboxes");
+      stmt.execute("DELETE FROM erased_boxes");
     }
     adaId = mailboxes.insert(box("10", "Ada", "Lovelace", null));
     mailboxes.insert(box("9", "Grace", "Hopper", null));
@@ -159,18 +162,108 @@ class ManageBoxesActionsTest {
   }
 
   @Test
-  void deletingAsksThenErasesTheBoxAndItsHistory() throws SQLException {
+  void deletingAsksThenMovesTheBoxToRecentlyDeleted() throws SQLException {
     new RentalHistoryRepository().renew(adaId, new RentalPeriod(0, 0, LocalDate.now(), LocalDate.now(),
         LocalDate.now().plusMonths(1), 1000L, null, null));
     answer(true);
     select("10");
     FxTestSupport.run(() -> button("deleteButton").fire());
 
-    assertTrue(questions.get(0).startsWith("Permanently delete box 10 for Ada Lovelace? | "), questions.get(0));
+    assertTrue(questions.get(0).startsWith("Delete box 10 for Ada Lovelace? | It moves to Recently deleted"),
+        questions.get(0));
     assertTrue(questions.get(0).contains("close it instead"), questions.get(0));
     assertNull(find(adaId));
-    assertEquals(List.of(), new RentalHistoryRepository().findForMailbox(adaId));
+    assertEquals(List.of(LocalDate.now()), mailboxes.findDeleted().stream().map(Mailbox::getDeletedOn)
+        .collect(Collectors.toList()));
+    assertEquals(1, new RentalHistoryRepository().findForMailbox(adaId).size());
     assertEquals(List.of("9"), boxNumbersShown());
+  }
+
+  @Test
+  void boxesWhoseMailIsHeldAreMarkedAndCanBeListed() throws SQLException {
+    var today = LocalDate.now();
+    var ada = find(adaId);
+    mailboxes.update(ada.withMailHold(new MailHold(today, today.plusDays(3), "on vacation")));
+    var later = mailboxes.findOpen().stream().filter(m -> m.getBoxNumber().equals("9")).findFirst().orElseThrow();
+    mailboxes.update(later.withMailHold(new MailHold(today.plusDays(1), today.plusDays(3), null)));
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+
+    FxTestSupport.run(() -> showChoice().setValue(ManageBoxesView.Show.HOLDING));
+    assertEquals(List.of("10"), boxNumbersShown());
+    var held = find(adaId);
+    assertEquals("10 (holding)", BoxLabels.boxNumber(held, today));
+    assertEquals("9", BoxLabels.boxNumber(later, today));
+
+    FxTestSupport.run(() -> BoxDetailsView.show(mainWindow, held, () -> { }, () -> { }));
+    var details = FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w.getScene() != null && w.getScene().lookup("#detailMailHold") != null)
+        .findFirst().orElseThrow());
+    assertTrue(FxTestSupport.call(() -> ((Label) details.getScene().lookup("#detailMailHold")).getText())
+        .startsWith("Holding mail "));
+  }
+
+  @Test
+  void recentlyDeletedListsOnlyDeletedBoxesWithTheirOwnButtons() throws SQLException {
+    mailboxes.delete(adaId, LocalDate.of(2026, 10, 1));
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+
+    FxTestSupport.run(() -> showChoice().setValue(ManageBoxesView.Show.ALL));
+    assertEquals(List.of("9", "100"), boxNumbersShown());
+    assertFalse(FxTestSupport.call(() -> table().getColumns().stream()
+        .anyMatch(column -> "deletedColumn".equals(column.getId()))));
+
+    FxTestSupport.run(() -> showChoice().setValue(ManageBoxesView.Show.DELETED));
+    assertEquals(List.of("10"), boxNumbersShown());
+    assertEquals("Deleted", FxTestSupport.call(() -> table().getColumns().get(1).getText()));
+    assertTrue(FxTestSupport.call(() -> button("restoreButton").isVisible()));
+    assertTrue(FxTestSupport.call(() -> button("deleteForeverButton").isVisible()));
+    assertFalse(FxTestSupport.call(() -> button("editButton").isVisible()));
+    assertFalse(FxTestSupport.call(() -> button("deleteButton").isVisible()));
+  }
+
+  @Test
+  void restoringBringsTheBoxBack() throws SQLException {
+    mailboxes.delete(adaId, LocalDate.of(2026, 10, 1));
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+    FxTestSupport.run(() -> showChoice().setValue(ManageBoxesView.Show.DELETED));
+    select("10");
+
+    FxTestSupport.run(() -> button("restoreButton").fire());
+
+    assertNotNull(find(adaId));
+    assertEquals(List.of(), mailboxes.findDeleted());
+    assertEquals(List.of(), boxNumbersShown());
+  }
+
+  @Test
+  void restoringIsRefusedWhileItsNumberIsGivenToSomeoneElse() throws SQLException {
+    mailboxes.delete(adaId, LocalDate.of(2026, 10, 1));
+    mailboxes.insert(box("10", "Bob", "Byte", null));
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+    FxTestSupport.run(() -> showChoice().setValue(ManageBoxesView.Show.DELETED));
+    select("10");
+
+    FxTestSupport.run(() -> button("restoreButton").fire());
+
+    assertEquals(1, mailboxes.findDeleted().size());
+    assertEquals("Box 10 has been given to someone else, so Ada Lovelace can't be restored in it until that box "
+        + "is closed.", FxTestSupport.call(() -> ((Label) mainWindow.getScene().getRoot().lookup("#statusLabel"))
+            .getText()));
+  }
+
+  @Test
+  void deleteForeverAsksThenErasesTheBoxButRemembersItsNumber() throws SQLException {
+    mailboxes.delete(adaId, LocalDate.of(2026, 10, 1));
+    FxTestSupport.run(() -> ManageBoxesView.show(mainWindow));
+    FxTestSupport.run(() -> showChoice().setValue(ManageBoxesView.Show.DELETED));
+    answer(true);
+    select("10");
+
+    FxTestSupport.run(() -> button("deleteForeverButton").fire());
+
+    assertTrue(questions.get(0).startsWith("Erase box 10 for Ada Lovelace for good? | "), questions.get(0));
+    assertEquals(List.of(), mailboxes.findDeleted());
+    assertEquals(java.util.Map.of(adaId, "10"), mailboxes.findErasedBoxNumbers());
   }
 
   @Test

@@ -7,11 +7,14 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
+import org.lfps.mailboxes.model.DatedNote;
 import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.ForwardingAddress;
+import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
 import org.lfps.mailboxes.util.BoxNumbers;
@@ -31,34 +34,54 @@ public class MailboxRepository {
   /** Adds a mailbox. */
   private static final String INSERT_SQL = "INSERT INTO mailboxes "
       + "(first_name, last_name, business_title, box_number, box_name, phone, email, end_date, notes, "
-      + "closed_date, key_count, key_deposit_cents, forwarding_only, key_deposit_outcome) "
-      + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      + "closed_date, key_count, key_deposit_cents, forwarding_only, key_deposit_outcome, hold_from, hold_until, "
+      + "hold_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-  /** Reads every mailbox. */
-  private static final String SELECT_ALL_SQL = "SELECT id, first_name, last_name, "
+  /** Reads mailboxes' details; a WHERE clause picks which. */
+  private static final String SELECT_COLUMNS_SQL = "SELECT id, first_name, last_name, "
       + "business_title, box_number, box_name, phone, email, end_date, notes, closed_date, key_count, "
-      + "key_deposit_cents, forwarding_only, key_deposit_outcome FROM mailboxes";
+      + "key_deposit_cents, forwarding_only, key_deposit_outcome, deleted_on, hold_from, hold_until, hold_note "
+      + "FROM mailboxes";
+
+  /** Reads every mailbox that hasn't been deleted, open or closed. */
+  private static final String SELECT_ALL_SQL = SELECT_COLUMNS_SQL + " WHERE deleted_on IS NULL";
+
+  /** Reads every open mailbox's details; see {@link Mailbox#isClosed()}. */
+  private static final String SELECT_OPEN_SQL = SELECT_ALL_SQL + " AND closed_date IS NULL";
+
+  /** Reads every deleted mailbox, as listed under Recently deleted. */
+  private static final String SELECT_DELETED_SQL = SELECT_COLUMNS_SQL + " WHERE deleted_on IS NOT NULL";
 
   /** Replaces a mailbox's details. */
   private static final String UPDATE_SQL = "UPDATE mailboxes SET first_name = ?, last_name = ?, "
       + "business_title = ?, box_number = ?, box_name = ?, phone = ?, email = ?, end_date = ?, notes = ?, "
-      + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ?, key_deposit_outcome = ? "
-      + "WHERE id = ?";
+      + "closed_date = ?, key_count = ?, key_deposit_cents = ?, forwarding_only = ?, key_deposit_outcome = ?, "
+      + "hold_from = ?, hold_until = ?, hold_note = ? WHERE id = ?";
 
-  /** Checks whether another open, rented box has a box number. */
+  /** Checks whether another open, rented box that isn't deleted has a box number. */
   private static final String BOX_NUMBER_TAKEN_SQL = "SELECT 1 FROM mailboxes "
       + "WHERE TRIM(box_number) = ? COLLATE NOCASE AND id <> ? AND closed_date IS NULL AND forwarding_only = 0 "
-      + "LIMIT 1";
+      + "AND deleted_on IS NULL LIMIT 1";
 
   /** Closes or reopens a mailbox, and records what happened to its key deposit. */
   private static final String SET_CLOSED_DATE_SQL =
       "UPDATE mailboxes SET closed_date = ?, key_deposit_outcome = ? WHERE id = ?";
 
-  /** Deletes a mailbox. */
-  private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
+  /** Moves a mailbox to Recently deleted, or restores it. */
+  private static final String SET_DELETED_ON_SQL = "UPDATE mailboxes SET deleted_on = ? WHERE id = ?";
 
-  /** Deletes a mailbox's rental history. */
-  private static final String DELETE_RENTAL_PERIODS_SQL = "DELETE FROM rental_periods WHERE mailbox_id = ?";
+  /** Reads the deleted mailboxes that are due to be erased for good. */
+  private static final String SELECT_DELETED_BEFORE_SQL = "SELECT id FROM mailboxes WHERE deleted_on < ?";
+
+  /** Remembers the number of a mailbox about to be erased for good, for its payments. */
+  private static final String INSERT_ERASED_SQL = "INSERT OR REPLACE INTO erased_boxes (mailbox_id, box_number) "
+      + "SELECT id, box_number FROM mailboxes WHERE id = ?";
+
+  /** Reads the numbers of the mailboxes erased for good. */
+  private static final String SELECT_ERASED_SQL = "SELECT mailbox_id, box_number FROM erased_boxes";
+
+  /** Erases a mailbox for good. */
+  private static final String DELETE_SQL = "DELETE FROM mailboxes WHERE id = ?";
 
   /** Deletes the records of a mailbox's printed forwarding labels. */
   private static final String DELETE_LABELS_SQL = "DELETE FROM labels WHERE mailbox_id = ?";
@@ -67,9 +90,9 @@ public class MailboxRepository {
   private static final String INSERT_BUSINESS_NAME_SQL =
       "INSERT INTO business_names (mailbox_id, name) VALUES (?, ?)";
 
-  /** Reads a mailbox's alternate business names, in the order they were added. */
-  private static final String SELECT_BUSINESS_NAMES_SQL =
-      "SELECT name FROM business_names WHERE mailbox_id = ? ORDER BY id";
+  /** Reads every mailbox's alternate business names, in the order they were added. */
+  private static final String SELECT_ALL_BUSINESS_NAMES_SQL =
+      "SELECT mailbox_id, name FROM business_names ORDER BY id";
 
   /** Deletes a mailbox's alternate business names. */
   private static final String DELETE_BUSINESS_NAMES_SQL =
@@ -84,13 +107,28 @@ public class MailboxRepository {
       "SELECT street, unit, city, state, zip, note, added_on "
       + "FROM forwarding_addresses WHERE mailbox_id = ? ORDER BY id";
 
+  /** Adds a dated note to a mailbox. */
+  private static final String INSERT_DATED_NOTE_SQL =
+      "INSERT INTO dated_notes (mailbox_id, noted_on, text) VALUES (?, ?, ?)";
+
+  /** Reads every mailbox's dated notes. */
+  private static final String SELECT_ALL_DATED_NOTES_SQL = "SELECT mailbox_id, noted_on, text FROM dated_notes";
+
+  /** Deletes a mailbox's dated notes. */
+  private static final String DELETE_DATED_NOTES_SQL = "DELETE FROM dated_notes WHERE mailbox_id = ?";
+
+  /** Reads every mailbox's forwarding addresses, in the order they were added. */
+  private static final String SELECT_ALL_FORWARDING_ADDRESSES_SQL =
+      "SELECT mailbox_id, street, unit, city, state, zip, note, added_on "
+      + "FROM forwarding_addresses ORDER BY id";
+
   /** Deletes a mailbox's forwarding addresses. */
   private static final String DELETE_FORWARDING_ADDRESSES_SQL =
       "DELETE FROM forwarding_addresses WHERE mailbox_id = ?";
 
   /**
-   * Inserts a new mailbox along with its alternate business names and
-   * forwarding addresses.
+   * Inserts a new mailbox along with its alternate business names,
+   * forwarding addresses, and dated notes.
    *
    * @param mailbox the mailbox to persist; its id is ignored
    * @return the new mailbox's id
@@ -102,7 +140,8 @@ public class MailboxRepository {
 
   /**
    * Inserts a new mailbox along with its alternate business names,
-   * forwarding addresses, and the first entry in its rental history.
+   * forwarding addresses, dated notes, and the first entry in its rental
+   * history.
    *
    * @param mailbox the mailbox to persist; its id is ignored
    * @param firstPeriod the rental being paid for now, or {@code null} to
@@ -114,17 +153,7 @@ public class MailboxRepository {
     try (Connection conn = Database.connect()) {
       conn.setAutoCommit(false);
       try {
-        int mailboxId;
-        try (PreparedStatement stmt = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
-          bindMailboxFields(stmt, mailbox);
-          stmt.executeUpdate();
-          try (ResultSet keys = stmt.getGeneratedKeys()) {
-            keys.next();
-            mailboxId = keys.getInt(1);
-          }
-        }
-        insertBusinessNames(conn, mailboxId, mailbox.getAlternateBusinessNames());
-        insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses(), List.of());
+        var mailboxId = insert(conn, mailbox);
         if (firstPeriod != null) {
           RentalHistoryRepository.insert(conn, mailboxId, firstPeriod);
         }
@@ -138,49 +167,106 @@ public class MailboxRepository {
   }
 
   /**
+   * Inserts many new mailboxes at once, as File → Import Boxes does, all or
+   * nothing: if one can't be added, none are.
+   *
+   * @param mailboxes the mailboxes to persist; their ids are ignored
+   * @throws SQLException if they can't be added; nothing is added then
+   */
+  public void insertAll(List<Mailbox> mailboxes) throws SQLException {
+    try (Connection conn = Database.connect()) {
+      conn.setAutoCommit(false);
+      try {
+        for (var mailbox : mailboxes) {
+          insert(conn, mailbox);
+        }
+        conn.commit();
+      } catch (SQLException e) {
+        conn.rollback();
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Inserts a new mailbox with its alternate business names, forwarding
+   * addresses, and dated notes.
+   *
+   * @param conn the connection, in a transaction
+   * @param mailbox the mailbox; its id is ignored
+   * @return the new mailbox's id
+   * @throws SQLException if it can't be added
+   */
+  private int insert(Connection conn, Mailbox mailbox) throws SQLException {
+    int mailboxId;
+    try (PreparedStatement stmt = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
+      bindMailboxFields(stmt, mailbox);
+      stmt.executeUpdate();
+      try (ResultSet keys = stmt.getGeneratedKeys()) {
+        keys.next();
+        mailboxId = keys.getInt(1);
+      }
+    }
+    insertBusinessNames(conn, mailboxId, mailbox.getAlternateBusinessNames());
+    insertForwardingAddresses(conn, mailboxId, mailbox.getForwardingAddresses(), List.of());
+    insertDatedNotes(conn, mailboxId, mailbox.getDatedNotes());
+    return mailboxId;
+  }
+
+  /**
    * Returns the boxes that are open (not closed), ordered by box number.
    *
    * @return the open mailboxes
    * @throws SQLException if the query fails
    */
   public List<Mailbox> findOpen() throws SQLException {
-    return findAll().stream().filter(m -> !m.isClosed()).collect(Collectors.toList());
+    return find(SELECT_OPEN_SQL);
   }
 
   /**
    * Returns every mailbox, open and closed, ordered by box number (see
    * {@link BoxNumbers#ORDER}), with its alternate business names and
-   * forwarding addresses loaded.
+   * forwarding addresses loaded. Deleted boxes are left out; see
+   * {@link #findDeleted()}.
    *
-   * @return all mailboxes in the database
+   * @return all mailboxes in the database that haven't been deleted
    * @throws SQLException if the query fails
    */
   public List<Mailbox> findAll() throws SQLException {
+    return find(SELECT_ALL_SQL);
+  }
+
+  /**
+   * Returns the boxes listed under Recently deleted on Manage Boxes: those
+   * deleted but not yet restored or erased for good, ordered by box number.
+   *
+   * @return the deleted mailboxes
+   * @throws SQLException if the query fails
+   */
+  public List<Mailbox> findDeleted() throws SQLException {
+    return find(SELECT_DELETED_SQL);
+  }
+
+  /**
+   * Reads mailboxes with their alternate business names and forwarding
+   * addresses, ordered by box number. The names and addresses of every box
+   * are read in one query each, rather than two queries per box, which
+   * would take thousands of queries in a large shop.
+   *
+   * @param sql {@link #SELECT_ALL_SQL}, {@link #SELECT_OPEN_SQL}, or
+   *     {@link #SELECT_DELETED_SQL}
+   * @return the mailboxes it finds
+   * @throws SQLException if the query fails
+   */
+  private List<Mailbox> find(String sql) throws SQLException {
     var mailboxes = new ArrayList<Mailbox>();
 
-    try (Connection conn = Database.connect();
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(SELECT_ALL_SQL)) {
-      while (rs.next()) {
-        var id = rs.getInt("id");
-        mailboxes.add(new Mailbox(
-            id,
-            rs.getString("first_name"),
-            rs.getString("last_name"),
-            rs.getString("business_title"),
-            rs.getString("box_number"),
-            rs.getString("box_name"),
-            rs.getString("phone"),
-            rs.getString("email"),
-            findBusinessNames(conn, id),
-            date(rs.getString("end_date")),
-            findForwardingAddresses(conn, id),
-            rs.getString("notes"),
-            date(rs.getString("closed_date")),
-            rs.getObject("key_count") == null ? null : rs.getInt("key_count"),
-            rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents"),
-            rs.getInt("forwarding_only") != 0,
-            DepositOutcome.fromName(rs.getString("key_deposit_outcome"))));
+    try (Connection conn = Database.connect()) {
+      var businessNames = findAllBusinessNames(conn);
+      var forwardingAddresses = findAllForwardingAddresses(conn);
+      var datedNotes = findAllDatedNotes(conn);
+      try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+        readMailboxes(rs, businessNames, forwardingAddresses, datedNotes, mailboxes);
       }
     }
 
@@ -189,8 +275,47 @@ public class MailboxRepository {
   }
 
   /**
-   * Updates an existing mailbox and replaces its alternate business names
-   * and forwarding addresses.
+   * Turns each row of a mailbox query into a {@link Mailbox}.
+   *
+   * @param rs the rows, from a query starting with {@link #SELECT_COLUMNS_SQL}
+   * @param businessNames every box's alternate business names, by mailbox id
+   * @param forwardingAddresses every box's forwarding addresses, by mailbox id
+   * @param datedNotes every box's dated notes, by mailbox id
+   * @param mailboxes the list to add the mailboxes to
+   * @throws SQLException if a row can't be read
+   */
+  private static void readMailboxes(ResultSet rs, Map<Integer, List<String>> businessNames,
+      Map<Integer, List<ForwardingAddress>> forwardingAddresses, Map<Integer, List<DatedNote>> datedNotes,
+      List<Mailbox> mailboxes) throws SQLException {
+    while (rs.next()) {
+      var id = rs.getInt("id");
+      mailboxes.add(new Mailbox(
+          id,
+          rs.getString("first_name"),
+          rs.getString("last_name"),
+          rs.getString("business_title"),
+          rs.getString("box_number"),
+          rs.getString("box_name"),
+          rs.getString("phone"),
+          rs.getString("email"),
+          businessNames.get(id),
+          date(rs.getString("end_date")),
+          forwardingAddresses.get(id),
+          rs.getString("notes"),
+          date(rs.getString("closed_date")),
+          rs.getObject("key_count") == null ? null : rs.getInt("key_count"),
+          rs.getObject("key_deposit_cents") == null ? null : rs.getLong("key_deposit_cents"),
+          rs.getInt("forwarding_only") != 0,
+          DepositOutcome.fromName(rs.getString("key_deposit_outcome")),
+          date(rs.getString("deleted_on")),
+          mailHold(rs),
+          datedNotes.get(id)));
+    }
+  }
+
+  /**
+   * Updates an existing mailbox and replaces its alternate business names,
+   * forwarding addresses, and dated notes.
    *
    * @param mailbox the mailbox to save, identified by {@link Mailbox#getId()}
    * @throws SQLException if the update fails
@@ -201,7 +326,7 @@ public class MailboxRepository {
       try {
         try (PreparedStatement stmt = conn.prepareStatement(UPDATE_SQL)) {
           bindMailboxFields(stmt, mailbox);
-          stmt.setInt(15, mailbox.getId());
+          stmt.setInt(18, mailbox.getId());
           stmt.executeUpdate();
         }
         deleteBusinessNames(conn, mailbox.getId());
@@ -210,6 +335,8 @@ public class MailboxRepository {
         var previous = findForwardingAddresses(conn, mailbox.getId());
         deleteForwardingAddresses(conn, mailbox.getId());
         insertForwardingAddresses(conn, mailbox.getId(), mailbox.getForwardingAddresses(), previous);
+        deleteDatedNotes(conn, mailbox.getId());
+        insertDatedNotes(conn, mailbox.getId(), mailbox.getDatedNotes());
         conn.commit();
       } catch (SQLException e) {
         conn.rollback();
@@ -220,7 +347,7 @@ public class MailboxRepository {
 
   /**
    * Checks whether another open mailbox already uses the given box number,
-   * ignoring surrounding whitespace and letter case. Closed and
+   * ignoring surrounding whitespace and letter case. Closed, deleted, and
    * forwarding-only boxes don't count, so a number can be reused once its
    * holder leaves or switches to having their mail forwarded.
    *
@@ -274,31 +401,62 @@ public class MailboxRepository {
   }
 
   /**
-   * Permanently deletes a mailbox with its alternate business names,
-   * forwarding addresses, rental history, and the records of its printed
-   * forwarding labels.
+   * Deletes a box, which moves it to Recently deleted on Manage Boxes. It
+   * disappears from every other list and frees its box number, but nothing
+   * recorded for it is erased until {@link #eraseDeletedBefore} runs 30
+   * days later, so it can be restored until then.
    *
    * @param id the id of the mailbox to delete
-   * @throws SQLException if the delete fails
+   * @param deletedOn the day it's deleted, normally today
+   * @throws SQLException if the update fails
    */
-  public void delete(int id) throws SQLException {
+  public void delete(int id, LocalDate deletedOn) throws SQLException {
+    setDeletedOn(id, deletedOn);
+  }
+
+  /**
+   * Brings a deleted box back from Recently deleted, as it was when deleted.
+   * Callers check first that its box number hasn't been given to someone
+   * else, as when reopening a closed box.
+   *
+   * @param id the id of the mailbox to restore
+   * @throws SQLException if the update fails
+   */
+  public void restore(int id) throws SQLException {
+    setDeletedOn(id, null);
+  }
+
+  /**
+   * Records the day a box was deleted.
+   *
+   * @param id the id of the mailbox
+   * @param deletedOn the day, or {@code null} if it isn't deleted
+   * @throws SQLException if the update fails
+   */
+  private void setDeletedOn(int id, LocalDate deletedOn) throws SQLException {
+    try (Connection conn = Database.connect();
+        PreparedStatement stmt = conn.prepareStatement(SET_DELETED_ON_SQL)) {
+      stmt.setString(1, deletedOn == null ? null : deletedOn.toString());
+      stmt.setInt(2, id);
+      stmt.executeUpdate();
+    }
+  }
+
+  /**
+   * Erases a box for good, with its alternate business names, forwarding
+   * addresses, dated notes, and the records of its printed forwarding labels. Its rental
+   * history is kept, so Payments still adds up for the days it paid, and its
+   * box number is remembered for those payments (see
+   * {@link #findErasedBoxNumbers()}).
+   *
+   * @param id the id of the mailbox to erase
+   * @throws SQLException if it can't be erased; nothing is erased then
+   */
+  public void eraseForever(int id) throws SQLException {
     try (Connection conn = Database.connect()) {
       conn.setAutoCommit(false);
       try {
-        deleteBusinessNames(conn, id);
-        deleteForwardingAddresses(conn, id);
-        try (PreparedStatement stmt = conn.prepareStatement(DELETE_RENTAL_PERIODS_SQL)) {
-          stmt.setInt(1, id);
-          stmt.executeUpdate();
-        }
-        try (PreparedStatement stmt = conn.prepareStatement(DELETE_LABELS_SQL)) {
-          stmt.setInt(1, id);
-          stmt.executeUpdate();
-        }
-        try (PreparedStatement stmt = conn.prepareStatement(DELETE_SQL)) {
-          stmt.setInt(1, id);
-          stmt.executeUpdate();
-        }
+        erase(conn, id);
         conn.commit();
       } catch (SQLException e) {
         conn.rollback();
@@ -308,8 +466,89 @@ public class MailboxRepository {
   }
 
   /**
-   * Fills in a mailbox's details as the first 14 parameters of an insert or
-   * update.
+   * Erases for good the boxes deleted before a day, as the app does when it
+   * starts with those deleted more than 30 days ago. See
+   * {@link #eraseForever(int)} for what's erased and what's kept.
+   *
+   * @param cutoff boxes deleted before this day are erased
+   * @return how many boxes were erased
+   * @throws SQLException if they can't be erased; none are erased then
+   */
+  public int eraseDeletedBefore(LocalDate cutoff) throws SQLException {
+    try (Connection conn = Database.connect()) {
+      conn.setAutoCommit(false);
+      try {
+        var ids = new ArrayList<Integer>();
+        try (PreparedStatement stmt = conn.prepareStatement(SELECT_DELETED_BEFORE_SQL)) {
+          stmt.setString(1, cutoff.toString());
+          try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+              ids.add(rs.getInt("id"));
+            }
+          }
+        }
+        for (var id : ids) {
+          erase(conn, id);
+        }
+        conn.commit();
+        return ids.size();
+      } catch (SQLException e) {
+        conn.rollback();
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Returns the box number of each box erased for good, for showing its
+   * payments, which are kept.
+   *
+   * @return each erased box's number, by its old mailbox id
+   * @throws SQLException if they can't be read
+   */
+  public Map<Integer, String> findErasedBoxNumbers() throws SQLException {
+    var numbers = new HashMap<Integer, String>();
+
+    try (Connection conn = Database.connect();
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(SELECT_ERASED_SQL)) {
+      while (rs.next()) {
+        numbers.put(rs.getInt("mailbox_id"), rs.getString("box_number"));
+      }
+    }
+
+    return numbers;
+  }
+
+  /**
+   * Erases a box for good; see {@link #eraseForever(int)}.
+   *
+   * @param conn the connection, in a transaction
+   * @param id the id of the mailbox to erase
+   * @throws SQLException if it can't be erased
+   */
+  private void erase(Connection conn, int id) throws SQLException {
+    try (PreparedStatement stmt = conn.prepareStatement(INSERT_ERASED_SQL)) {
+      stmt.setInt(1, id);
+      stmt.executeUpdate();
+    }
+    deleteBusinessNames(conn, id);
+    deleteDatedNotes(conn, id);
+    deleteForwardingAddresses(conn, id);
+    try (PreparedStatement stmt = conn.prepareStatement(DELETE_LABELS_SQL)) {
+      stmt.setInt(1, id);
+      stmt.executeUpdate();
+    }
+    try (PreparedStatement stmt = conn.prepareStatement(DELETE_SQL)) {
+      stmt.setInt(1, id);
+      stmt.executeUpdate();
+    }
+  }
+
+  /**
+   * Fills in a mailbox's details as the first 17 parameters of an insert or
+   * update. A mail hold that has ended isn't saved, so it's cleared the next
+   * time the box is saved.
    *
    * @param stmt the insert or update
    * @param mailbox the mailbox
@@ -330,6 +569,27 @@ public class MailboxRepository {
     stmt.setObject(12, mailbox.getKeyDepositCents());
     stmt.setInt(13, mailbox.isForwardingOnly() ? 1 : 0);
     stmt.setString(14, mailbox.getKeyDepositOutcome() == null ? null : mailbox.getKeyDepositOutcome().name());
+    var hold = mailbox.getMailHold(LocalDate.now());
+    stmt.setString(15, hold == null ? null : hold.getFrom().toString());
+    stmt.setString(16, hold == null ? null : hold.getUntil().toString());
+    stmt.setString(17, hold == null ? null : hold.getNote());
+  }
+
+  /**
+   * Reads the mail hold in the current row of a mailbox query.
+   *
+   * @param rs the query, on a row with the hold's columns
+   * @return the hold, or {@code null} if there's none or it was stored
+   *     without both of its days
+   * @throws SQLException if a column can't be read
+   */
+  private static MailHold mailHold(ResultSet rs) throws SQLException {
+    var from = date(rs.getString("hold_from"));
+    var until = date(rs.getString("hold_until"));
+    if (from == null || until == null || until.isBefore(from)) {
+      return null;
+    }
+    return new MailHold(from, until, rs.getString("hold_note"));
   }
 
   /**
@@ -427,6 +687,61 @@ public class MailboxRepository {
   }
 
   /**
+   * Adds dated notes to a mailbox.
+   *
+   * @param conn the connection, which may be in a transaction
+   * @param mailboxId the mailbox's id
+   * @param notes the notes
+   * @throws SQLException if they can't be added
+   */
+  private void insertDatedNotes(Connection conn, int mailboxId, List<DatedNote> notes) throws SQLException {
+    try (PreparedStatement stmt = conn.prepareStatement(INSERT_DATED_NOTE_SQL)) {
+      for (var note : notes) {
+        stmt.setInt(1, mailboxId);
+        stmt.setString(2, note.getDate().toString());
+        stmt.setString(3, note.getText());
+        stmt.addBatch();
+      }
+      stmt.executeBatch();
+    }
+  }
+
+  /**
+   * Deletes a mailbox's dated notes.
+   *
+   * @param conn the connection, which may be in a transaction
+   * @param mailboxId the mailbox's id
+   * @throws SQLException if they can't be deleted
+   */
+  private void deleteDatedNotes(Connection conn, int mailboxId) throws SQLException {
+    try (PreparedStatement stmt = conn.prepareStatement(DELETE_DATED_NOTES_SQL)) {
+      stmt.setInt(1, mailboxId);
+      stmt.executeUpdate();
+    }
+  }
+
+  /**
+   * Reads every mailbox's dated notes.
+   *
+   * @param conn the connection
+   * @return each box's notes, by mailbox id; a box with none isn't in the
+   *     map. {@link Mailbox} puts them newest first.
+   * @throws SQLException if they can't be read
+   */
+  private Map<Integer, List<DatedNote>> findAllDatedNotes(Connection conn) throws SQLException {
+    var notes = new HashMap<Integer, List<DatedNote>>();
+
+    try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SELECT_ALL_DATED_NOTES_SQL)) {
+      while (rs.next()) {
+        notes.computeIfAbsent(rs.getInt("mailbox_id"), id -> new ArrayList<>())
+            .add(new DatedNote(date(rs.getString("noted_on")), rs.getString("text")));
+      }
+    }
+
+    return notes;
+  }
+
+  /**
    * Deletes a mailbox's forwarding addresses.
    *
    * @param conn the connection, which may be in a transaction
@@ -455,9 +770,7 @@ public class MailboxRepository {
       stmt.setInt(1, mailboxId);
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          addresses.add(new ForwardingAddress(rs.getString("street"), rs.getString("unit"),
-              rs.getString("city"), rs.getString("state"), rs.getString("zip"), rs.getString("note"),
-              date(rs.getString("added_on"))));
+          addresses.add(forwardingAddress(rs));
         }
       }
     }
@@ -466,26 +779,56 @@ public class MailboxRepository {
   }
 
   /**
-   * Reads a mailbox's alternate business names.
+   * Reads every mailbox's alternate business names.
    *
    * @param conn the connection
-   * @param mailboxId the mailbox's id
-   * @return the names, in the order they were added
+   * @return each box's names in the order they were added, by mailbox id;
+   *     a box with none isn't in the map
    * @throws SQLException if they can't be read
    */
-  private List<String> findBusinessNames(Connection conn, int mailboxId) throws SQLException {
-    var names = new ArrayList<String>();
+  private Map<Integer, List<String>> findAllBusinessNames(Connection conn) throws SQLException {
+    var names = new HashMap<Integer, List<String>>();
 
-    try (PreparedStatement stmt = conn.prepareStatement(SELECT_BUSINESS_NAMES_SQL)) {
-      stmt.setInt(1, mailboxId);
-      try (ResultSet rs = stmt.executeQuery()) {
-        while (rs.next()) {
-          names.add(rs.getString("name"));
-        }
+    try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SELECT_ALL_BUSINESS_NAMES_SQL)) {
+      while (rs.next()) {
+        names.computeIfAbsent(rs.getInt("mailbox_id"), id -> new ArrayList<>()).add(rs.getString("name"));
       }
     }
 
     return names;
+  }
+
+  /**
+   * Reads the forwarding address in the current row of a query.
+   *
+   * @param rs the query, on a row with the address's columns
+   * @return the address
+   * @throws SQLException if a column can't be read
+   */
+  private static ForwardingAddress forwardingAddress(ResultSet rs) throws SQLException {
+    return new ForwardingAddress(rs.getString("street"), rs.getString("unit"), rs.getString("city"),
+        rs.getString("state"), rs.getString("zip"), rs.getString("note"), date(rs.getString("added_on")));
+  }
+
+  /**
+   * Reads every mailbox's forwarding addresses.
+   *
+   * @param conn the connection
+   * @return each box's addresses in the order they were added, by mailbox id;
+   *     a box with none isn't in the map
+   * @throws SQLException if they can't be read
+   */
+  private Map<Integer, List<ForwardingAddress>> findAllForwardingAddresses(Connection conn) throws SQLException {
+    var addresses = new HashMap<Integer, List<ForwardingAddress>>();
+
+    try (Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(SELECT_ALL_FORWARDING_ADDRESSES_SQL)) {
+      while (rs.next()) {
+        addresses.computeIfAbsent(rs.getInt("mailbox_id"), id -> new ArrayList<>()).add(forwardingAddress(rs));
+      }
+    }
+
+    return addresses;
   }
 
 }

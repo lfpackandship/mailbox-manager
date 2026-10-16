@@ -1,6 +1,7 @@
 package org.lfps.mailboxes.view;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 import javafx.beans.binding.Bindings;
 import javafx.collections.ObservableList;
@@ -21,6 +22,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.lfps.mailboxes.data.MailboxRepository;
+import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
 import org.lfps.mailboxes.util.Validators;
@@ -83,6 +85,11 @@ public class EditBoxView {
     outcomeField.setStyle("-fx-pref-width: 15em; -fx-max-width: 15em;");
 
     var notesField = notesField();
+    // A hold that has ended is left out, so saving clears it.
+    var holdEditor = new MailHoldEditor(mailbox.getMailHold(LocalDate.now()));
+    var datedNotesEditor = new DatedNotesEditor();
+    datedNotesEditor.setNotes(mailbox.getDatedNotes());
+    var datedNotesSection = section("Dated Notes", datedNotesEditor, datedNotesEditor.entries());
     notesField.setText(orEmpty(mailbox.getNotes()));
 
     hints(firstNameField, lastNameField, businessTitleField, boxNumberField, boxNameField, phoneField, emailField);
@@ -99,6 +106,8 @@ public class EditBoxView {
         forwardingOnlyBox.selectedProperty(), notesField.textProperty(), outcomeField.valueProperty());
     businessNamesEditor.watchFor(changes);
     forwardingEditor.watchFor(changes);
+    holdEditor.watchFor(changes);
+    datedNotesEditor.watchFor(changes);
 
     var saveBtn = new Button("Save");
     var resultLabel = new Label();
@@ -113,6 +122,11 @@ public class EditBoxView {
       // A name or address typed but not added with its Add button is saved
       // too, rather than quietly left out.
       businessNamesEditor.addTyped();
+      var datedNoteProblem = datedNotesEditor.addTypedBeforeSaving();
+      if (datedNoteProblem != null) {
+        errors.append(datedNoteProblem).append('\n');
+        datedNotesSection.setExpanded(true);
+      }
       var forwardingProblem = forwardingEditor.addTypedBeforeSaving();
       if (forwardingProblem != null) {
         errors.append(forwardingProblem).append('\n');
@@ -120,14 +134,15 @@ public class EditBoxView {
       }
 
       var forwardingOnly = forwardingOnlyBox.isSelected();
+      // Closed and forwarding-only boxes don't hold their numbers, so only
+      // check an open box whose number changed or that now holds it.
+      var takesBox = !boxNumberField.getText().isBlank() && !mailbox.isClosed() && !forwardingOnly
+          && (mailbox.isForwardingOnly()
+              || !BoxNumbers.key(boxNumberField.getText()).equals(BoxNumbers.key(mailbox.getBoxNumber())));
       if (boxNumberField.getText().isBlank()) {
         errors.append("Box number is required.\n");
         problems.mark(boxNumberField);
-      } else if (!mailbox.isClosed() && !forwardingOnly
-          && (mailbox.isForwardingOnly()
-              || !BoxNumbers.key(boxNumberField.getText()).equals(BoxNumbers.key(mailbox.getBoxNumber())))) {
-        // Closed and forwarding-only boxes don't hold their numbers, so only
-        // check an open box whose number changed or that now holds it.
+      } else if (takesBox) {
         var problem = BoxNumberChecks.problem(boxNumberField.getText(), mailbox.getId());
         if (!problem.isEmpty()) {
           errors.append(problem);
@@ -161,6 +176,13 @@ public class EditBoxView {
         errors.append(ex.getMessage()).append('\n');
         problems.mark(keys.depositField);
       }
+      MailHold hold = null;
+      try {
+        hold = holdEditor.getHold();
+      } catch (IllegalArgumentException ex) {
+        errors.append(ex.getMessage()).append('\n');
+        problems.mark(holdEditor.problemField());
+      }
 
       if (errors.length() > 0) {
         resultLabel.setStyle("-fx-text-fill: red;");
@@ -168,12 +190,17 @@ public class EditBoxView {
         problems.focusFirst();
         return;
       }
+      // Asked only when the box is newly taken, not every time a box already in it is saved.
+      if (takesBox && !BoxNumberChecks.confirmIfOutOfService(stage, boxNumberField.getText())) {
+        return;
+      }
 
       var updated = new Mailbox(mailbox.getId(), firstNameField.getText(), lastNameField.getText(),
           businessTitleField.getText(), boxNumberField.getText(), boxNameField.getText(), phone, email,
           businessNamesEditor.getNames(), endDateField.getValue(), forwardingEditor.getAddresses(),
           notesField.getText(), mailbox.getClosedDate(), keyCount, keyDeposit, forwardingOnly,
-          mailbox.isClosed() ? KeyFields.outcomeAt(outcomeField.getSelectionModel().getSelectedIndex()) : null);
+          mailbox.isClosed() ? KeyFields.outcomeAt(outcomeField.getSelectionModel().getSelectedIndex()) : null)
+          .withMailHold(hold).withDatedNotes(datedNotesEditor.getNotes());
 
       try {
         repository.update(updated);
@@ -209,8 +236,10 @@ public class EditBoxView {
     }
     grid.add(namesSection, 0, row++, 4, 1);
     grid.add(forwardingSection, 0, row++, 4, 1);
+    grid.add(holdEditor.section(), 0, row++, 4, 1);
     grid.add(new Label("Notes:"), 0, row++, 4, 1);
-    grid.add(notesField, 0, row, 4, 1);
+    grid.add(notesField, 0, row++, 4, 1);
+    grid.add(datedNotesSection, 0, row, 4, 1);
 
     var layout = new VBox(8, grid);
     layout.setPadding(new Insets(15));

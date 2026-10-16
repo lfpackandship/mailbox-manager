@@ -9,6 +9,8 @@ module org.lfps.mailboxes {
     requires java.sql;
     requires jdk.httpserver;
     requires org.xerial.sqlitejdbc;
+    requires org.dhatim.fastexcel;
+    requires org.dhatim.fastexcel.reader;
     exports org.lfps.mailboxes;
     exports org.lfps.mailboxes.model;
 }

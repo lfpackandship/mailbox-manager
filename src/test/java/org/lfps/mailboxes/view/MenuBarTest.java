@@ -1,24 +1,29 @@
 package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -38,6 +43,7 @@ import org.lfps.mailboxes.model.Mailbox;
 class MenuBarTest {
 
   private final Function<Window, File> realChooseFolder = SettingsView.chooseFolder;
+  private final BiFunction<Window, Path, Path> realChooseCopyFolder = SettingsView.chooseCopyFolder;
 
   private final Predicate<String> realConfirm = RestoreView.confirm;
 
@@ -76,6 +82,7 @@ class MenuBarTest {
       }
     });
     SettingsView.chooseFolder = realChooseFolder;
+    SettingsView.chooseCopyFolder = realChooseCopyFolder;
     RestoreView.confirm = realConfirm;
   }
 
@@ -83,10 +90,40 @@ class MenuBarTest {
   void theMenusHoldWhatsDoneMostOften() {
     assertEquals(List.of("File", "Go", "Help"), FxTestSupport.call(() -> menuBar().getMenus().stream()
         .map(menu -> menu.getText()).collect(Collectors.toList())));
-    assertEquals(List.of("Print Price Sheet…", "Print Renewal Reminders…", "Forwarding", "Back Up Now…",
+    assertEquals(List.of("Print Price Sheet…", "Print Renewal Reminders…", "Forwarding", "Import Boxes…",
+        "Back Up Now…",
         "Restore a Backup…", "Settings", "Exit"), items("File"));
     assertEquals(List.of("Main Menu", "Add New Box", "Manage Boxes", "Find a Box", "Renewals", "Calendar",
         "Payments", "Box Inventory", "Prices…"), items("Go"));
+    assertEquals(List.of("Keyboard Shortcuts", "Show Data Folder", "About Mailbox Manager"), items("Help"));
+  }
+
+  @Test
+  void keyboardShortcutsListsEveryMenuShortcutAndTheOtherKeys() {
+    FxTestSupport.run(() -> item("Help", "Keyboard Shortcuts").fire());
+
+    var lines = FxTestSupport.call(() -> shortcutLines(windowWith("#shortcutsGrid")));
+    var menuShortcuts = FxTestSupport.call(() -> menuBar().getMenus().stream()
+        .flatMap(m -> m.getItems().stream())
+        .filter(item -> item.getAccelerator() != null)
+        .map(item -> item.getAccelerator().getDisplayText() + "  " + KeyboardShortcutsView.menuItemName(item))
+        .collect(Collectors.toList()));
+    assertEquals(11, menuShortcuts.size(), menuShortcuts.toString());
+    assertTrue(lines.containsAll(menuShortcuts), lines.toString());
+    assertTrue(lines.contains("File menu") && lines.contains("Go menu"), lines.toString());
+    assertFalse(lines.contains("Help menu"), lines.toString());
+    assertTrue(lines.contains("Esc  Closes a window with a Cancel or Close button, such as Renew or a box's "
+        + "details, without saving"), lines.toString());
+  }
+
+  @Test
+  void keyboardShortcutsOpensOnlyOneWindow() {
+    FxTestSupport.run(() -> item("Help", "Keyboard Shortcuts").fire());
+    FxTestSupport.run(() -> item("Help", "Keyboard Shortcuts").fire());
+
+    assertEquals(1, FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w.getScene() != null && w.getScene().lookup("#shortcutsGrid") != null)
+        .count()));
   }
 
   @Test
@@ -173,7 +210,7 @@ class MenuBarTest {
   @Test
   void backUpNowSavesABackupWhereChosen() throws Exception {
     var folder = Files.createTempDirectory(Database.dataDir(), "usb");
-    SettingsView.chooseFolder = owner -> folder.toFile();
+    SettingsView.chooseCopyFolder = (owner, secondFolder) -> folder;
 
     FxTestSupport.run(() -> item("File", "Back Up Now…").fire());
 
@@ -196,6 +233,22 @@ class MenuBarTest {
 
     assertTrue(FxTestSupport.call(mainWindow::isShowing));
     assertTrue(FxTestSupport.call(() -> !restore.isShowing()));
+  }
+
+  /**
+   * Returns each line of the Keyboard Shortcuts window: a heading such as
+   * "Go menu", or the keys and what they do separated by two spaces, such as
+   * "Ctrl+N  Add New Box".
+   */
+  private static List<String> shortcutLines(Stage window) {
+    var grid = (GridPane) window.getScene().lookup("#shortcutsGrid");
+    var lines = new java.util.TreeMap<Integer, String>();
+    for (var node : grid.getChildren()) {
+      var row = GridPane.getRowIndex(node);
+      var text = ((Label) node).getText();
+      lines.merge(row, text, (keys, action) -> keys + "  " + action);
+    }
+    return List.copyOf(lines.values());
   }
 
   /** Returns the main window's menu bar. */

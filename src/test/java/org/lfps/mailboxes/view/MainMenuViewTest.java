@@ -18,12 +18,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.lfps.mailboxes.data.BoxInventoryRepository;
 import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.data.MailboxRepository;
+import org.lfps.mailboxes.data.RentalHistoryRepository;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.model.RentalPeriod;
 
 /**
  * Tests for the bubbles on the main menu's Renewals button counting the boxes
@@ -51,6 +54,7 @@ class MainMenuViewTest {
       stmt.execute("DELETE FROM business_names");
       stmt.execute("DELETE FROM forwarding_addresses");
       stmt.execute("DELETE FROM mailboxes");
+      stmt.execute("DELETE FROM box_inventory");
     }
   }
 
@@ -125,6 +129,44 @@ class MainMenuViewTest {
     assertNull(FxTestSupport.call(() -> renewalsButton(stage).getTooltip()));
   }
 
+  @Test
+  void theSummaryCountsOpenAndEmptyBoxesAndThisMonthsPayments() throws SQLException {
+    var oct15 = LocalDate.of(2026, 10, 15);
+    var rented = mailboxes.insert(box("1", null, null));
+    mailboxes.insert(box("3", null, null));
+    mailboxes.insert(new Mailbox(0, "Ada", "Forwarded", null, "4", null, "", null, null, null, null, null, null,
+        null, null, true));
+    mailboxes.insert(box("5", null, LocalDate.of(2026, 1, 1)));
+    mailboxes.delete(mailboxes.insert(box("6", null, null)), oct15);
+    var inventory = new BoxInventoryRepository();
+    inventory.add(List.of("1", "2", "3", "4", "5", "6"), null);
+    inventory.setOutOfService(List.of("2"), null);
+    var history = new RentalHistoryRepository();
+    for (var day : List.of(LocalDate.of(2026, 9, 30), LocalDate.of(2026, 10, 1), oct15, LocalDate.of(2026, 10, 16))) {
+      history.renew(rented, new RentalPeriod(0, 0, day, day, day.plusMonths(1), 1500L, "Cash", null));
+    }
+
+    // Open: 1, 3, and forwarding-only 4. Empty: 4, 5, and 6, as forwarding-only,
+    // closed, and deleted boxes don't hold their numbers; 2 is out of service.
+    assertEquals("3 open boxes · 3 empty · $30.00 taken in October", MainMenuView.summary(oct15));
+  }
+
+  @Test
+  void theSummaryLeavesOutEmptyBoxesUntilTheInventoryIsSetUp() throws SQLException {
+    mailboxes.insert(box("1", null, null));
+
+    assertEquals("1 open box · $0.00 taken in March", MainMenuView.summary(LocalDate.of(2027, 3, 2)));
+  }
+
+  @Test
+  void theSummaryIsShownUnderTheButtons() throws SQLException {
+    mailboxes.insert(box("1", null, null));
+
+    var stage = showMenu();
+
+    assertEquals(MainMenuView.summary(TODAY), FxTestSupport.call(() -> badge(stage, "mainMenuSummary").getText()));
+  }
+
   /** Opens the main menu in a new window. */
   private static Stage showMenu() {
     return FxTestSupport.call(() -> {
@@ -134,7 +176,10 @@ class MainMenuViewTest {
     });
   }
 
-  /** Returns a bubble on the Renewals button by its id, or {@code null} if it isn't shown. */
+  /**
+   * Returns a label on the main menu by its id, such as a bubble on the
+   * Renewals button, or {@code null} if it isn't shown.
+   */
   private static Label badge(Stage stage, String id) {
     return (Label) stage.getScene().getRoot().lookup("#" + id);
   }

@@ -10,10 +10,14 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -26,6 +30,8 @@ import org.lfps.mailboxes.data.BoxInventoryRepository;
 import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.data.TestSandbox;
+import org.lfps.mailboxes.model.DatedNote;
+import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.Mailbox;
 
 /**
@@ -232,6 +238,166 @@ class EditBoxViewTest {
     assertFalse(FxTestSupport.call(phone::getStyle).contains("#c62828"));
   }
 
+  @Test
+  void savesAMailHold() throws SQLException {
+    var today = LocalDate.now();
+    edit("1");
+    FxTestSupport.run(() -> {
+      holdField("#holdFromField").setValue(today);
+      holdField("#holdUntilField").setValue(today.plusDays(7));
+      textField("#holdNoteField").setText("forward it all on Friday");
+      save();
+    });
+
+    assertTrue(done);
+    assertEquals(new MailHold(today, today.plusDays(7), "forward it all on Friday"), find("1").getMailHold(today));
+  }
+
+  @Test
+  void aMailHoldNeedsBothDays() throws SQLException {
+    edit("1");
+    FxTestSupport.run(() -> {
+      holdField("#holdFromField").setValue(LocalDate.now());
+      save();
+    });
+
+    assertEquals("A mail hold needs both a From and an Until date.", result());
+    assertTrue(FxTestSupport.call(() -> ((TitledPane) mainWindow.getScene().getRoot().lookup("#mailHoldSection"))
+        .isExpanded()));
+    assertNull(find("1").getMailHold(LocalDate.now()));
+  }
+
+  @Test
+  void aMailHoldThatsOverStartsEmptyAndIsClearedBySaving() throws SQLException {
+    var id = find("1").getId();
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("UPDATE mailboxes SET hold_from = '2020-01-01', hold_until = '2020-01-05' WHERE id = " + id);
+    }
+    edit("1");
+
+    assertNull(FxTestSupport.call(() -> holdField("#holdFromField").getValue()));
+    assertEquals("Mail Hold", FxTestSupport.call(() -> ((TitledPane) mainWindow.getScene().getRoot()
+        .lookup("#mailHoldSection")).getText()));
+    FxTestSupport.run(this::save);
+    try (var conn = Database.connect(); var stmt = conn.createStatement();
+        var rs = stmt.executeQuery("SELECT hold_from FROM mailboxes WHERE id = " + id)) {
+      rs.next();
+      assertNull(rs.getString(1));
+    }
+  }
+
+  @Test
+  void clearEndsAMailHold() throws SQLException {
+    var today = LocalDate.now();
+    mailboxes.update(find("1").withMailHold(new MailHold(today, today.plusDays(3), null)));
+    edit("1");
+    FxTestSupport.run(() -> {
+      ((Button) mainWindow.getScene().getRoot().lookup("#clearHoldButton")).fire();
+      save();
+    });
+
+    assertNull(find("1").getMailHold(today));
+  }
+
+  @Test
+  void addsDatedNotesDatedTodayOrAnEarlierDayAndKeepsTheMainNote() throws SQLException {
+    var today = LocalDate.now();
+    edit("2");
+    FxTestSupport.run(() -> {
+      textField("#datedNoteTextField").setText("Called about late payment");
+      button("#addDatedNoteButton").fire();
+      ((DatePicker) lookup("#datedNoteDateField")).setValue(today.minusDays(40));
+      // Typed but not added: Save adds it.
+      textField("#datedNoteTextField").setText("Picked up spare key");
+      save();
+    });
+
+    assertTrue(done);
+    var box = find("2");
+    assertEquals(List.of(new DatedNote(today, "Called about late payment"),
+        new DatedNote(today.minusDays(40), "Picked up spare key")), box.getDatedNotes());
+    assertEquals("Old note", box.getNotes());
+  }
+
+  @Test
+  void editPutsANoteBackInTheFieldsAndRemoveDeletesIt() throws SQLException {
+    var day = LocalDate.of(2026, 9, 2);
+    mailboxes.update(find("1").withDatedNotes(List.of(new DatedNote(day, "Picked up spare key"),
+        new DatedNote(day.plusDays(1), "Lost a key"))));
+    edit("1");
+    FxTestSupport.run(() -> {
+      noteList().getSelectionModel().select(0);
+      button("#editDatedNoteButton").fire();
+    });
+
+    assertEquals("Lost a key", FxTestSupport.call(() -> textField("#datedNoteTextField").getText()));
+    assertEquals(day.plusDays(1), FxTestSupport.call(() -> ((DatePicker) lookup("#datedNoteDateField")).getValue()));
+
+    FxTestSupport.run(() -> {
+      textField("#datedNoteTextField").setText("Lost both keys");
+      button("#addDatedNoteButton").fire();
+      noteList().getSelectionModel().select(1);
+      button("#removeDatedNoteButton").fire();
+      save();
+    });
+
+    assertEquals(List.of(new DatedNote(day.plusDays(1), "Lost both keys")), find("1").getDatedNotes());
+  }
+
+  @Test
+  void aDatedNoteWithoutADayIsntSaved() throws SQLException {
+    edit("1");
+    FxTestSupport.run(() -> {
+      ((DatePicker) lookup("#datedNoteDateField")).setValue(null);
+      textField("#datedNoteTextField").setText("Called");
+      save();
+    });
+
+    assertEquals("Finish the dated note or clear it. Choose the day for the dated note.", result());
+    assertEquals(List.of(), find("1").getDatedNotes());
+  }
+
+  @Test
+  void addNewBoxHasNoDatedNotes() {
+    FxTestSupport.run(() -> AddBoxView.show(mainWindow));
+
+    assertNull(FxTestSupport.call(() -> lookup("#datedNoteList")));
+  }
+
+  @Test
+  void theDetailsAndSearchIncludeDatedNotes() throws SQLException {
+    var box = find("1").withDatedNotes(List.of(new DatedNote(LocalDate.of(2026, 10, 15), "Called about rent")));
+
+    assertTrue(ManageBoxesView.matches(box, "rent"));
+    FxTestSupport.run(() -> BoxDetailsView.show(mainWindow, box, () -> { }, () -> { }));
+    var details = FxTestSupport.call(() -> Window.getWindows().stream()
+        .filter(w -> w.getScene() != null && w.getScene().lookup("#detailDatedNotes") != null)
+        .findFirst().orElseThrow());
+    assertEquals("Oct 15, 2026 – Called about rent",
+        FxTestSupport.call(() -> ((Label) details.getScene().lookup("#detailDatedNotes")).getText()));
+  }
+
+  /** Returns what matches a selector on the main window. */
+  private Node lookup(String selector) {
+    return mainWindow.getScene().getRoot().lookup(selector);
+  }
+
+  /** Returns the button matching a selector on the main window. */
+  private Button button(String selector) {
+    return (Button) lookup(selector);
+  }
+
+  /** Returns the list of dated notes on Edit Box. */
+  @SuppressWarnings("unchecked")
+  private ListView<DatedNote> noteList() {
+    return (ListView<DatedNote>) lookup("#datedNoteList");
+  }
+
+  /** Returns one of the Mail Hold section's date fields on Edit Box. */
+  private DatePicker holdField(String selector) {
+    return (DatePicker) mainWindow.getScene().getRoot().lookup(selector);
+  }
+
   /** Opens Edit Box for a box. */
   private void edit(String boxNumber) throws SQLException {
     var mailbox = find(boxNumber);
@@ -291,6 +457,7 @@ class EditBoxViewTest {
       stmt.execute("DELETE FROM business_names");
       stmt.execute("DELETE FROM forwarding_addresses");
       stmt.execute("DELETE FROM mailboxes");
+      stmt.execute("DELETE FROM dated_notes");
     }
   }
 

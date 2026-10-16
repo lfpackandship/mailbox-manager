@@ -88,17 +88,19 @@ The main menu has six screens:
   holder's name, business title, and phone, with a search field, which has
   the cursor in it when the screen opens. Search
   matches any part of a name, business name, box number, box name, phone
-  number, email, forwarding address (including its note), the notes, or the
+  number, email, forwarding address (including its note), the notes or dated notes, or the
   number of a [forwarding label](#forwarding-labels) printed for the box, and
   phone numbers match with or without formatting. **Ctrl+F** (⌘F on a Mac)
   comes here from any screen, ready to search. To see everything recorded
   for a box, including its rental history, double-click it, or select it and
   click **View** or press Enter; the details open in their own window with
   **Edit** and **Renew…** buttons. Select a row to edit, renew, close, or
-  delete it. The menu next to the search field shows closed boxes instead, or
-  all boxes. **Print…** prints the list as shown, and **Save as
+  delete it. The menu next to the search field shows closed boxes instead,
+  all boxes, boxes [holding mail](#holding-mail), or
+  [recently deleted](#deleting-a-box) ones. **Print…** prints the list as shown, and **Save as
   Spreadsheet…** saves it as a file Excel or Google Sheets opens, with
-  everything recorded for each box.
+  everything recorded for each box. **Import…** adds many boxes at once from a
+  spreadsheet (see [Importing boxes](#importing-boxes-from-a-spreadsheet)).
 - **Renewals** – open boxes that are past due, and those due within the next
   30 days (adjustable in Settings), most urgent first. On the main menu, small
   bubbles on the Renewals button count them: red for past due, yellow for due
@@ -125,6 +127,11 @@ The main menu has six screens:
 - **Box Inventory** – every box you have, and whether it's rented or empty.
   See [Box inventory](#box-inventory).
 
+A line under the buttons sums up the shop: how many boxes are open, how many
+are empty (once the [box inventory](#box-inventory) is set up), and the money
+taken this month, as on Payments, such as `212 open boxes · 14 empty ·
+$3,480.00 taken in October`.
+
 ### The menu bar
 
 The menus at the top of the window are there on every screen:
@@ -132,14 +139,16 @@ The menus at the top of the window are there on every screen:
 - **File** – **Print Price Sheet…** (⌘P on a Mac, Ctrl+P on Windows and
   Linux), **Print Renewal Reminders…** for every box past due or due soon,
   **Forwarding** (⌘6 or Ctrl+6, see [Forwarding labels](#forwarding-labels)),
+  **Import Boxes…** (see [Importing boxes](#importing-boxes-from-a-spreadsheet)),
   **Back Up Now…**, **Restore a Backup…**, **Settings**, and **Exit**.
 - **Go** – any screen, without going back to the main menu first: **Main
   Menu** (⌘0 or Ctrl+0), **Add New Box** (⌘N or Ctrl+N), **Manage Boxes**,
   **Find a Box** (⌘F or Ctrl+F, which opens Manage Boxes ready to search),
   **Renewals**, **Calendar**, **Payments**, and **Box Inventory** (⌘1 to ⌘5,
   or Ctrl+1 to Ctrl+5), and the **Prices…** window.
-- **Help** – **Show Data Folder**, and **About Mailbox Manager**, which says
-  which version is installed.
+- **Help** – **Keyboard Shortcuts**, which lists every shortcut in the app,
+  **Show Data Folder**, and **About Mailbox Manager**, which says which
+  version is installed.
 
 ### Renewing a box
 
@@ -236,8 +245,42 @@ find it. To bring it back, select it there and click **Reopen**. That only
 works if its number hasn't been given to someone else since; if it has, edit
 the closed box's number first.
 
-**Delete** erases a box and its history for good. Use it for boxes entered by
-mistake.
+### Deleting a box
+
+**Delete** is for boxes entered by mistake; if the holder has given up the
+box, close it instead. A deleted box disappears from every list and its
+number can be given to someone else, but for 30 days it's kept under
+**Recently deleted** in the menu next to the search field on Manage Boxes.
+Select it there and click **Restore** to bring it back as it was, as long as
+its number hasn't been given to someone else in the meantime.
+
+After 30 days it's erased for good, the next time the app starts. To erase
+one straight away, select it under Recently deleted and click **Delete
+Forever**. Either way, its payments stay on Payments, marked with the box
+number, such as "12 (deleted)", so the totals for past months never change.
+
+### Importing boxes from a spreadsheet
+
+To add many boxes at once, such as when first setting up the app, open
+**File → Import Boxes…**, or click **Import…** on Manage Boxes.
+
+1. Click **Save Template**. It puts **Mailbox Manager import template.xlsx**
+   in your Downloads folder (with a number added if one's already there).
+2. Open it in Excel, Google Sheets, or Numbers. Fill in one box per row,
+   under the grey example row. Only **Box Number**, in orange, is required;
+   the **Key** tab says what goes in each column. Save it as an Excel
+   workbook (.xlsx) or a CSV file. In Google Sheets or Numbers, download or
+   export it as Excel.
+3. Click **Choose File…** and pick it.
+
+Every row is checked the way Add New Box checks the form: the box number
+mustn't be rented to someone else or appear on two rows, must be in the
+[box inventory](#box-inventory) if that's set up, and phone numbers, emails,
+dates, keys, deposits, and forwarding addresses must make sense. Rows with
+problems are listed. Select one and click **Fix…** to correct it in the app,
+or **Skip** to leave it out; **Skip All** leaves them all out, after asking.
+Once none are left, **Import** adds the boxes, all at once. The example row,
+if left in, and blank rows are skipped.
 
 ### Box inventory
 
@@ -258,7 +301,16 @@ Once the inventory has any boxes in it:
 Removing a box from the inventory doesn't affect anyone renting it.
 
 When boxes have sizes, the screen also shows how many of each size are empty,
-such as `Large: 2 of 5 empty · Small: 30 of 35 empty`.
+such as `Large: 2 of 5 empty, 1 out of service · Small: 30 of 35 empty`.
+
+A box that can't be rented for now, for example because of a broken lock,
+can be marked out of service: select it and click **Out of Service…**, and
+give a reason if you like. It isn't counted as empty, and **Choose…** on Add
+New Box doesn't offer it. Typing its number on Add New Box or Edit Box asks
+whether to use it anyway. Anyone already renting it keeps it, and its status
+shows, for example, "Rented, out of service: broken lock". **Back in
+Service** undoes it, and **Out of service** in the menu above the list shows
+just these boxes.
 
 ### Prices
 
@@ -308,6 +360,32 @@ addresses; the notes help staff pick the right one. An address typed but not
 added is saved with the box anyway. The **Forwarding Addresses** and
 **Alternate Business Names** sections fold up to save room; click the heading
 to open one. Each heading says how many there are.
+
+### Dated notes
+
+Besides the **Notes** box, which is rewritten as things change, Edit Box has
+a **Dated Notes** section for keeping a history of what happens with a box,
+such as "Called about late payment". Type the note and click **Add Note**;
+it's dated today unless you choose an earlier day first, for something that
+happened before. To change a note, select it and click **Edit**, which puts
+it back in the fields to change and add again; **Remove** deletes it.
+Nothing is saved until you click **Save**. The box's details list the dated
+notes newest first. Add New Box doesn't have them, since a new box has no
+history yet.
+
+### Holding mail
+
+When a box holder asks the shop to hold their mail, such as while they're
+on vacation, open **Mail Hold** on Add New Box or Edit Box. Choose the first
+day under **From** and the last under **Until**, add a note if it helps,
+such as "forward it all on the 20th", and click **Save**. While the hold is
+on, the box's details say so at the top, and Manage Boxes and Renewals show
+the box number as, for example, "12 (holding)". **Holding mail** in the menu
+next to the search on Manage Boxes lists just those boxes. A hold set for
+later days shows on the box's details as "Will hold mail …" until it starts.
+
+The hold ends by itself after its last day; there's nothing to remove. To
+end one sooner, click **Clear** in the Mail Hold section and save.
 
 ### Forwarding labels
 
@@ -412,10 +490,14 @@ the computer itself fails. To keep copies somewhere else:
   Each daily backup is copied there too, and old copies are deleted the same
   way. If the folder isn't available when the app starts (for example, the
   USB drive is unplugged), the app shows a warning and tries again next time.
-- **Whenever you like:** click **Back Up Now…** and pick a folder. It saves a
-  backup named with the date and time, such as
-  `mailboxes-backup-2026-09-26-143005.db`. These are never deleted
-  automatically.
+- **Whenever you like:** click **Back Up Now…**. It saves a backup named
+  with the date and time, such as `mailboxes-backup-2026-09-26-143005.db`,
+  in the backups folder, where **Restore a Backup…** lists it. It then asks
+  whether to save a copy somewhere else too: **Downloads**, ready to drag
+  onto a USB drive or send to someone, the folder set as **Also copy backups
+  to** if there is one, or any folder with **Choose Folder…**. Click **No
+  Thanks** to keep just the one in the backups folder. Backups saved this
+  way are never deleted automatically, wherever they are.
 
 ### Backing up to Google Drive
 
@@ -539,12 +621,15 @@ src/main/java/org/lfps/mailboxes/
                     LabelRepository (forwarding label numbers and records)
   drive/            Google Drive backups: DriveBackup (connect, upload, download),
                     GoogleDrive (talks to Google), DriveAccount (the saved sign-in)
-  model/            Mailbox, ForwardingAddress, RentalPeriod, InventoryBox, PrintedLabel, and
-                    DepositOutcome
+  importing/        Import Boxes: ImportTemplate (the .xlsx template), ImportReader (reads .xlsx
+                    and .csv), ImportCheck (checks each row), ImportRow, and ImportColumn
+  model/            Mailbox, ForwardingAddress, RentalPeriod, InventoryBox, PrintedLabel,
+                    DepositOutcome, DatedNote, and MailHold
   view/             one class per screen, plus AppWindow (menu bar, text size), SettingsView,
                     GoogleDriveRow, RestoreView, PriceSheet (the printed price sheet and
                     reminders), ForwardingLabel and ForwardingLabelView (forwarding labels),
-                    Printing, and TableOutput (printing and saving lists)
+                    DatedNotesEditor and MailHoldEditor (sections of Edit Box),
+                    KeyboardShortcutsView, Printing, and TableOutput (printing and saving lists)
   util/             input validation, box number sorting, money, rental lengths, error
                     messages, and runtime info
   Launcher.java     the entry point of the jar and installers, which hands off to App

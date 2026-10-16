@@ -101,13 +101,15 @@ class LabelRepositoryTest {
   }
 
   @Test
-  void deletingABoxDeletesItsLabels() throws SQLException {
+  void erasingABoxDeletesItsLabelsButDeletingItKeepsThem() throws SQLException {
     var gone = box("12");
     var kept = box("13");
     labels.record(gone, List.of("Ada"), OCT_7_NOON);
     labels.record(kept, List.of("Grace"), OCT_7_NOON);
 
-    new MailboxRepository().delete(gone);
+    new MailboxRepository().delete(gone, LocalDate.of(2026, 10, 8));
+    assertEquals(2, labels.findAll().size());
+    new MailboxRepository().eraseForever(gone);
 
     assertEquals(List.of(kept), labels.findAll().stream().map(PrintedLabel::getMailboxId)
         .collect(Collectors.toList()));
