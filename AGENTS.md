@@ -4,18 +4,29 @@ Mailbox Manager is a JavaFX desktop app used by Lake Forest Pack and Ship.
 The README covers building, testing, the project layout, and releasing; read
 it before making changes. This file covers how to work in the repository.
 
-## Branches
+## Issues and branches
 
-- Never commit directly to `main`. Before changing anything, check the
-  current branch. If it's `main`, create a branch for the work first.
-- Name branches after the version they're for: `1.7-features` for a minor
-  release, `1.6.1-features` for a patch release. If a branch for the next
-  version already exists, keep working on it rather than starting another.
-- Merge into `main` only when the user asks, and push only when they ask.
-  When finishing a release, a yes to the merge also covers pushing `main`
-  (see below).
-- After a release is tagged, its branch can be deleted once `git log
-  main..<branch>` is empty, locally and on GitHub.
+Work is planned in GitHub issues, and each issue gets its own branch.
+
+- Every piece of work starts from an issue, which the user opens. If asked
+  for something that has no issue, ask the user to open one, and don't
+  start until it exists. `gh issue view <number>` shows what it asks for.
+- Work on the branch linked to the issue, which the user creates from the
+  issue's page (Development → Create a branch). `gh issue develop --list
+  <number>` shows it; run `git fetch` first, then check it out. If the issue
+  has no branch, ask the user to create one.
+- Never commit directly to `main`, except for the release commit (see
+  "When finishing a release"). Before changing anything, check the current
+  branch.
+- Say which issue each commit is for at the end of its message, such as
+  "Part of #4".
+- When the issue's work is done, ask whether to open a pull request (see
+  below). The user reviews and merges it on GitHub and closes the issue, so
+  don't merge it or close the issue yourself.
+- Push only when the user asks. A yes to a pull request also covers pushing
+  its branch.
+- Once a pull request is merged, switch to `main`, pull it, and delete the
+  issue's local branch.
 
 ## Commits and checking in
 
@@ -77,9 +88,10 @@ Everything is documented, so someone new can read any file cold.
 
 ## When asked for a pull request
 
-Push the branch if the user agrees, then give them a title and description
-to paste in. The GitHub CLI may not be installed, so also give the link for
-opening it: `https://github.com/lfpackandship/mailbox-manager/compare/main...<branch>`.
+Push the branch if the user agrees, then open the pull request with `gh pr
+create`. If the GitHub CLI isn't installed, give the user a title and
+description to paste in instead, with the link for opening it:
+`https://github.com/lfpackandship/mailbox-manager/compare/main...<branch>`.
 
 The description is for whoever reviews and merges the branch, so unlike the
 release notes it can name code. Base it on `git log main..<branch>` and the
@@ -88,7 +100,8 @@ diff, not on memory, and keep it short:
 ```markdown
 ## Summary
 
-One or two sentences: what the branch does and why.
+One or two sentences: what the branch does and why, and which issue it's
+for, such as "Part of #4".
 
 ## Changes
 
@@ -112,16 +125,18 @@ Google Drive backups". Don't merge the pull request yourself unless asked.
 
 ## When finishing a release
 
-Do these in order. Steps 3 and 5 decide that the release is ready and
-publish it, so ask before each one and wait for a yes. Do the rest without
-asking.
+There's no release branch. The user decides when a release is ready, once
+the issues they want in it are merged into `main`, and says which version
+it is. Do these in order. Steps 3 and 5 publish the release, so ask before
+each one and wait for a yes. Do the rest without asking.
 
-1. Update the README for anything in the release that it describes.
-2. Make the release commit, as in the README's release steps: set the
-   version in `pom.xml`, turn "Unreleased" in CHANGELOG.md into the version
-   and today's date, and commit it as `Release x.y.z`.
-3. Ask, then merge the branch into `main` with a merge commit
-   (`git merge --no-ff`) and push `main`.
+1. Switch to `main` and pull it. Check that `git status` is clean.
+2. Make the release commit on `main`, the one commit that doesn't go on an
+   issue branch, as in the README's release steps: update the README for
+   anything in the release that it describes, set the version in
+   `pom.xml`, turn "Unreleased" in CHANGELOG.md into the version and
+   today's date, and commit it as `Release x.y.z`.
+3. Ask, then push `main`.
 4. Wait for the tests to pass in GitHub Actions. If you can't see them, ask
    the user to say when they have.
 5. Ask, then tag the release commit `vx.y.z` and push the tag, which builds
@@ -132,8 +147,6 @@ asking.
    ask the user to look.
 7. Give the user release notes to paste into the GitHub release (edit the
    release, replace the generated notes), as described below.
-8. Delete the branch, locally and on GitHub, once `git log main..<branch>`
-   is empty.
 
 The release notes are for the people who use the app, not developers.
 Write them like the earlier releases on the releases page:

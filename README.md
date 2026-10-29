@@ -642,17 +642,21 @@ To add a setting, declare it in `data/Setting.java`, add a field for it in
 `view/SettingsView.java`, and read it with `SettingsRepository` where it's
 used. To add a menu item, edit `buildMenuBar` in `view/AppWindow.java`.
 
-### Branches
+### Issues and branches
 
-Work for each version goes on its own branch, named for that version, such
-as `1.7-features` or `1.6.1-features`, and is merged into `main` when it's
-ready to release. Nothing is committed to `main` directly. Once a version is
-released and its branch is fully merged, the branch is deleted.
+Work is planned in GitHub issues. Each issue gets its own branch, created
+from the issue's page (Development → Create a branch), and comes back to
+`main` through a pull request that's reviewed and merged on GitHub. Nothing
+is committed to `main` directly except the release commit. Once a pull
+request is merged, its branch is deleted.
 
 Instructions for AI coding agents, including these rules, are in
 [AGENTS.md](AGENTS.md). Claude Code reads them through `CLAUDE.md`.
 
 ### Releasing
+
+A release is made when it's ready, from whatever has been merged into
+`main` by then.
 
 1. Update the version in `pom.xml` and commit it (`Release x.y.z`). Versions
    must be three numbers, x.y.z, because the macOS installer accepts nothing
