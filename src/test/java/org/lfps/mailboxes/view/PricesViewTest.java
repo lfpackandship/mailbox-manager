@@ -3,6 +3,7 @@ package org.lfps.mailboxes.view;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.Map;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -64,7 +66,7 @@ class PricesViewTest {
   }
 
   @Test
-  void showsARowForEachSizeAndTheDefaultWithSavedPrices() throws SQLException {
+  void showsAColumnForEachSizeAndTheDefaultWithSavedPrices() throws SQLException {
     prices.save(Map.of(PriceRepository.key("large", 6), 9000L));
     var window = openPrices();
 
@@ -73,6 +75,26 @@ class PricesViewTest {
     }
     assertEquals("$90.00", FxTestSupport.call(() -> field(window, "price-large-6").getText()));
     assertEquals("", FxTestSupport.call(() -> field(window, "price-small-6").getText()));
+  }
+
+  @Test
+  void laysOutSizesAcrossWithWhatTheyMeasureAboveARowForEachLength() {
+    var window = openPrices();
+
+    FxTestSupport.run(() -> {
+      var measures = field(window, "measures-large");
+      var shortest = field(window, "price-large-1");
+      var longest = field(window, "price-large-12");
+      assertEquals(GridPane.getColumnIndex(measures), GridPane.getColumnIndex(shortest));
+      assertEquals(GridPane.getColumnIndex(measures), GridPane.getColumnIndex(longest));
+      assertTrue(GridPane.getRowIndex(measures) < GridPane.getRowIndex(shortest));
+      assertTrue(GridPane.getRowIndex(shortest) < GridPane.getRowIndex(longest));
+      var small = field(window, "price-small-1");
+      var byDefault = field(window, "price-default-1");
+      assertEquals(GridPane.getRowIndex(shortest), GridPane.getRowIndex(small));
+      assertTrue(GridPane.getColumnIndex(shortest) < GridPane.getColumnIndex(byDefault));
+      assertTrue(GridPane.getColumnIndex(small) < GridPane.getColumnIndex(byDefault));
+    });
   }
 
   @Test

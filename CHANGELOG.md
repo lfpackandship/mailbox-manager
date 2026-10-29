@@ -3,6 +3,15 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## Unreleased
+
+### Changed
+
+- **Prices** and **Price Change** are laid out like the printed price sheet:
+  a column for each box size, with the default price last, and a row for
+  each rental length. On **Prices**, what each size measures goes in the
+  **Measures** row at the top, under the size's name.
+
 ## 1.11.0 – 2026-10-16
 
 ### Added

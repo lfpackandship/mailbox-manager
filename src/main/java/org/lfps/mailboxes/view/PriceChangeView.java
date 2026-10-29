@@ -87,7 +87,7 @@ final class PriceChangeView {
     dateField.setId("priceChangeDate");
     dateField.setStyle("-fx-pref-width: 12em;");
 
-    var grid = new PriceGrid(sizes, lengths, change == null ? today : change.applyTo(today), "newPrice");
+    var grid = new PriceGrid(sizes, lengths, change == null ? today : change.applyTo(today), "newPrice", 0);
 
     var messageField = new TextArea(message);
     messageField.setId("priceChangeMessageField");
