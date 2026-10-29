@@ -27,10 +27,10 @@ import org.lfps.mailboxes.util.RentalLengths;
 
 /**
  * A window for setting the price of each box size for each rental length, as
- * a grid with a row per size, cheapest first, and a column per rental
- * length. Choosing a
- * rental length on Add New Box or when renewing fills in the price. What
- * each size measures is also entered here, for the printed price sheet.
+ * a grid with a column per size, cheapest first, and a row per rental length,
+ * like the printed price sheet. Choosing a rental length on Add New Box or
+ * when renewing fills in the price. What each size measures is also entered
+ * here, in a row above the prices, for the printed price sheet.
  */
 final class PricesView {
 
@@ -71,25 +71,25 @@ final class PricesView {
       showError(resultLabel, "Failed to load prices: " + e.getMessage());
     }
 
-    var priceGrid = new PriceGrid(sizes, lengths, saved, "price");
+    // Leave a row under the size headings for what each size measures.
+    var priceGrid = new PriceGrid(sizes, lengths, saved, "price", sizes.isEmpty() ? 0 : 1);
     var grid = priceGrid.grid;
     var measuresHeader = new Label("Measures");
     measuresHeader.setStyle("-fx-font-weight: bold;");
-    var measuresCol = lengths.size() + 1;
     if (!sizes.isEmpty()) {
-      grid.add(measuresHeader, measuresCol, 0);
+      grid.add(measuresHeader, 0, 1);
     }
 
     // What each size measures, for the price sheet, keyed by size.
     var descriptionFields = new LinkedHashMap<String, TextField>();
-    for (var row = 0; row < sizes.size(); row++) {
-      var size = sizes.get(row);
+    for (var col = 0; col < sizes.size(); col++) {
+      var size = sizes.get(col);
       var description = new TextField(savedDescriptions.getOrDefault(size.toLowerCase(), ""));
       description.setId("measures-" + size.toLowerCase());
       description.setPromptText("e.g. 3¾\" x 5\" x 14\"");
       description.setStyle("-fx-pref-width: 11em;");
       descriptionFields.put(size, description);
-      grid.add(description, measuresCol, row + 1);
+      grid.add(description, col + 1, 1);
     }
 
     var explanation = new Label((sizes.isEmpty()

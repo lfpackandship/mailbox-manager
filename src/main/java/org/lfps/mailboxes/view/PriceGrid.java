@@ -15,13 +15,17 @@ import org.lfps.mailboxes.util.Money;
 import org.lfps.mailboxes.util.RentalLengths;
 
 /**
- * A grid of price fields, with a row for each box size and the default
- * price, and a column for each rental length. Used on the Prices window for
- * today's prices and on the Price Change window for the new ones.
+ * A grid of price fields, with a column for each box size and the default
+ * price, and a row for each rental length, laid out like the printed price
+ * sheet. Used on the Prices window for today's prices and on the Price Change
+ * window for the new ones.
  */
 final class PriceGrid {
 
-  /** The grid, to add to a window. Columns after the prices are free for other fields. */
+  /**
+   * The grid, to add to a window. Rows between the size headings and the
+   * prices are left free for other fields, such as what each size measures.
+   */
   final GridPane grid = new GridPane();
 
   /** Each price field, keyed like the prices in {@link PriceRepository}. */
@@ -30,36 +34,37 @@ final class PriceGrid {
   /**
    * Builds the grid.
    *
-   * @param sizes the sizes, one row each, followed by a row for the default price
-   * @param lengths the rental lengths, one column each
+   * @param sizes the sizes, one column each, followed by a column for the default price
+   * @param lengths the rental lengths, one row each
    * @param prices the prices to fill in, keyed by {@link PriceRepository#key(String, int)}
    * @param idPrefix starts each field's id, which is followed by the size and length
+   * @param freeRows how many rows to leave empty under the size headings, for
+   *     other fields; 0 puts the prices straight under the headings
    */
-  PriceGrid(List<String> sizes, List<Integer> lengths, Map<String, Long> prices, String idPrefix) {
+  PriceGrid(List<String> sizes, List<Integer> lengths, Map<String, Long> prices, String idPrefix, int freeRows) {
     grid.setHgap(10);
     grid.setVgap(8);
-    for (var col = 0; col < lengths.size(); col++) {
-      var header = new Label(RentalLengths.label(lengths.get(col)));
-      header.setStyle("-fx-font-weight: bold;");
+    var columns = new ArrayList<String>(sizes);
+    columns.add(PriceRepository.DEFAULT_SIZE);
+    for (var col = 0; col < columns.size(); col++) {
+      var size = columns.get(col);
+      var header = new Label(size.isEmpty() ? "Default" : size);
+      header.setStyle(size.isEmpty() ? "-fx-font-weight: bold; -fx-font-style: italic;" : "-fx-font-weight: bold;");
       grid.add(header, col + 1, 0);
     }
 
-    var rows = new ArrayList<String>(sizes);
-    rows.add(PriceRepository.DEFAULT_SIZE);
-    for (var row = 0; row < rows.size(); row++) {
-      var size = rows.get(row);
-      var label = new Label(size.isEmpty() ? "Default:" : size + ":");
-      if (size.isEmpty()) {
-        label.setStyle("-fx-font-style: italic;");
-      }
-      grid.add(label, 0, row + 1);
-      for (var col = 0; col < lengths.size(); col++) {
-        var key = PriceRepository.key(size, lengths.get(col));
+    var firstPriceRow = 1 + freeRows;
+    for (var row = 0; row < lengths.size(); row++) {
+      var length = lengths.get(row);
+      grid.add(new Label(RentalLengths.label(length)), 0, firstPriceRow + row);
+      for (var col = 0; col < columns.size(); col++) {
+        var size = columns.get(col);
+        var key = PriceRepository.key(size, length);
         var field = new TextField();
-        field.setId(idPrefix + "-" + (size.isEmpty() ? "default" : size.toLowerCase()) + "-" + lengths.get(col));
+        field.setId(idPrefix + "-" + (size.isEmpty() ? "default" : size.toLowerCase()) + "-" + length);
         field.setStyle("-fx-pref-width: 7em;");
         fields.put(key, field);
-        grid.add(field, col + 1, row + 1);
+        grid.add(field, col + 1, firstPriceRow + row);
       }
     }
     show(prices);
