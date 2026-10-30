@@ -175,6 +175,45 @@ class PriceSheetTest {
   }
 
   @Test
+  void bothPricesFitOnOneLineWhenEveryPriceChanges() {
+    var after = new PriceSheet.Content("Lake Forest Pack and Ship", "", "", "", "", "", "",
+        List.of(3, 6, 12), List.of(
+            new PriceSheet.Column("Small", "Small", "3¾\" x 5\" x 14\"", Map.of(3, 10000L, 6, 20000L, 12, 30000L)),
+            new PriceSheet.Column("Medium", "Medium", "7½\" x 5\" x 14\"",
+                Map.of(3, 12000L, 6, 22000L, 12, 35000L)),
+            new PriceSheet.Column("Large", "Large", "15\" x 10\" x 14\"",
+                Map.of(3, 18000L, 6, 28000L, 12, 45000L))));
+    var page = layOut(PriceSheet.notice(content(), after, box(LocalDate.of(2026, 10, 31)), "Small",
+        LocalDate.of(2026, 11, 1), TODAY));
+
+    var oneLine = FxTestSupport.call(() -> label(page, "noticeBox").getFont().getSize() * 2);
+    for (var months : List.of(3, 6, 12)) {
+      for (var col = 0; col < 3; col++) {
+        var id = "#noticePrice-" + months + "-" + col;
+        var cell = FxTestSupport.call(() -> page.lookup(id).lookup(".label"));
+        assertTrue(FxTestSupport.call(() -> ((Label) cell).getText()).contains("→"), id);
+        assertTrue(FxTestSupport.call(() -> cell.getBoundsInLocal().getHeight()) < oneLine, id + " is on one line");
+      }
+    }
+    assertTrue(FxTestSupport.call(page::getWidth) <= PriceSheet.PAGE_WIDTH + 8);
+  }
+
+  @Test
+  void everyPriceColumnIsTheSameWidth() {
+    var notice = layOut(notice(content(), "medium"));
+    var sheet = layOut(PriceSheet.page(content(), TODAY));
+
+    for (var prefix : List.of("notice", "sheet")) {
+      var page = prefix.equals("notice") ? notice : sheet;
+      var first = FxTestSupport.call(() -> page.lookup("#" + prefix + "Header-0").getBoundsInParent().getWidth());
+      for (var col = 1; col < 3; col++) {
+        var id = "#" + prefix + "Header-" + col;
+        assertEquals(first, FxTestSupport.call(() -> page.lookup(id).getBoundsInParent().getWidth()), 1, id);
+      }
+    }
+  }
+
+  @Test
   void anUnchangedPriceIsShownOnceWithoutAnArrow() {
     var page = layOut(notice(content(), "medium"));
 
@@ -293,15 +332,16 @@ class PriceSheetTest {
 
   /**
    * Builds a price change notice for box 12 starting November 1, 2026, from
-   * the given prices: Medium goes up for 3 months, Small has no 6-month price
+   * the given prices, with every size's measurements: Medium goes up for 3 months, Small has no 6-month price
    * any more, Large gains a 24-month price, and everything else stays the same.
    */
   private static Region notice(PriceSheet.Content current, String size) {
     var after = new PriceSheet.Content("Lake Forest Pack and Ship", "", "", "", "", "", "",
         List.of(3, 6, 12, 24), List.of(
             new PriceSheet.Column("Small", "Small", "3¾\" x 5\" x 14\"", Map.of(3, 9000L, 12, 24000L)),
-            new PriceSheet.Column("Medium", "Medium", "", Map.of(3, 11000L, 6, 18000L, 12, 30000L)),
-            new PriceSheet.Column("Large", "Large", "", Map.of(3, 15000L, 6, 26000L, 12, 40000L, 24, 50000L))));
+            new PriceSheet.Column("Medium", "Medium", "7½\" x 5\" x 14\"", Map.of(3, 11000L, 6, 18000L, 12, 30000L)),
+            new PriceSheet.Column("Large", "Large", "15\" x 10\" x 14\"",
+                Map.of(3, 15000L, 6, 26000L, 12, 40000L, 24, 50000L))));
     return PriceSheet.notice(current, after, box(LocalDate.of(2026, 10, 31)), size, LocalDate.of(2026, 11, 1),
         TODAY);
   }

@@ -282,7 +282,8 @@ final class PriceSheet {
       body.getChildren().add(none);
     } else {
       body.getChildren().add(table(marked, content, mailbox == null ? null : content.columnFor(size), "sheet",
-          "sizeCircle", (column, months) -> price(column.prices.get(months))));
+          "sizeCircle", false,
+          (column, months) -> price(column.prices.get(months), 15)));
     }
 
     addNoteAndDate(body, content, (mailbox == null ? "Prices as of " : "Printed ") + longDate(today));
@@ -350,7 +351,7 @@ final class PriceSheet {
     body.getChildren().add(heading("New prices from " + longDate(startsOn)));
     var both = combined(current, after);
     body.getChildren().add(both.columns.isEmpty() ? new Label("No prices are set.")
-        : table(marked, both, both.columnFor(size), "notice", "sizeCircle",
+        : table(marked, both, both.columnFor(size), "notice", "sizeCircle", true,
             (column, months) -> change(priceOf(current, column, months), priceOf(after, column, months))));
 
     addNoteAndDate(body, after, "Printed " + longDate(today));
@@ -605,18 +606,27 @@ final class PriceSheet {
    * @param circled the column to circle, or {@code null} for none
    * @param idPrefix starts the ids of the table's parts, such as "sheet"
    * @param circleId the circle's id
+   * @param compact whether to make room for two prices on one line in each
+   *     cell, as on a price change notice: the rental lengths' column is only
+   *     as wide as its labels, and the cells have less room on their sides
    * @param price makes what's shown in the cell for a column and rental
    *     length in months
    * @return the table
    */
   private static Node table(Marked marked, Content content, Column circled, String idPrefix, String circleId,
-      BiFunction<Column, Integer, Node> price) {
+      boolean compact, BiFunction<Column, Integer, Node> price) {
     var grid = new GridPane();
     grid.setId(idPrefix + "Prices");
     grid.setStyle("-fx-border-color: black; -fx-border-width: 0 1 1 0;");
-    grid.getColumnConstraints().add(new ColumnConstraints(110));
+    var lengthsColumn = new ColumnConstraints(compact ? Region.USE_COMPUTED_SIZE : 110);
+    lengthsColumn.setHgrow(Priority.NEVER);
+    grid.getColumnConstraints().add(lengthsColumn);
     for (var i = 0; i < content.columns.size(); i++) {
       var constraints = new ColumnConstraints();
+      // Every column starts from nothing and gets an equal share of the
+      // width, so all the price boxes are the same size.
+      constraints.setMinWidth(0);
+      constraints.setPrefWidth(0);
       constraints.setHgrow(Priority.ALWAYS);
       constraints.setHalignment(HPos.CENTER);
       grid.getColumnConstraints().add(constraints);
@@ -625,7 +635,8 @@ final class PriceSheet {
     grid.setPrefWidth(PAGE_WIDTH - 24);
     grid.setMaxWidth(PAGE_WIDTH - 24);
 
-    grid.add(cell(new Label(""), Pos.CENTER_LEFT), 0, 0);
+    var sides = compact ? 7 : 10;
+    grid.add(cell(new Label(""), Pos.CENTER_LEFT, sides), 0, 0);
     for (var col = 0; col < content.columns.size(); col++) {
       var column = content.columns.get(col);
       var heading = new Label(column.heading);
@@ -641,7 +652,7 @@ final class PriceSheet {
         measures.setMinHeight(Region.USE_PREF_SIZE);
         header.getChildren().add(measures);
       }
-      var headerCell = cell(header, Pos.CENTER);
+      var headerCell = cell(header, Pos.CENTER, sides);
       headerCell.setId(idPrefix + "Header-" + col);
       grid.add(headerCell, col + 1, 0);
     }
@@ -650,9 +661,9 @@ final class PriceSheet {
       var months = content.lengths.get(row);
       var length = new Label(RentalLengths.label(months));
       length.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
-      grid.add(cell(length, Pos.CENTER_LEFT), 0, row + 1);
+      grid.add(cell(length, Pos.CENTER_LEFT, sides), 0, row + 1);
       for (var col = 0; col < content.columns.size(); col++) {
-        var priceCell = cell(price.apply(content.columns.get(col), months), Pos.CENTER);
+        var priceCell = cell(price.apply(content.columns.get(col), months), Pos.CENTER, sides);
         priceCell.setId(idPrefix + "Price-" + months + "-" + col);
         grid.add(priceCell, col + 1, row + 1);
       }
@@ -681,11 +692,12 @@ final class PriceSheet {
    * Shows a price in a cell of the table.
    *
    * @param cents the price in cents, or {@code null} for a dash
+   * @param size the text size, in points
    * @return the price's label
    */
-  private static Label price(Long cents) {
+  private static Label price(Long cents, int size) {
     var label = new Label(cents == null ? "—" : Money.format(cents));
-    label.setStyle("-fx-font-size: 15px;");
+    label.setStyle("-fx-font-size: " + size + "px;");
     return label;
   }
 
@@ -693,7 +705,8 @@ final class PriceSheet {
    * Shows how a price changes in a cell of a price change notice: both
    * prices with an arrow between them, or just one if it isn't changing.
    * A price that's only new says NEW under it, and one with no new price says
-   * NO LONGER OFFERED.
+   * NO LONGER OFFERED. The prices are a little smaller than on the price
+   * sheet, so two fit on one line with three sizes.
    *
    * @param before today's price in cents, or {@code null} if there's none
    * @param after the new price in cents, or {@code null} if there's none
@@ -701,10 +714,10 @@ final class PriceSheet {
    */
   private static Node change(Long before, Long after) {
     if (before == null && after == null || before != null && before.equals(after)) {
-      return price(after);
+      return price(after, 13);
     }
     if (before == null || after == null) {
-      var shown = price(before == null ? after : before);
+      var shown = price(before == null ? after : before, 13);
       var tag = new Label(before == null ? "NEW" : "NO LONGER OFFERED");
       tag.setStyle("-fx-font-size: 11px; -fx-font-weight: bold;");
       tag.setWrapText(true);
@@ -713,8 +726,8 @@ final class PriceSheet {
       both.setAlignment(Pos.CENTER);
       return both;
     }
-    var label = price(before);
-    label.setText(Money.format(before) + " → " + Money.format(after));
+    var label = new Label(Money.format(before) + " → " + Money.format(after));
+    label.setStyle("-fx-font-size: 13px;");
     // Wraps after the arrow if the column is too narrow for both prices.
     label.setWrapText(true);
     label.setTextAlignment(TextAlignment.CENTER);
@@ -727,12 +740,13 @@ final class PriceSheet {
    *
    * @param content what's in the cell
    * @param alignment where in the cell it goes
+   * @param sides how much room is left on its left and right, in points
    * @return the cell
    */
-  private static StackPane cell(Node content, Pos alignment) {
+  private static StackPane cell(Node content, Pos alignment, double sides) {
     var cell = new StackPane(content);
     StackPane.setAlignment(content, alignment);
-    cell.setPadding(new Insets(8, 10, 8, 10));
+    cell.setPadding(new Insets(8, sides, 8, sides));
     cell.setStyle("-fx-border-color: black; -fx-border-width: 1 0 0 1;");
     cell.setMaxWidth(Double.MAX_VALUE);
     cell.setMaxHeight(Double.MAX_VALUE);
@@ -827,7 +841,9 @@ final class PriceSheet {
         circle.setY(area.getMinY() - pad[1]);
         circle.setWidth(width);
         circle.setHeight(height);
-        circle.setArcWidth(round);
+        // Corners no rounder than half the width, so a circle around a
+        // column doesn't cut into the text in its bottom cell.
+        circle.setArcWidth(Math.min(round, width * 0.5));
         circle.setArcHeight(Math.min(round, height * 0.6));
       }
     }
