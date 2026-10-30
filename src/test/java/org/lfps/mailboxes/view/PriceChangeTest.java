@@ -1,6 +1,7 @@
 package org.lfps.mailboxes.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -183,10 +185,50 @@ class PriceChangeTest {
   }
 
   @Test
+  void theNewPricesCanBeTurnedOffOnThePriceSheet() throws SQLException {
+    prices.scheduleChange(NEXT_MONTH, Map.of(PriceRepository.key("small", 3), 9500L));
+    FxTestSupport.run(() -> PriceSheetView.showPriceSheet(mainWindow));
+    var check = FxTestSupport.call(() -> (CheckBox) printWindow().getScene().lookup("#showNewPricesCheck"));
+    assertTrue(FxTestSupport.call(check::isSelected), "ticked to start with");
+
+    FxTestSupport.run(() -> check.setSelected(false));
+
+    assertEquals("$90.00", FxTestSupport.call(() -> previewPrice(printWindow(), "sheetPrice-3-0")));
+    assertFalse(FxTestSupport.call(() -> printWindow().getScene().getRoot().lookupAll(".label").stream()
+        .anyMatch(node -> ((Label) node).getText().startsWith("New prices from"))));
+  }
+
+  @Test
+  void theNewPricesCanBeTurnedOffOnReminders() throws SQLException {
+    prices.scheduleChange(NEXT_MONTH, Map.of(PriceRepository.key("small", 3), 9500L));
+    var box = new Mailbox(0, "Ada", "Lovelace", null, "1", null, "", null, null, LocalDate.now(), null);
+    new MailboxRepository().insert(box);
+    FxTestSupport.run(() -> PriceSheetView.showReminders(mainWindow, List.of(box)));
+
+    FxTestSupport.run(() -> ((CheckBox) printWindow().getScene().lookup("#showNewPricesCheck")).setSelected(false));
+
+    assertEquals("$90.00", FxTestSupport.call(() -> previewPrice(printWindow(), "sheetPrice-3-0")));
+    assertNotNull(FxTestSupport.call(() -> printWindow().getScene().lookup("#sizeCircle")));
+  }
+
+  @Test
   void thePriceSheetIsUnchangedWithNoPriceChangeComingUp() {
     FxTestSupport.run(() -> PriceSheetView.showPriceSheet(mainWindow));
 
     assertEquals("$90.00", FxTestSupport.call(() -> previewPrice(printWindow(), "sheetPrice-3-0")));
+    assertNull(FxTestSupport.call(() -> printWindow().getScene().lookup("#showNewPricesCheck")));
+  }
+
+  @Test
+  void noticesHaveNoChoiceAboutShowingTheNewPrices() throws SQLException {
+    prices.scheduleChange(NEXT_MONTH, Map.of(PriceRepository.key("small", 3), 9500L));
+    var box = new Mailbox(0, "Ada", "Lovelace", null, "1", null, "", null, null, LocalDate.now(), null);
+    new MailboxRepository().insert(box);
+
+    var change = prices.findChange();
+    FxTestSupport.run(() -> PriceSheetView.showNotices(mainWindow, List.of(box), change));
+
+    assertNull(FxTestSupport.call(() -> printWindow().getScene().lookup("#showNewPricesCheck")));
   }
 
   /** Returns the open window for printing price sheets, reminders, or notices. */

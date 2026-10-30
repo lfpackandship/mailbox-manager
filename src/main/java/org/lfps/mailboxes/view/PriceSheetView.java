@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -15,6 +16,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
@@ -212,6 +214,18 @@ final class PriceSheetView {
     }
     updatePrintButton.run();
 
+    // On the price sheet and reminders, whether to show a price change that's
+    // coming up. Ticked to start with; notices always show it.
+    var showNewPrices = new CheckBox(upcoming == null ? "" : "Show the new prices from "
+        + upcoming.startsOn.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)));
+    showNewPrices.setId("showNewPricesCheck");
+    showNewPrices.setSelected(true);
+    showNewPrices.setWrapText(true);
+    var offerNewPrices = kind != Kind.NOTICES && upcoming != null;
+    Supplier<List<Region>> chosenPages = () -> showNewPrices.isSelected()
+        ? pages(kind, content, after, upcoming, boxes, ticked, today)
+        : pages(kind, content, null, null, boxes, ticked, today);
+
     Runnable showPreview = () -> {
       if (content == null) {
         return;
@@ -220,12 +234,17 @@ final class PriceSheetView {
       if (reminders && box == null) {
         box = boxes.get(0);
       }
-      var page = page(kind, content, after, upcoming, box, today);
+      var page = showNewPrices.isSelected() ? page(kind, content, after, upcoming, box, today)
+          : page(kind, content, null, null, box, today);
       page.getTransforms().setAll(new Scale(PREVIEW_SCALE, PREVIEW_SCALE));
       preview.getChildren().setAll(new Group(page));
     };
 
     var left = new VBox(8);
+    if (offerNewPrices) {
+      showNewPrices.selectedProperty().addListener((obs, was, now) -> showPreview.run());
+      left.getChildren().add(showNewPrices);
+    }
     if (reminders) {
       var dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
       list.getItems().setAll(boxes);
@@ -271,7 +290,7 @@ final class PriceSheetView {
     left.setMinWidth(Region.USE_PREF_SIZE);
 
     printBtn.setOnAction(e -> {
-      var pages = pages(kind, content, after, upcoming, boxes, ticked, today);
+      var pages = chosenPages.get();
       Printing.print(kind.jobName, pages, resultLabel, reminders ? "Printed " + kind.count(pages.size()) : "Printed");
     });
 
@@ -279,8 +298,7 @@ final class PriceSheetView {
     pdfBtn.setId("savePdfButton");
     pdfBtn.disableProperty().bind(printBtn.disableProperty());
     pdfBtn.setOnAction(e -> Printing.savePdf(stage,
-        kind.filePrefix + today + ".pdf", pages(kind, content, after, upcoming, boxes, ticked, today),
-        resultLabel));
+        kind.filePrefix + today + ".pdf", chosenPages.get(), resultLabel));
 
     var closeBtn = new Button("Close");
     closeBtn.setId("printCloseButton");
