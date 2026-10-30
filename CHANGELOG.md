@@ -10,6 +10,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 - Email addresses with more than one dot after the @, such as
   jane@mail.example.com or bob@company.co.uk, were turned down as "not
   valid" on Add New Box, Edit Box, and Import Boxes. They're now accepted.
+- A phone number typed or imported with a 1 in front, such as
+  1-847-615-0222, was saved and shown wrong, as (184) 761-5022. The 1 is now
+  left off, so it's (847) 615-0222. A box that already shows the wrong number
+  needs it corrected on Edit Box.
 
 ## 1.11.1 – 2026-10-29
 
