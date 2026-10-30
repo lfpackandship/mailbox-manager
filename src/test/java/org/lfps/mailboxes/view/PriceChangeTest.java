@@ -173,14 +173,19 @@ class PriceChangeTest {
 
   @Test
   void renewalRemindersShowPricesThatAreAboutToChange() throws SQLException {
-    // A 12-month price, which there isn't one of today.
-    prices.scheduleChange(NEXT_MONTH, Map.of(PriceRepository.key("small", 12), 24000L));
+    // A 12-month price, which there isn't one of today, and no 6-month price.
+    var newPrices = new java.util.HashMap<String, Long>();
+    newPrices.put(PriceRepository.key("small", 12), 24000L);
+    newPrices.put(PriceRepository.key("small", 6), null);
+    prices.scheduleChange(NEXT_MONTH, newPrices);
     var box = new Mailbox(0, "Ada", "Lovelace", null, "1", null, "", null, null, LocalDate.now(), null);
     new MailboxRepository().insert(box);
 
     FxTestSupport.run(() -> PriceSheetView.showReminders(mainWindow, List.of(box)));
 
     assertEquals("$240.00 NEW", FxTestSupport.call(() -> previewPrice(printWindow(), "sheetPrice-12-0")));
+    assertEquals("$150.00 NO LONGER OFFERED",
+        FxTestSupport.call(() -> previewPrice(printWindow(), "sheetPrice-6-0")));
     assertNotNull(FxTestSupport.call(() -> printWindow().getScene().lookup("#sizeCircle")));
   }
 
