@@ -47,6 +47,12 @@ class MoneyTest {
   }
 
   @Test
+  void saysTooLargeForAmountsTooLongToCount() {
+    var e = assertThrows(IllegalArgumentException.class, () -> Money.parse("123456789012345678901"));
+    assertEquals("The amount paid is too large. Check it and try again.", e.getMessage());
+  }
+
+  @Test
   void acceptsTheLargestAmount() {
     assertEquals(Money.MAX_CENTS, Money.parse("100000"));
   }

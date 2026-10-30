@@ -18,6 +18,9 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   name or note had an accented letter or a curly apostrophe, such as José or
   O’Brien, and said only "Input length = 1". Those files are now read, with
   their letters as typed.
+- An amount with 18 or more digits, such as one pasted by mistake, made
+  **Renew**, **Save**, and other buttons beside money fields do nothing, with
+  no message. It now says the amount is too large.
 
 ## 1.11.1 – 2026-10-29
 
