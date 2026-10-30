@@ -277,6 +277,38 @@ class PriceSheetTest {
   }
 
   @Test
+  void thePriceSheetShowsPricesThatAreAboutToChange() {
+    var page = layOut(PriceSheet.page(content(), after(), LocalDate.of(2026, 11, 1), null, null, TODAY));
+
+    assertEquals("$105.00 → $110.00", FxTestSupport.call(() -> cellText(page, "sheetPrice-3-1")));
+    assertEquals("$90.00", FxTestSupport.call(() -> cellText(page, "sheetPrice-3-0")));
+    assertTrue(FxTestSupport.call(() -> page.lookupAll(".label").stream()
+        .anyMatch(node -> "New prices from November 1, 2026".equals(((Label) node).getText()))));
+    assertNull(FxTestSupport.call(() -> page.lookup("#sizeCircle")));
+    assertEquals("Prices as of October 3, 2026", FxTestSupport.call(() -> label(page, "sheetDate").getText()));
+  }
+
+  @Test
+  void aReminderShowsPricesThatAreAboutToChangeWithTheSizeCircled() {
+    var page = layOut(PriceSheet.page(content(), after(), LocalDate.of(2026, 11, 1),
+        box(LocalDate.of(2026, 10, 31)), "medium", TODAY));
+
+    assertEquals("Mailbox Renewal Reminder", FxTestSupport.call(() -> label(page, "reminderTitle").getText()));
+    assertEquals("$105.00 → $110.00", FxTestSupport.call(() -> cellText(page, "sheetPrice-3-1")));
+    var sizeCircle = FxTestSupport.call(() -> bounds(page, page.lookup("#sizeCircle")));
+    assertTrue(sizeCircle.contains(FxTestSupport.call(() -> bounds(page, page.lookup("#sheetHeader-1")))));
+  }
+
+  @Test
+  void withNoPriceChangeThePriceSheetHasNoNewPricesHeading() {
+    var page = layOut(PriceSheet.page(content(), null, null, null, null, TODAY));
+
+    assertEquals("$90.00", FxTestSupport.call(() -> cellText(page, "sheetPrice-3-0")));
+    assertFalse(FxTestSupport.call(() -> page.lookupAll(".label").stream()
+        .anyMatch(node -> ((Label) node).getText().startsWith("New prices from"))));
+  }
+
+  @Test
   void aBoxWithNoSizeHasNoSizeCircledWithoutDefaultPrices() {
     var page = layOut(PriceSheet.page(content(), box(LocalDate.of(2026, 10, 31)), null, TODAY));
 
@@ -361,6 +393,19 @@ class PriceSheetTest {
                 Map.of(3, 15000L, 6, 26000L, 12, 40000L, 24, 50000L))));
     return PriceSheet.notice(current, after, box(LocalDate.of(2026, 10, 31)), size, LocalDate.of(2026, 11, 1),
         TODAY);
+  }
+
+  /** The prices from {@link #content()} once Medium's 3-month price goes up to $110.00. */
+  private static PriceSheet.Content after() {
+    var current = content();
+    var columns = new java.util.ArrayList<>(current.columns);
+    var medium = columns.get(1);
+    var prices = new java.util.HashMap<>(medium.prices);
+    prices.put(3, 11000L);
+    columns.set(1, new PriceSheet.Column(medium.size, medium.heading, medium.description, prices));
+    return new PriceSheet.Content(current.shopName, current.shopDetails, current.intro, current.note,
+        current.reminderMessage, current.forwardingReminderMessage, current.priceChangeMessage, current.lengths,
+        columns);
   }
 
   /** Makes box 12 for Ada Lovelace with the given end date. */
