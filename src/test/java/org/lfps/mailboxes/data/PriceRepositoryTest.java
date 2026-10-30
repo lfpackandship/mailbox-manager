@@ -68,6 +68,18 @@ class PriceRepositoryTest {
   }
 
   @Test
+  void aPriceTheChangeRemovesIsFoundAsNoPriceNotZero() throws SQLException {
+    prices.save(Map.of(PriceRepository.key("Small", 6), 15000L));
+    var newPrices = new HashMap<String, Long>();
+    newPrices.put(PriceRepository.key("Small", 6), null);
+    prices.scheduleChange(LocalDate.now().plusDays(1), newPrices);
+
+    var change = prices.findChange();
+    assertTrue(change.prices.containsKey(PriceRepository.key("Small", 6)));
+    assertNull(change.prices.get(PriceRepository.key("Small", 6)));
+  }
+
+  @Test
   void schedulingAgainReplacesTheChangeAndItCanBeCancelled() throws SQLException {
     prices.scheduleChange(LocalDate.now().plusDays(5), Map.of(PriceRepository.key("Small", 3), 9500L));
     prices.scheduleChange(LocalDate.now().plusDays(9), Map.of(PriceRepository.key("Large", 3), 16000L));

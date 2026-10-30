@@ -203,7 +203,10 @@ public class PriceRepository {
         ResultSet rs = stmt.executeQuery(SELECT_SCHEDULED_SQL)) {
       while (rs.next()) {
         var amount = rs.getLong("amount_cents");
-        prices.put(key(rs.getString("size"), rs.getInt("months")), rs.wasNull() ? null : amount);
+        // Checked straight after reading the amount, before reading anything
+        // else: a removed price is stored as NULL, which getLong reads as 0.
+        var removed = rs.wasNull();
+        prices.put(key(rs.getString("size"), rs.getInt("months")), removed ? null : amount);
         startsOn = LocalDate.parse(rs.getString("starts_on"));
       }
     }
