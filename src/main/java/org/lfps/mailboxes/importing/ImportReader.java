@@ -3,6 +3,9 @@ package org.lfps.mailboxes.importing;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,12 +51,30 @@ public final class ImportReader {
     if (name.endsWith(".xlsx")) {
       cells = readXlsx(file);
     } else if (name.endsWith(".csv")) {
-      cells = parseCsv(Files.readString(file, StandardCharsets.UTF_8));
+      cells = parseCsv(csvText(Files.readAllBytes(file)));
     } else {
       throw new IllegalArgumentException("Choose an Excel file (.xlsx) or a CSV file (.csv). In Numbers or "
           + "Google Sheets, export or download the spreadsheet as Excel first.");
     }
     return rows(cells);
+  }
+
+  /**
+   * Turns a CSV file's bytes into text. Most CSVs are UTF-8, but Excel on
+   * Windows saves "CSV (Comma delimited)" in the Windows encoding
+   * (windows-1252), so one that isn't valid UTF-8 is read that way instead.
+   * Otherwise a name like José would stop the import.
+   *
+   * @param bytes the file's contents
+   * @return the text
+   */
+  static String csvText(byte[] bytes) {
+    try {
+      // Unlike new String(bytes, UTF_8), a decoder reports bytes that aren't UTF-8.
+      return StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString();
+    } catch (CharacterCodingException notUtf8) {
+      return new String(bytes, Charset.forName("windows-1252"));
+    }
   }
 
   /**

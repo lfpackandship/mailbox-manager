@@ -14,6 +14,10 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
   1-847-615-0222, was saved and shown wrong, as (184) 761-5022. The 1 is now
   left off, so it's (847) 615-0222. A box that already shows the wrong number
   needs it corrected on Edit Box.
+- **Import Boxes** couldn't read a CSV file saved by Excel on Windows if a
+  name or note had an accented letter or a curly apostrophe, such as José or
+  O’Brien, and said only "Input length = 1". Those files are now read, with
+  their letters as typed.
 
 ## 1.11.1 – 2026-10-29
 

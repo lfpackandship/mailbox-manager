@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -85,6 +86,29 @@ class ImportReaderTest {
     var rows = ImportReader.read(file);
 
     assertEquals("Ada", rows.get(0).get(ImportColumn.FIRST_NAME));
+  }
+
+  @Test
+  void readsAccentsInAUtf8CsvFile() throws IOException {
+    var file = folder.resolve("boxes.csv");
+    Files.writeString(file, "Box Number,First Name,Last Name\n12,José,O’Brien\n", StandardCharsets.UTF_8);
+
+    var rows = ImportReader.read(file);
+
+    assertEquals("José", rows.get(0).get(ImportColumn.FIRST_NAME));
+    assertEquals("O’Brien", rows.get(0).get(ImportColumn.LAST_NAME));
+  }
+
+  @Test
+  void readsACsvFileSavedByExcelOnWindows() throws IOException {
+    var file = folder.resolve("boxes.csv");
+    Files.writeString(file, "Box Number,First Name,Last Name\r\n12,José,O’Brien\r\n",
+        Charset.forName("windows-1252"));
+
+    var rows = ImportReader.read(file);
+
+    assertEquals("José", rows.get(0).get(ImportColumn.FIRST_NAME));
+    assertEquals("O’Brien", rows.get(0).get(ImportColumn.LAST_NAME));
   }
 
   @Test
