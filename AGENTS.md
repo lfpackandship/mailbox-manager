@@ -17,9 +17,8 @@ Work is planned in GitHub issues, and each issue gets its own branch.
   has no branch, create one from `main` with `gh issue develop <number>
   --base main --checkout`, which links it the same way as Development →
   Create a branch on the issue's page.
-- Never commit directly to `main`, except for the release commit (see
-  "When finishing a release"). Before changing anything, check the current
-  branch.
+- Never commit directly to `main`. Before changing anything, check the
+  current branch.
 - Say which issue each commit is for at the end of its message, such as
   "Part of #4".
 - When the issue's work is done, push its branch and open a pull request
@@ -78,6 +77,9 @@ Everything is documented, so someone new can read any file cold.
   `@Test` methods don't need one.
 - When code changes, change its comments with it. A wrong comment is worse
   than none.
+- Update the README and the user guide (`docs/user-guide.md`) on the same
+  branch as the change they describe. Releases are cut straight from
+  `main`, so there's no later step that catches them up.
 - Google Drive backups need the app's Google client ID. Release builds get
   it from the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` repository
   secrets; local builds from the gitignored
@@ -128,25 +130,21 @@ Google Drive backups". Don't merge the pull request yourself unless asked.
 
 There's no release branch. The user decides when a release is ready, once
 the issues they want in it are merged into `main`, and says which version
-it is. Do these in order. Steps 3 and 5 publish the release, so ask before
-each one and wait for a yes. Do the rest without asking.
+it is. A release is only a tag on `main`: there's no release commit, and
+the build takes the version from the tag, so `pom.xml` isn't changed. Do
+these in order. Step 3 publishes the release, so ask before it and wait for
+a yes. Do the rest without asking.
 
 1. Switch to `main` and pull it. Check that `git status` is clean.
-2. Make the release commit on `main`, the one commit that doesn't go on an
-   issue branch, as in the README's release steps: update the README and
-   the user guide (`docs/user-guide.md`) for anything in the release they
-   describe, set the version in
-   `pom.xml`, and commit it as `Release x.y.z`.
-3. Ask, then push `main`.
-4. Wait for the tests to pass in GitHub Actions. If you can't see them, ask
-   the user to say when they have.
-5. Ask, then tag the release commit `vx.y.z` and push the tag, which builds
-   the installers and makes the GitHub release.
-6. Once the build finishes, check that its annotations don't include the
+2. Check that the tests passed in GitHub Actions for the latest commit on
+   `main`. If you can't see them, ask the user to say when they have.
+3. Ask, then tag that commit `vx.y.z` and push the tag, which builds the
+   installers and makes the GitHub release.
+4. Once the build finishes, check that its annotations don't include the
    "GOOGLE_CLIENT_ID isn't set" warning. If they do, the installers can't
    connect to Google Drive, so tell the user. If you can't see the build,
    ask the user to look.
-7. Write the release notes as described below and replace the generated
+5. Write the release notes as described below and replace the generated
    ones with them: `gh release edit vx.y.z --notes-file <file>`. Then give
    the user the release's link. If the GitHub CLI isn't installed, give the
    user the notes to paste in instead (edit the release, replace the
