@@ -130,6 +130,13 @@ PDF with **Print Price Sheet…** on the Prices window or in Settings. Its price
 the [price table](#prices), with a column for each size and a row for each
 rental length that has a price.
 
+While a [price change](#raising-prices-from-a-later-date) is coming up, the
+price sheet and reminders show the new prices too, under **New prices from**
+and the day they start, the same way as the price change notices: today's
+price and the new one with an arrow between them, or just the price if it
+isn't changing, and NEW or NO LONGER OFFERED. Once the new prices start, the
+sheet and reminders go back to showing one price in each box.
+
 The shop's name, address, and phone number, the text above and below the
 prices, and the reminders' messages are set in Settings under
 [Price Sheet and Reminders](#settings). What each size measures is entered on
