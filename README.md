@@ -476,9 +476,12 @@ Everything is stored in a single database file, `mailboxes.db`, in this folder:
 
 Each day, the first time the app starts, it saves a copy of the database to
 the `backups` folder inside that folder, named by date
-(`mailboxes-2026-09-26.db`). If a backup can't be made, for example because the
-disk is full, the app still opens, shows a warning, and tries again the next
-time it starts.
+(`mailboxes-2026-09-26.db`). Each time the app closes, it brings that day's
+backup up to date, so the backup has the day's work. If the app is left open
+past midnight, it saves the new day's backup by itself. If a backup can't be
+made, for example because the disk is full, the app still opens, shows a
+warning, and tries again the next time it starts; nothing is shown when the
+app closes.
 
 ### A second copy of your backups
 
@@ -488,8 +491,9 @@ the computer itself fails. To keep copies somewhere else:
 - **Automatically:** on the Backups tab of Settings, next to **Also copy
   backups to**, click **Choose…** and pick a folder on a USB drive, a network
   drive, or a synced folder such as OneDrive or Dropbox, then click **Save**.
-  Each daily backup is copied there too, and old copies are deleted the same
-  way. If the folder isn't available when the app starts (for example, the
+  Each daily backup is copied there too, including when it's brought up to
+  date as the app closes, and old copies are deleted the same way. If the
+  folder isn't available when the app starts (for example, the
   USB drive is unplugged), the app shows a warning and tries again next time.
 - **Whenever you like:** click **Back Up Now…**. It saves a backup named
   with the date and time, such as `mailboxes-backup-2026-09-26-143005.db`,
@@ -512,11 +516,13 @@ data is safe even if the computer is lost or broken. To turn it on:
 3. Go back to the app. It shows "Backing up to Google Drive as" and your
    email address, and uploads today's backup straight away.
 
-After that, each day's backup is uploaded when the app starts, to a folder in
-your Google Drive called **Mailbox Manager Backups**. The app deletes old
-backups there the same way it does on the computer, keeping as many as
-**Daily backups to keep** says. The app can only see the files it puts in your
-Google Drive, not anything else there.
+After that, each day's backup is uploaded when the app starts (or at the
+new day, if it's left open), to a folder in your Google Drive called
+**Mailbox Manager Backups**. It isn't uploaded again each time the app
+closes, so a day's work reaches Google Drive in the next day's backup. The app
+deletes old backups there the same way it does on the computer, keeping as
+many as **Daily backups to keep** says. The app can only see the files it
+puts in your Google Drive, not anything else there.
 
 Settings shows when the last backup was uploaded. If an upload fails, for
 example because the internet is down, the app shows a warning and tries again
