@@ -29,6 +29,9 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 
 import org.lfps.mailboxes.data.BoxInventoryRepository;
@@ -54,6 +57,15 @@ final class PriceSheet {
 
   /** How wide a page is laid out, in points (1/72 inch): letter paper less margins. */
   static final double PAGE_WIDTH = 540;
+
+  /** How much room is left on each side of a cell on a price change notice, in points. */
+  private static final double COMPACT_SIDES = 7;
+
+  /**
+   * The size of the prices on a price change notice, in points, unless they
+   * have to be smaller to fit.
+   */
+  private static final double CHANGE_SIZE = 13;
 
   /** The color of the circles, like a red pen. It prints dark grey in black and white. */
   private static final Color INK = Color.web("#c62828");
@@ -350,9 +362,11 @@ final class PriceSheet {
 
     body.getChildren().add(heading("New prices from " + longDate(startsOn)));
     var both = combined(current, after);
+    var textSize = changeSize(both, current, after);
     body.getChildren().add(both.columns.isEmpty() ? new Label("No prices are set.")
         : table(marked, both, both.columnFor(size), "notice", "sizeCircle", true,
-            (column, months) -> change(priceOf(current, column, months), priceOf(after, column, months))));
+            (column, months) -> change(priceOf(current, column, months), priceOf(after, column, months),
+                textSize)));
 
     addNoteAndDate(body, after, "Printed " + longDate(today));
     return finish(marked, body);
@@ -635,7 +649,7 @@ final class PriceSheet {
     grid.setPrefWidth(PAGE_WIDTH - 24);
     grid.setMaxWidth(PAGE_WIDTH - 24);
 
-    var sides = compact ? 7 : 10;
+    var sides = compact ? COMPACT_SIDES : 10;
     grid.add(cell(new Label(""), Pos.CENTER_LEFT, sides), 0, 0);
     for (var col = 0; col < content.columns.size(); col++) {
       var column = content.columns.get(col);
@@ -695,7 +709,7 @@ final class PriceSheet {
    * @param size the text size, in points
    * @return the price's label
    */
-  private static Label price(Long cents, int size) {
+  private static Label price(Long cents, double size) {
     var label = new Label(cents == null ? "—" : Money.format(cents));
     label.setStyle("-fx-font-size: " + size + "px;");
     return label;
@@ -705,19 +719,19 @@ final class PriceSheet {
    * Shows how a price changes in a cell of a price change notice: both
    * prices with an arrow between them, or just one if it isn't changing.
    * A price that's only new says NEW under it, and one with no new price says
-   * NO LONGER OFFERED. The prices are a little smaller than on the price
-   * sheet, so two fit on one line with three sizes.
+   * NO LONGER OFFERED.
    *
    * @param before today's price in cents, or {@code null} if there's none
    * @param after the new price in cents, or {@code null} if there's none
+   * @param size the prices' text size, in points, from {@link #changeSize}
    * @return what's shown in the cell
    */
-  private static Node change(Long before, Long after) {
+  private static Node change(Long before, Long after, double size) {
     if (before == null && after == null || before != null && before.equals(after)) {
-      return price(after, 13);
+      return price(after, size);
     }
     if (before == null || after == null) {
-      var shown = price(before == null ? after : before, 13);
+      var shown = price(before == null ? after : before, size);
       var tag = new Label(before == null ? "NEW" : "NO LONGER OFFERED");
       tag.setStyle("-fx-font-size: 11px; -fx-font-weight: bold;");
       tag.setWrapText(true);
@@ -726,13 +740,76 @@ final class PriceSheet {
       both.setAlignment(Pos.CENTER);
       return both;
     }
-    var label = new Label(Money.format(before) + " → " + Money.format(after));
-    label.setStyle("-fx-font-size: 13px;");
-    // Wraps after the arrow if the column is too narrow for both prices.
+    var label = price(before, size);
+    label.setText(arrow(before, after));
+    // Only wraps after the arrow if changeSize got it wrong.
     label.setWrapText(true);
     label.setTextAlignment(TextAlignment.CENTER);
     label.setMinHeight(Region.USE_PREF_SIZE);
     return label;
+  }
+
+  /**
+   * Writes a price that's changing, such as "$105.00 → $120.00".
+   *
+   * @param before today's price in cents
+   * @param after the new price in cents
+   * @return the text
+   */
+  private static String arrow(long before, long after) {
+    return Money.format(before) + " → " + Money.format(after);
+  }
+
+  /**
+   * Works out how big the prices on a price change notice can be, so that
+   * every changing price fits on one line. Fonts differ from one computer to
+   * the next, so this measures the text in the font this one has, rather
+   * than counting on a size that fit somewhere else.
+   *
+   * @param both the notice's table, from {@link #combined}
+   * @param current what's printed now, with today's prices
+   * @param after what will be printed once the new prices start
+   * @return {@link #CHANGE_SIZE}, or smaller if the widest change wouldn't fit
+   */
+  private static double changeSize(Content both, Content current, Content after) {
+    if (both.columns.isEmpty()) {
+      return CHANGE_SIZE;
+    }
+    var widest = 0.0;
+    var lengths = 0.0;
+    for (var months : both.lengths) {
+      lengths = Math.max(lengths, textWidth(RentalLengths.label(months), 15, FontWeight.BOLD));
+      for (var column : both.columns) {
+        var before = priceOf(current, column, months);
+        var now = priceOf(after, column, months);
+        if (before != null && now != null && !before.equals(now)) {
+          widest = Math.max(widest, textWidth(arrow(before, now), CHANGE_SIZE, FontWeight.NORMAL));
+        }
+      }
+    }
+    // The table's width less the rental lengths' column, shared equally, less
+    // each cell's sides and border, and 2 points to spare for rounding.
+    var room = (PAGE_WIDTH - 24 - lengths - 2 * COMPACT_SIDES - 1) / both.columns.size()
+        - 2 * COMPACT_SIDES - 1 - 2;
+    if (widest <= room) {
+      return CHANGE_SIZE;
+    }
+    // Text gets narrower in step with its size; rounded down to a quarter point.
+    return Math.floor(CHANGE_SIZE * room / widest * 4) / 4;
+  }
+
+  /**
+   * Measures how wide some text is in the page's font on this computer.
+   *
+   * @param text the text
+   * @param size the text size, in points
+   * @param weight bold or normal
+   * @return the width, in points
+   */
+  private static double textWidth(String text, double size, FontWeight weight) {
+    var measured = new Text(text);
+    measured.setFont(Font.font(Font.getDefault().getFamily(), weight, size));
+    return measured.getLayoutBounds().getWidth();
   }
 
   /**
