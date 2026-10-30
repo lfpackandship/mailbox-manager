@@ -30,11 +30,13 @@ public final class Money {
     if (!cleaned.matches("\\d+(\\.\\d{0,2})?|\\.\\d{1,2}")) {
       throw new IllegalArgumentException("Enter the amount paid in dollars and cents, like 60 or 60.00.");
     }
-    var cents = new BigDecimal(cleaned).movePointRight(2).longValueExact();
-    if (cents > MAX_CENTS) {
+    // Compared before turning it into a long, which an amount of 18 or more
+    // digits doesn't fit in.
+    var cents = new BigDecimal(cleaned).movePointRight(2);
+    if (cents.compareTo(BigDecimal.valueOf(MAX_CENTS)) > 0) {
       throw new IllegalArgumentException("The amount paid is too large. Check it and try again.");
     }
-    return cents;
+    return cents.longValueExact();
   }
 
   /**
