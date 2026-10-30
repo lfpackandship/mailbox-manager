@@ -14,13 +14,15 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ValidatorsTest {
 
   @ParameterizedTest
-  @ValueSource(strings = { "a@b.co", "first.last@example.com", "a+tag@sub-domain.org", "x_y@example.io" })
+  @ValueSource(strings = { "a@b.co", "first.last@example.com", "a+tag@sub-domain.org", "x_y@example.io",
+      "jane@mail.example.com", "bob@company.co.uk" })
   void acceptsValidEmails(String email) {
     assertTrue(Validators.isValidEmail(email));
   }
 
   @ParameterizedTest
-  @ValueSource(strings = { "", "plain", "@example.com", "a@", "a@example", "a@example.c", "a b@example.com" })
+  @ValueSource(strings = { "", "plain", "@example.com", "a@", "a@example", "a@example.c", "a b@example.com",
+      "a@.example.com", "a@example..com", "a@example.com.", "a@@example.com" })
   void rejectsInvalidEmails(String email) {
     assertFalse(Validators.isValidEmail(email));
   }
