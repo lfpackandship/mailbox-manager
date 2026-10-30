@@ -5,6 +5,16 @@ the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
 ## Unreleased
 
+### Changed
+
+- Closing the app now brings today's backup up to date, on this computer and
+  in the second backup folder, so the backup has the day's work. Before, it
+  only had the data as it was when the app first opened that day.
+- If the app is left open past midnight, it makes the new day's backup by
+  itself, copies it to the second backup folder, and uploads it to Google
+  Drive, as it does when it starts. Before, no backup was made until the app
+  was opened again.
+
 ### Fixed
 
 - Email addresses with more than one dot after the @, such as

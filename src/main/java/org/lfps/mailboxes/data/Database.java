@@ -122,6 +122,29 @@ public class Database {
   }
 
   /**
+   * Brings today's daily backup up to date with the current data, as the app
+   * does when it closes, so the day's work is in today's backup and not only
+   * in tomorrow's. The copy in the second backup folder, if one is set, is
+   * replaced too, and old daily backups are deleted in both as in
+   * {@link #backupDaily()}. Google Drive keeps the copy uploaded earlier;
+   * the day's work reaches it in the next day's backup.
+   *
+   * @throws RuntimeException if the backup can't be written or copied; the
+   *     earlier copy of today's backup is then left as it was
+   */
+  public static void updateTodaysBackup() {
+    var target = todaysBackup();
+    try {
+      Files.createDirectories(BACKUP_DIR);
+      writeCopy(target);
+      deleteOldDailyBackups(BACKUP_DIR);
+    } catch (IOException | SQLException e) {
+      throw new RuntimeException("Failed to back up database to " + target, e);
+    }
+    copyToSecondBackupFolder(true);
+  }
+
+  /**
    * Copies today's daily backup into the folder chosen in the
    * {@link Setting#SECOND_BACKUP_FOLDER} setting, if one is set and the copy
    * isn't there yet, then deletes old daily backups there the same way as
@@ -132,6 +155,19 @@ public class Database {
    *     drive that isn't plugged in) or the copy fails
    */
   public static void copyToSecondBackupFolder() {
+    copyToSecondBackupFolder(false);
+  }
+
+  /**
+   * Copies today's daily backup into the second backup folder, then deletes
+   * old daily backups there; see {@link #copyToSecondBackupFolder()}.
+   *
+   * @param replace {@code true} to replace a copy of today's backup that's
+   *     already there, as when it's been brought up to date; {@code false} to
+   *     leave it
+   * @throws RuntimeException if the folder is missing or the copy fails
+   */
+  private static void copyToSecondBackupFolder(boolean replace) {
     Path folder = null;
     try {
       var setting = new SettingsRepository().get(Setting.SECOND_BACKUP_FOLDER).trim();
@@ -148,11 +184,11 @@ public class Database {
         return;
       }
       var target = folder.resolve(todays.getFileName());
-      if (!Files.exists(target)) {
+      if (replace || !Files.exists(target)) {
         var partial = folder.resolve(target.getFileName() + ".partial");
         try {
           Files.copy(todays, partial, StandardCopyOption.REPLACE_EXISTING);
-          Files.move(partial, target, StandardCopyOption.ATOMIC_MOVE);
+          Files.move(partial, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } finally {
           Files.deleteIfExists(partial);
         }
@@ -437,9 +473,10 @@ public class Database {
   /**
    * Writes a consistent copy of the database to {@code target} under a
    * temporary name, renaming it once complete, so a failure never leaves a
-   * partial file that looks like a finished backup.
+   * partial file that looks like a finished backup, and a file being
+   * replaced is kept until the new one is ready.
    *
-   * @param target where to write the copy; it must not exist
+   * @param target where to write the copy; it's replaced if it exists
    * @throws IOException if the copy can't be moved into place
    * @throws SQLException if the copy can't be made
    */
@@ -453,7 +490,7 @@ public class Database {
         // VACUUM INTO produces a consistent copy even if the database is in use.
         stmt.execute("VACUUM INTO '" + partial.toString().replace("'", "''") + "'");
       }
-      Files.move(partial, target, StandardCopyOption.ATOMIC_MOVE);
+      Files.move(partial, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     } finally {
       Files.deleteIfExists(partial);
     }

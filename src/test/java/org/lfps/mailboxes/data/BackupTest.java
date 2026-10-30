@@ -152,6 +152,41 @@ class BackupTest {
   }
 
   @Test
+  void updatingTodaysBackupAddsTheDaysWorkHereAndInTheSecondFolder() throws SQLException {
+    settings.put(Setting.SECOND_BACKUP_FOLDER, elsewhere.toString());
+    mailboxes.insert(box("101"));
+    Database.backupDaily();
+    Database.copyToSecondBackupFolder();
+    mailboxes.insert(box("102"));
+
+    Database.updateTodaysBackup();
+
+    var today = "mailboxes-" + LocalDate.now() + ".db";
+    assertEquals(List.of("101", "102"), boxNumbersIn(BACKUP_DIR.resolve(today)));
+    assertEquals(List.of("101", "102"), boxNumbersIn(elsewhere.resolve(today)));
+  }
+
+  @Test
+  void updatingTodaysBackupMakesItIfThereIsNoneYet() throws SQLException {
+    mailboxes.insert(box("101"));
+
+    Database.updateTodaysBackup();
+
+    assertEquals(List.of("101"), boxNumbersIn(Database.todaysBackup()));
+  }
+
+  @Test
+  void dailyBackupLeavesTodaysBackupAloneOnceMade() throws SQLException {
+    mailboxes.insert(box("101"));
+    Database.backupDaily();
+    mailboxes.insert(box("102"));
+
+    Database.backupDaily();
+
+    assertEquals(List.of("101"), boxNumbersIn(Database.todaysBackup()));
+  }
+
+  @Test
   void secondFolderCopyDoesNothingWhenNoFolderIsSet() throws IOException {
     Database.backupDaily();
 
