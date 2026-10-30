@@ -9,6 +9,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeSet;
+import java.util.function.BiFunction;
 
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -27,6 +29,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.TextAlignment;
 
 import org.lfps.mailboxes.data.BoxInventoryRepository;
 import org.lfps.mailboxes.data.PriceRepository;
@@ -43,8 +46,9 @@ import org.lfps.mailboxes.util.RentalLengths;
  * which box it's for and when its rental ends, with the end date and the
  * box's size circled. A forwarding-only box's reminder is about renewing its
  * mail forwarding instead, with its own message and no size circled. As a
- * price change notice, it says when new prices start and shows today's prices
- * and the new ones, with the box's size circled in both.
+ * price change notice, it says when new prices start and shows one table
+ * with today's price and the new one in each cell, with the box's size
+ * circled.
  */
 final class PriceSheet {
 
@@ -278,7 +282,7 @@ final class PriceSheet {
       body.getChildren().add(none);
     } else {
       body.getChildren().add(table(marked, content, mailbox == null ? null : content.columnFor(size), "sheet",
-          "sizeCircle"));
+          "sizeCircle", (column, months) -> price(column.prices.get(months))));
     }
 
     addNoteAndDate(body, content, (mailbox == null ? "Prices as of " : "Printed ") + longDate(today));
@@ -286,8 +290,9 @@ final class PriceSheet {
   }
 
   /**
-   * Builds a notice for a box that prices are changing, with today's prices
-   * and the new ones, and the box's size circled in each.
+   * Builds a notice for a box that prices are changing, with one table
+   * showing today's price and the new one in each cell, and the box's size
+   * circled.
    *
    * @param current what's printed now, with today's prices
    * @param after what will be printed once the new prices start
@@ -342,15 +347,83 @@ final class PriceSheet {
     card.setStyle("-fx-border-color: black; -fx-border-width: 1.5; -fx-border-radius: 6;");
     body.getChildren().add(card);
 
-    body.getChildren().add(heading("Today's prices"));
-    body.getChildren().add(current.columns.isEmpty() ? new Label("No prices are set.")
-        : table(marked, current, current.columnFor(size), "sheet", "sizeCircle"));
     body.getChildren().add(heading("New prices from " + longDate(startsOn)));
-    body.getChildren().add(after.columns.isEmpty() ? new Label("No prices are set.")
-        : table(marked, after, after.columnFor(size), "new", "newSizeCircle"));
+    var both = combined(current, after);
+    body.getChildren().add(both.columns.isEmpty() ? new Label("No prices are set.")
+        : table(marked, both, both.columnFor(size), "notice", "sizeCircle",
+            (column, months) -> change(priceOf(current, column, months), priceOf(after, column, months))));
 
     addNoteAndDate(body, after, "Printed " + longDate(today));
     return finish(marked, body);
+  }
+
+  /**
+   * Combines today's prices and the new ones into one table's columns and
+   * rows, for a price change notice: every size and rental length that has a
+   * price either now or after the change. Sizes are in the new prices' order,
+   * then any that only have a price today, with the default prices last.
+   *
+   * @param current what's printed now, with today's prices
+   * @param after what will be printed once the new prices start
+   * @return the new prices' wording, with the combined columns and rows; a
+   *     column's prices are the new ones, or today's if it has no new ones
+   */
+  private static Content combined(Content current, Content after) {
+    var columns = new ArrayList<Column>();
+    Column defaults = null;
+    var both = new ArrayList<>(after.columns);
+    for (var column : current.columns) {
+      if (find(after, column.size) == null) {
+        both.add(column);
+      }
+    }
+    for (var column : both) {
+      if (column.size.isEmpty()) {
+        defaults = column;
+      } else {
+        columns.add(column);
+      }
+    }
+    if (defaults != null) {
+      // Headed as on the price sheet: "Price" alone, "Other sizes" beside sizes.
+      columns.add(new Column(PriceRepository.DEFAULT_SIZE, columns.isEmpty() ? "Price" : "Other sizes", "",
+          defaults.prices));
+    }
+
+    var lengths = new TreeSet<Integer>(current.lengths);
+    lengths.addAll(after.lengths);
+    return new Content(after.shopName, after.shopDetails, after.intro, after.note, after.reminderMessage,
+        after.forwardingReminderMessage, after.priceChangeMessage, new ArrayList<>(lengths), columns);
+  }
+
+  /**
+   * Returns the column of prices for a size, matching it exactly rather than
+   * falling back to the default prices.
+   *
+   * @param content the prices to look in
+   * @param size the size, or {@link PriceRepository#DEFAULT_SIZE}
+   * @return the column, or {@code null} if the size has no prices
+   */
+  private static Column find(Content content, String size) {
+    for (var column : content.columns) {
+      if (column.size.equalsIgnoreCase(size)) {
+        return column;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns the price of a size for a rental length.
+   *
+   * @param content the prices to look in
+   * @param column the column for the size, from any of the tables
+   * @param months the rental length
+   * @return the price in cents, or {@code null} if there's none
+   */
+  private static Long priceOf(Content content, Column column, int months) {
+    var found = find(content, column.size);
+    return found == null ? null : found.prices.get(months);
   }
 
   /**
@@ -525,17 +598,19 @@ final class PriceSheet {
   }
 
   /**
-   * Builds a table of prices. Its parts' ids start with {@code idPrefix}, so a
-   * page can have two.
+   * Builds a table of prices.
    *
    * @param marked the page, which draws the circle
-   * @param content the prices to show
+   * @param content the columns and rental lengths to show
    * @param circled the column to circle, or {@code null} for none
    * @param idPrefix starts the ids of the table's parts, such as "sheet"
    * @param circleId the circle's id
+   * @param price makes what's shown in the cell for a column and rental
+   *     length in months
    * @return the table
    */
-  private static Node table(Marked marked, Content content, Column circled, String idPrefix, String circleId) {
+  private static Node table(Marked marked, Content content, Column circled, String idPrefix, String circleId,
+      BiFunction<Column, Integer, Node> price) {
     var grid = new GridPane();
     grid.setId(idPrefix + "Prices");
     grid.setStyle("-fx-border-color: black; -fx-border-width: 0 1 1 0;");
@@ -577,10 +652,7 @@ final class PriceSheet {
       length.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
       grid.add(cell(length, Pos.CENTER_LEFT), 0, row + 1);
       for (var col = 0; col < content.columns.size(); col++) {
-        var price = content.columns.get(col).prices.get(months);
-        var priceLabel = new Label(price == null ? "—" : Money.format(price));
-        priceLabel.setStyle("-fx-font-size: 15px;");
-        var priceCell = cell(priceLabel, Pos.CENTER);
+        var priceCell = cell(price.apply(content.columns.get(col), months), Pos.CENTER);
         priceCell.setId(idPrefix + "Price-" + months + "-" + col);
         grid.add(priceCell, col + 1, row + 1);
       }
@@ -603,6 +675,51 @@ final class PriceSheet {
     // Room above and below for the circle.
     holder.setPadding(new Insets(6, 0, 6, 0));
     return holder;
+  }
+
+  /**
+   * Shows a price in a cell of the table.
+   *
+   * @param cents the price in cents, or {@code null} for a dash
+   * @return the price's label
+   */
+  private static Label price(Long cents) {
+    var label = new Label(cents == null ? "—" : Money.format(cents));
+    label.setStyle("-fx-font-size: 15px;");
+    return label;
+  }
+
+  /**
+   * Shows how a price changes in a cell of a price change notice: both
+   * prices with an arrow between them, or just one if it isn't changing.
+   * A price that's only new says NEW under it, and one with no new price says
+   * NO LONGER OFFERED.
+   *
+   * @param before today's price in cents, or {@code null} if there's none
+   * @param after the new price in cents, or {@code null} if there's none
+   * @return what's shown in the cell
+   */
+  private static Node change(Long before, Long after) {
+    if (before == null && after == null || before != null && before.equals(after)) {
+      return price(after);
+    }
+    if (before == null || after == null) {
+      var shown = price(before == null ? after : before);
+      var tag = new Label(before == null ? "NEW" : "NO LONGER OFFERED");
+      tag.setStyle("-fx-font-size: 11px; -fx-font-weight: bold;");
+      tag.setWrapText(true);
+      tag.setMinHeight(Region.USE_PREF_SIZE);
+      var both = new VBox(2, shown, tag);
+      both.setAlignment(Pos.CENTER);
+      return both;
+    }
+    var label = price(before);
+    label.setText(Money.format(before) + " → " + Money.format(after));
+    // Wraps after the arrow if the column is too narrow for both prices.
+    label.setWrapText(true);
+    label.setTextAlignment(TextAlignment.CENTER);
+    label.setMinHeight(Region.USE_PREF_SIZE);
+    return label;
   }
 
   /**
