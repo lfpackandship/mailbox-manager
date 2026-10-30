@@ -315,11 +315,12 @@ just these boxes.
 ### Prices
 
 Click **Prices…** on the Box Inventory screen, or next to **Prices for each
-size** in Settings, to set what a box costs. There's a row for each size in
-the inventory and a column for each rental length, plus a **Default** row for
-boxes with no size, or whose size has no price for that length. Leave a price
-blank if there isn't one, and click **Save**. The **Measures** column is for what each size measures, such
-as `3¾" x 5" x 14"`, which is shown on the printed price sheet.
+size** in Settings, to set what a box costs. It's laid out like the printed
+price sheet: a column for each size in the inventory, plus a **Default**
+column for boxes with no size, or whose size has no price for that length,
+and a row for each rental length. Leave a price blank if there isn't one, and
+click **Save**. The **Measures** row at the top is for what each size
+measures, such as `3¾" x 5" x 14"`, which is shown on the printed price sheet.
 
 When you click a rental length button on Add New Box or when renewing, the
 price for that box's size and length is filled in as the amount paid. You can
