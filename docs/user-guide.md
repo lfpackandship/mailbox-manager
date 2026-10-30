@@ -275,9 +275,12 @@ To change prices from a day in the future, and let box holders know:
    click **Save**.
 4. Click **Print Notices…** to print a notice for each rented box. Each one
    has the box number, the holder's name, when their rental ends, and the day
-   the new prices start, then today's prices and the new ones, with the box's
-   size circled in both. As with reminders, untick any you don't want, click a
-   box to preview its notice, and print or save them as a PDF. The message on
+   the new prices start, then a table of prices with the box's size circled.
+   A price that's changing shows today's price and the new one with an arrow
+   between them, such as $40.00 → $45.00, and one that isn't changing is
+   shown once. A price that's only new says NEW, and one that's going away
+   says NO LONGER OFFERED. As with reminders, untick any you don't want, click
+   a box to preview its notice, and print or save them as a PDF. The message on
    the notices can be changed on the Price Change window.
 
 Until that day, adding or renewing a box still fills in today's prices, so box
