@@ -48,8 +48,9 @@ import org.lfps.mailboxes.util.RentalLengths;
  * size and a row for each rental length. As a renewal reminder, it also says
  * which box it's for and when its rental ends, with the end date and the
  * box's size circled. A forwarding-only box's reminder is about renewing its
- * mail forwarding instead, with its own message and no size circled. As a
- * price change notice, it says when new prices start and shows one table
+ * mail forwarding instead, with its own message and no size circled. While a
+ * price change is coming up, the price sheet and reminders show the new
+ * prices beside today's, as the notice does. As a price change notice, it says when new prices start and shows one table
  * with today's price and the new one in each cell, with the box's size
  * circled.
  */
@@ -264,7 +265,7 @@ final class PriceSheet {
    * @return the page, laid out {@link #PAGE_WIDTH} wide
    */
   static Region page(Content content, LocalDate today) {
-    return page(content, null, null, today);
+    return page(content, null, null, null, null, today);
   }
 
   /**
@@ -278,6 +279,27 @@ final class PriceSheet {
    * @return the page, laid out {@link #PAGE_WIDTH} wide
    */
   static Region page(Content content, Mailbox mailbox, String size, LocalDate today) {
+    return page(content, null, null, mailbox, size, today);
+  }
+
+  /**
+   * Builds the price sheet, as a renewal reminder for a box if one is given.
+   * If a price change is coming up, the table shows today's prices and the
+   * new ones together, under a heading saying when they start.
+   *
+   * @param content what to print
+   * @param after what will be printed once the new prices start, or
+   *     {@code null} if no price change is coming up
+   * @param startsOn the day the new prices start, or {@code null} if no price
+   *     change is coming up
+   * @param mailbox the box the reminder is for, or {@code null} for the plain
+   *     price sheet
+   * @param size the box's size in the inventory, or {@code null} if it has none
+   * @param today the date the reminder is printed
+   * @return the page, laid out {@link #PAGE_WIDTH} wide
+   */
+  static Region page(Content content, Content after, LocalDate startsOn, Mailbox mailbox, String size,
+      LocalDate today) {
     var marked = new Marked();
     var body = new VBox(16, shop(content));
 
@@ -288,7 +310,10 @@ final class PriceSheet {
       body.getChildren().add(intro(content.intro));
     }
 
-    if (content.columns.isEmpty()) {
+    if (after != null) {
+      body.getChildren().add(heading("New prices from " + longDate(startsOn)));
+      body.getChildren().add(changeTable(marked, content, after, mailbox != null, size, "sheet"));
+    } else if (content.columns.isEmpty()) {
       var none = new Label("No prices have been set. Set them with Prices… in Settings.");
       none.setId("sheetNoPrices");
       body.getChildren().add(none);
@@ -361,15 +386,33 @@ final class PriceSheet {
     body.getChildren().add(card);
 
     body.getChildren().add(heading("New prices from " + longDate(startsOn)));
-    var both = combined(current, after);
-    var textSize = changeSize(both, current, after);
-    body.getChildren().add(both.columns.isEmpty() ? new Label("No prices are set.")
-        : table(marked, both, both.columnFor(size), "notice", "sizeCircle", true,
-            (column, months) -> change(priceOf(current, column, months), priceOf(after, column, months),
-                textSize)));
+    body.getChildren().add(changeTable(marked, current, after, true, size, "notice"));
 
     addNoteAndDate(body, after, "Printed " + longDate(today));
     return finish(marked, body);
+  }
+
+  /**
+   * Builds the table of prices for a price change: today's price and the new
+   * one in each cell, sized so changing prices fit on one line.
+   *
+   * @param marked the page, which draws the circle
+   * @param current what's printed now, with today's prices
+   * @param after what will be printed once the new prices start
+   * @param circle whether to circle a box's size
+   * @param size the box's size in the inventory, or {@code null} if it has none
+   * @param idPrefix starts the ids of the table's parts, such as "notice"
+   * @return the table, or a line saying there are no prices
+   */
+  private static Node changeTable(Marked marked, Content current, Content after, boolean circle, String size,
+      String idPrefix) {
+    var both = combined(current, after);
+    if (both.columns.isEmpty()) {
+      return new Label("No prices are set.");
+    }
+    var textSize = changeSize(both, current, after);
+    return table(marked, both, circle ? both.columnFor(size) : null, idPrefix, "sizeCircle", true,
+        (column, months) -> change(priceOf(current, column, months), priceOf(after, column, months), textSize));
   }
 
   /**

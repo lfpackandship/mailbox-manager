@@ -159,6 +159,51 @@ class PriceChangeTest {
         FxTestSupport.call(() -> ((Label) notices.getScene().lookup("#noticeTitle")).getText()));
   }
 
+  @Test
+  void thePriceSheetShowsPricesThatAreAboutToChange() throws SQLException {
+    prices.scheduleChange(NEXT_MONTH, Map.of(PriceRepository.key("small", 3), 9500L));
+
+    FxTestSupport.run(() -> PriceSheetView.showPriceSheet(mainWindow));
+
+    assertEquals("$90.00 → $95.00", FxTestSupport.call(() -> previewPrice(printWindow(), "sheetPrice-3-0")));
+    assertEquals("$150.00", FxTestSupport.call(() -> previewPrice(printWindow(), "sheetPrice-6-0")));
+  }
+
+  @Test
+  void renewalRemindersShowPricesThatAreAboutToChange() throws SQLException {
+    // A 12-month price, which there isn't one of today.
+    prices.scheduleChange(NEXT_MONTH, Map.of(PriceRepository.key("small", 12), 24000L));
+    var box = new Mailbox(0, "Ada", "Lovelace", null, "1", null, "", null, null, LocalDate.now(), null);
+    new MailboxRepository().insert(box);
+
+    FxTestSupport.run(() -> PriceSheetView.showReminders(mainWindow, List.of(box)));
+
+    assertEquals("$240.00 NEW", FxTestSupport.call(() -> previewPrice(printWindow(), "sheetPrice-12-0")));
+    assertNotNull(FxTestSupport.call(() -> printWindow().getScene().lookup("#sizeCircle")));
+  }
+
+  @Test
+  void thePriceSheetIsUnchangedWithNoPriceChangeComingUp() {
+    FxTestSupport.run(() -> PriceSheetView.showPriceSheet(mainWindow));
+
+    assertEquals("$90.00", FxTestSupport.call(() -> previewPrice(printWindow(), "sheetPrice-3-0")));
+  }
+
+  /** Returns the open window for printing price sheets, reminders, or notices. */
+  private static Stage printWindow() {
+    return Window.getWindows().stream()
+        .filter(w -> w.getScene() != null && w.getScene().lookup("#printPreview") != null)
+        .map(w -> (Stage) w)
+        .findFirst()
+        .orElseThrow();
+  }
+
+  /** Returns the text in a cell of the previewed table of prices, with a space between each line. */
+  private static String previewPrice(Stage window, String id) {
+    return window.getScene().lookup("#" + id).lookupAll(".label").stream().map(node -> ((Label) node).getText())
+        .collect(java.util.stream.Collectors.joining(" "));
+  }
+
   /** Opens the Prices window and then the Price Change window, and returns it. */
   private Stage openPriceChange() {
     FxTestSupport.run(() -> PricesView.show(mainWindow));

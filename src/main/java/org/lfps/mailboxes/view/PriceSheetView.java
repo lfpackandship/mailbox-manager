@@ -139,7 +139,8 @@ final class PriceSheetView {
    * @param kind what it prints
    * @param boxes the boxes to print a page for, or none for the plain price
    *     sheet
-   * @param change the price change, for notices, or {@code null}
+   * @param change the price change, for notices, or {@code null} to show
+   *     the one coming up, if there is one, on the price sheet or reminders
    */
   private static void show(Stage owner, Kind kind, List<Mailbox> boxes, PriceRepository.PriceChange change) {
     if (window != null) {
@@ -154,17 +155,24 @@ final class PriceSheetView {
 
     PriceSheet.Content loaded = null;
     PriceSheet.Content loadedAfter = null;
+    var loadedChange = change;
     try {
       loaded = PriceSheet.load();
-      if (change != null) {
-        loadedAfter = PriceSheet.loadAfter(change);
+      if (loadedChange == null) {
+        // So the price sheet and reminders show prices that are about to change.
+        loadedChange = new PriceRepository().findChange();
+      }
+      if (loadedChange != null) {
+        loadedAfter = PriceSheet.loadAfter(loadedChange);
       }
     } catch (SQLException e) {
       showError(resultLabel, "Couldn't load the prices: " + e.getMessage());
       loaded = null;
     }
     var content = loaded;
-    // For notices, what the sheet will be once the new prices start.
+    // The price change coming up, and what the sheet will be once its new
+    // prices start, or null for both if there's none.
+    var upcoming = loadedChange;
     var after = loadedAfter;
 
     var preview = new StackPane();
@@ -212,7 +220,7 @@ final class PriceSheetView {
       if (reminders && box == null) {
         box = boxes.get(0);
       }
-      var page = page(kind, content, after, change, box, today);
+      var page = page(kind, content, after, upcoming, box, today);
       page.getTransforms().setAll(new Scale(PREVIEW_SCALE, PREVIEW_SCALE));
       preview.getChildren().setAll(new Group(page));
     };
@@ -263,7 +271,7 @@ final class PriceSheetView {
     left.setMinWidth(Region.USE_PREF_SIZE);
 
     printBtn.setOnAction(e -> {
-      var pages = pages(kind, content, after, change, boxes, ticked, today);
+      var pages = pages(kind, content, after, upcoming, boxes, ticked, today);
       Printing.print(kind.jobName, pages, resultLabel, reminders ? "Printed " + kind.count(pages.size()) : "Printed");
     });
 
@@ -271,7 +279,7 @@ final class PriceSheetView {
     pdfBtn.setId("savePdfButton");
     pdfBtn.disableProperty().bind(printBtn.disableProperty());
     pdfBtn.setOnAction(e -> Printing.savePdf(stage,
-        kind.filePrefix + today + ".pdf", pages(kind, content, after, change, boxes, ticked, today),
+        kind.filePrefix + today + ".pdf", pages(kind, content, after, upcoming, boxes, ticked, today),
         resultLabel));
 
     var closeBtn = new Button("Close");
@@ -309,7 +317,7 @@ final class PriceSheetView {
    * @param content what's printed now, with today's prices
    * @param after for notices, what will be printed once new prices start, or
    *     {@code null}
-   * @param change for notices, the price change, or {@code null}
+   * @param change the price change coming up, or {@code null} if there's none
    * @param boxes the boxes listed
    * @param ticked whether each box is ticked
    * @param today the date printed
@@ -335,17 +343,18 @@ final class PriceSheetView {
    *
    * @param kind what's printed
    * @param content what's printed now, with today's prices
-   * @param after for notices, what will be printed once new prices start, or
-   *     {@code null}
-   * @param change for notices, the price change, or {@code null}
+   * @param after what will be printed once new prices start, or {@code null}
+   *     if no price change is coming up
+   * @param change the price change coming up, or {@code null} if there's none
    * @param box the box, or {@code null} for the plain price sheet
    * @param today the date printed
    * @return the page
    */
   private static Region page(Kind kind, PriceSheet.Content content, PriceSheet.Content after,
       PriceRepository.PriceChange change, Mailbox box, LocalDate today) {
+    var startsOn = change == null ? null : change.startsOn;
     if (box == null) {
-      return PriceSheet.page(content, today);
+      return PriceSheet.page(content, after, startsOn, null, null, today);
     }
     String size = null;
     try {
@@ -354,8 +363,8 @@ final class PriceSheetView {
     } catch (SQLException e) {
       // Print it without circling a size.
     }
-    return kind == Kind.NOTICES ? PriceSheet.notice(content, after, box, size, change.startsOn, today)
-        : PriceSheet.page(content, box, size, today);
+    return kind == Kind.NOTICES ? PriceSheet.notice(content, after, box, size, startsOn, today)
+        : PriceSheet.page(content, after, startsOn, box, size, today);
   }
 
   /**
