@@ -3,6 +3,14 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## Unreleased
+
+### Fixed
+
+- Email addresses with more than one dot after the @, such as
+  jane@mail.example.com or bob@company.co.uk, were turned down as "not
+  valid" on Add New Box, Edit Box, and Import Boxes. They're now accepted.
+
 ## 1.11.1 – 2026-10-29
 
 ### Changed

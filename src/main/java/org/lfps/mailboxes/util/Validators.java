@@ -8,10 +8,12 @@ import java.util.regex.Pattern;
 public class Validators {
 
     /**
-     * Matches an email address such as name@example.com.
+     * Matches an email address such as name@example.com, including ones
+     * with more parts after the @, such as name@mail.example.com or
+     * name@company.co.uk.
      */
     private static final Pattern EMAIL_PATTERN =
-            Pattern.compile("^[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}$");
+            Pattern.compile("^[\\w.+-]+@([\\w-]+\\.)+[a-zA-Z]{2,}$");
 
     /** Matches a ZIP code, with or without the four extra digits. */
     private static final Pattern ZIP_PATTERN = Pattern.compile("^\\d{5}(-\\d{4})?$");
