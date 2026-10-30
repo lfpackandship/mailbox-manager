@@ -487,3 +487,13 @@ brings back the settings from that day. The Google Drive sign-in is the
 exception: it's kept separately, in `google-drive.properties` in the data
 folder, so it isn't included in backups and restoring doesn't change it. Backups from older versions of the app
 are upgraded automatically when restored.
+
+## Running the jar instead
+
+Each release also includes a jar for each system (`…-<platform>.jar`), which
+needs Java 17 or newer installed; Java 25 from
+[Oracle](https://www.oracle.com/java/technologies/downloads/) or
+[Adoptium](https://adoptium.net/) is recommended. The Java on java.com is
+version 8, which is too old. Run it with `java -jar <file>.jar`, or
+double-click it. If double-clicking shows "A Java Exception has occurred",
+check that `java -version` reports 17 or newer.
