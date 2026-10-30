@@ -199,6 +199,23 @@ class PriceSheetTest {
   }
 
   @Test
+  void longPricesShrinkToFitOnOneLine() {
+    var after = new PriceSheet.Content("Lake Forest Pack and Ship", "", "", "", "", "", "",
+        List.of(3, 6, 12), List.of(
+            new PriceSheet.Column("Small", "Small", "", Map.of(3, 105000L, 6, 150000L, 12, 240000L)),
+            new PriceSheet.Column("Medium", "Medium", "", Map.of(3, 120000L, 6, 180000L, 12, 300000L)),
+            new PriceSheet.Column("Large", "Large", "", Map.of(3, 180000L, 6, 260000L, 12, 400000L))));
+    var page = layOut(PriceSheet.notice(content(), after, box(LocalDate.of(2026, 10, 31)), "Small",
+        LocalDate.of(2026, 11, 1), TODAY));
+
+    var cell = FxTestSupport.call(() -> (Label) page.lookup("#noticePrice-12-2").lookup(".label"));
+    assertEquals("$400.00 → $4,000.00", FxTestSupport.call(cell::getText));
+    assertTrue(FxTestSupport.call(() -> cell.getFont().getSize()) < 13, "the prices are made smaller");
+    var oneLine = FxTestSupport.call(() -> cell.getFont().getSize() * 2);
+    assertTrue(FxTestSupport.call(() -> cell.getBoundsInLocal().getHeight()) < oneLine, "it's on one line");
+  }
+
+  @Test
   void everyPriceColumnIsTheSameWidth() {
     var notice = layOut(notice(content(), "medium"));
     var sheet = layOut(PriceSheet.page(content(), TODAY));
