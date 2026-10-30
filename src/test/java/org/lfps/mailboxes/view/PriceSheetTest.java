@@ -138,26 +138,86 @@ class PriceSheetTest {
   }
 
   @Test
-  void aNoticeShowsTheStartDateAndBothPricesWithTheSizeCircled() {
-    var after = new PriceSheet.Content("Lake Forest Pack and Ship", "", "", "", "", "", "Renew early.",
-        List.of(3), List.of(new PriceSheet.Column("Medium", "Medium", "", Map.of(3, 11000L))));
-    var page = layOut(PriceSheet.notice(content(), after, box(LocalDate.of(2026, 10, 31)), "medium",
-        LocalDate.of(2026, 11, 1), TODAY));
+  void aNoticeShowsTheStartDateAndTheBoxsSizeCircledOnce() {
+    var page = layOut(notice(content(), "medium"));
 
     assertEquals("Mailbox Price Change", FxTestSupport.call(() -> label(page, "noticeTitle").getText()));
     assertEquals("Box 12 – Ada Lovelace", FxTestSupport.call(() -> label(page, "noticeBox").getText()));
     assertEquals("Sunday, November 1, 2026", FxTestSupport.call(() -> label(page, "noticeStartDate").getText()));
     assertEquals("Renew early to keep today's prices.",
         FxTestSupport.call(() -> label(page, "noticeMessage").getText()));
-    assertEquals("$105.00", FxTestSupport.call(() -> cellText(page, "sheetPrice-3-1")));
-    assertEquals("$110.00", FxTestSupport.call(() -> cellText(page, "newPrice-3-0")));
 
-    var oldCircle = FxTestSupport.call(() -> bounds(page, page.lookup("#sizeCircle")));
-    var newCircle = FxTestSupport.call(() -> bounds(page, page.lookup("#newSizeCircle")));
-    assertTrue(oldCircle.contains(FxTestSupport.call(() -> bounds(page, page.lookup("#sheetHeader-1")))));
-    assertTrue(newCircle.contains(FxTestSupport.call(() -> bounds(page, page.lookup("#newHeader-0")))));
+    var sizeCircle = FxTestSupport.call(() -> bounds(page, page.lookup("#sizeCircle")));
+    assertTrue(sizeCircle.contains(FxTestSupport.call(() -> bounds(page, page.lookup("#noticeHeader-1")))));
+    assertFalse(sizeCircle.contains(centre(FxTestSupport.call(() -> bounds(page, page.lookup("#noticePrice-3-0"))))));
+    assertNull(FxTestSupport.call(() -> page.lookup("#newSizeCircle")));
     var dateCircle = FxTestSupport.call(() -> bounds(page, page.lookup("#startDateCircle")));
     assertTrue(dateCircle.contains(FxTestSupport.call(() -> bounds(page, page.lookup("#noticeStartDate")))));
+  }
+
+  @Test
+  void aNoticeHasOneTableUnderTheNewPricesHeading() {
+    var page = layOut(notice(content(), "medium"));
+
+    assertEquals(1, FxTestSupport.call(() -> page.lookupAll("GridPane").size()));
+    assertNull(FxTestSupport.call(() -> page.lookup("#sheetPrices")));
+    var labels = FxTestSupport.call(() -> page.lookupAll(".label").stream()
+        .map(node -> ((Label) node).getText()).collect(java.util.stream.Collectors.toList()));
+    assertTrue(labels.contains("New prices from November 1, 2026"));
+    assertFalse(labels.contains("Today's prices"));
+  }
+
+  @Test
+  void aChangedPriceShowsTodaysAndTheNewOneWithAnArrow() {
+    var page = layOut(notice(content(), "medium"));
+
+    assertEquals("$105.00 → $110.00", FxTestSupport.call(() -> cellText(page, "noticePrice-3-1")));
+  }
+
+  @Test
+  void anUnchangedPriceIsShownOnceWithoutAnArrow() {
+    var page = layOut(notice(content(), "medium"));
+
+    assertEquals("$90.00", FxTestSupport.call(() -> cellText(page, "noticePrice-3-0")));
+    assertEquals("$400.00", FxTestSupport.call(() -> cellText(page, "noticePrice-12-2")));
+  }
+
+  @Test
+  void aPriceThatIsOnlyNewSaysNew() {
+    var page = layOut(notice(content(), "medium"));
+
+    assertEquals("$500.00 NEW", FxTestSupport.call(() -> cellText(page, "noticePrice-24-2")));
+    assertEquals("—", FxTestSupport.call(() -> cellText(page, "noticePrice-24-0")));
+  }
+
+  @Test
+  void aPriceWithNoNewOneSaysNoLongerOffered() {
+    var page = layOut(notice(content(), "medium"));
+
+    assertEquals("$150.00 NO LONGER OFFERED", FxTestSupport.call(() -> cellText(page, "noticePrice-6-0")));
+  }
+
+  @Test
+  void aSizeWithNoNewPricesKeepsItsColumn() {
+    var current = content();
+    var after = new PriceSheet.Content("Lake Forest Pack and Ship", "", "", "", "", "", "",
+        List.of(3), List.of(new PriceSheet.Column("Medium", "Medium", "", Map.of(3, 11000L))));
+    var page = layOut(PriceSheet.notice(current, after, box(LocalDate.of(2026, 10, 31)), "Small",
+        LocalDate.of(2026, 11, 1), TODAY));
+
+    assertTrue(FxTestSupport.call(() -> cellText(page, "noticeHeader-1")).startsWith("Small"));
+    assertEquals("$90.00 NO LONGER OFFERED", FxTestSupport.call(() -> cellText(page, "noticePrice-3-1")));
+    var sizeCircle = FxTestSupport.call(() -> bounds(page, page.lookup("#sizeCircle")));
+    assertTrue(sizeCircle.contains(FxTestSupport.call(() -> bounds(page, page.lookup("#noticeHeader-1")))));
+  }
+
+  @Test
+  void aNoticeFitsTheWidthOfThePage() {
+    var page = layOut(notice(content(), "Large"));
+
+    assertTrue(FxTestSupport.call(page::getWidth) <= PriceSheet.PAGE_WIDTH + 8);
+    var circle = FxTestSupport.call(() -> bounds(page, page.lookup("#sizeCircle")));
+    assertTrue(circle.getMaxX() <= FxTestSupport.call(page::getWidth));
   }
 
   @Test
@@ -231,6 +291,21 @@ class PriceSheetTest {
             new PriceSheet.Column("Large", "Large", "", Map.of(3, 15000L, 6, 26000L, 12, 40000L))));
   }
 
+  /**
+   * Builds a price change notice for box 12 starting November 1, 2026, from
+   * the given prices: Medium goes up for 3 months, Small has no 6-month price
+   * any more, Large gains a 24-month price, and everything else stays the same.
+   */
+  private static Region notice(PriceSheet.Content current, String size) {
+    var after = new PriceSheet.Content("Lake Forest Pack and Ship", "", "", "", "", "", "",
+        List.of(3, 6, 12, 24), List.of(
+            new PriceSheet.Column("Small", "Small", "3¾\" x 5\" x 14\"", Map.of(3, 9000L, 12, 24000L)),
+            new PriceSheet.Column("Medium", "Medium", "", Map.of(3, 11000L, 6, 18000L, 12, 30000L)),
+            new PriceSheet.Column("Large", "Large", "", Map.of(3, 15000L, 6, 26000L, 12, 40000L, 24, 50000L))));
+    return PriceSheet.notice(current, after, box(LocalDate.of(2026, 10, 31)), size, LocalDate.of(2026, 11, 1),
+        TODAY);
+  }
+
   /** Makes box 12 for Ada Lovelace with the given end date. */
   private static Mailbox box(LocalDate endDate) {
     return new Mailbox(0, "Ada", "Lovelace", null, "12", null, "", null, null, endDate, null);
@@ -246,9 +321,10 @@ class PriceSheetTest {
     return (Label) page.lookup("#" + id);
   }
 
-  /** Returns the text in a cell of a table of prices. */
+  /** Returns the text in a cell of a table of prices, with a space between each line. */
   private static String cellText(Region page, String id) {
-    return ((Label) ((javafx.scene.Parent) page.lookup("#" + id)).getChildrenUnmodifiable().get(0)).getText();
+    return page.lookup("#" + id).lookupAll(".label").stream().map(node -> ((Label) node).getText())
+        .collect(java.util.stream.Collectors.joining(" "));
   }
 
   /** Returns where something is on a page, in the page's coordinates. */
