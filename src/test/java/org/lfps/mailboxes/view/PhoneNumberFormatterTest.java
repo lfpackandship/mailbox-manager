@@ -32,6 +32,10 @@ class PhoneNumberFormatterTest {
       "5551234567, (555) 123-4567",
       "555123456789, (555) 123-4567",
       "'(555) 123-4567', (555) 123-4567",
+      "18476150222, (847) 615-0222",
+      "1-847-615-0222, (847) 615-0222",
+      "'+1 (847) 615-0222', (847) 615-0222",
+      "28476150222, (284) 761-5022",
       "abc, ''",
   }, emptyValue = "")
   void formatsDigits(String input, String expected) {
@@ -51,6 +55,26 @@ class PhoneNumberFormatterTest {
     }
     assertEquals("(555) 123-4567", field.getText());
     assertEquals(field.getText().length(), field.getCaretPosition());
+  }
+
+  @Test
+  void dropsCountryCodeTypedFirst() {
+    var field = phoneField();
+    for (var digit : "18476150222".split("")) {
+      field.insertText(field.getCaretPosition(), digit);
+    }
+    assertEquals("(847) 615-0222", field.getText());
+    assertEquals(field.getText().length(), field.getCaretPosition());
+  }
+
+  @Test
+  void keepsCaretNextToSameDigitWhenCountryCodeIsDropped() {
+    var field = phoneField();
+    field.setText("1847615022");
+    // Insert a 9 after the 1 in "(184) 761-5022", making 11 digits.
+    field.insertText(2, "9");
+    assertEquals("(984) 761-5022", field.getText());
+    assertEquals("(9".length(), field.getCaretPosition());
   }
 
   @Test

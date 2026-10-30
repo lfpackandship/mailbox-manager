@@ -3,6 +3,15 @@
 What changed in each release of Mailbox Manager, newest first. Downloads are on
 the [releases page](https://github.com/lfpackandship/mailbox-manager/releases).
 
+## Unreleased
+
+### Fixed
+
+- A phone number typed or imported with a 1 in front, such as
+  1-847-615-0222, was saved and shown wrong, as (184) 761-5022. The 1 is now
+  left off, so it's (847) 615-0222. A box that already shows the wrong number
+  needs it corrected on Edit Box.
+
 ## 1.11.1 – 2026-10-29
 
 ### Changed
