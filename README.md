@@ -646,10 +646,11 @@ used. To add a menu item, edit `buildMenuBar` in `view/AppWindow.java`.
 ### Issues and branches
 
 Work is planned in GitHub issues. Each issue gets its own branch, created
-from the issue's page (Development → Create a branch), and comes back to
-`main` through a pull request that's reviewed and merged on GitHub. Nothing
-is committed to `main` directly except the release commit. Once a pull
-request is merged, its branch is deleted.
+from the issue's page (Development → Create a branch) or with `gh issue
+develop <number>`, and comes back to `main` through a pull request that's
+reviewed and merged on GitHub. Nothing is committed to `main` directly
+except the release commit. Once a pull request is merged, its branch is
+deleted.
 
 Instructions for AI coding agents, including these rules, are in
 [AGENTS.md](AGENTS.md). Claude Code reads them through `CLAUDE.md`.

@@ -8,25 +8,31 @@ it before making changes. This file covers how to work in the repository.
 
 Work is planned in GitHub issues, and each issue gets its own branch.
 
-- Every piece of work starts from an issue, which the user opens. If asked
-  for something that has no issue, ask the user to open one, and don't
-  start until it exists. `gh issue view <number>` shows what it asks for.
-- Work on the branch linked to the issue, which the user creates from the
-  issue's page (Development → Create a branch). `gh issue develop --list
+- Every piece of work starts from an issue. The user opens it, or asks you
+  to open it with `gh issue create`. If asked for something that has no
+  issue, ask whether to open one, and don't start until it exists. `gh issue
+  view <number>` shows what an issue asks for.
+- Work on the branch linked to the issue. `gh issue develop --list
   <number>` shows it; run `git fetch` first, then check it out. If the issue
-  has no branch, ask the user to create one.
+  has no branch, create one from `main` with `gh issue develop <number>
+  --base main --checkout`, which links it the same way as Development →
+  Create a branch on the issue's page.
 - Never commit directly to `main`, except for the release commit (see
   "When finishing a release"). Before changing anything, check the current
   branch.
 - Say which issue each commit is for at the end of its message, such as
   "Part of #4".
-- When the issue's work is done, ask whether to open a pull request (see
-  below). The user reviews and merges it on GitHub and closes the issue, so
-  don't merge it or close the issue yourself.
-- Push only when the user asks. A yes to a pull request also covers pushing
-  its branch.
+- When the issue's work is done, push its branch and open a pull request
+  (see below) without asking first, so the user can review it on GitHub.
+  The user reviews and merges it and closes the issue, so don't merge it or
+  close the issue yourself.
+- Otherwise, push only when the user asks.
 - Once a pull request is merged, switch to `main`, pull it, and delete the
   issue's local branch.
+- Each branch from `main` adds its own "Unreleased" section to
+  CHANGELOG.md, so once one pull request is merged, the others conflict
+  there. Update each open branch from `main`, combine the entries under one
+  "Unreleased" section, run the tests, and push.
 
 ## Commits and checking in
 
@@ -86,11 +92,11 @@ Everything is documented, so someone new can read any file cold.
   repo. If the app starts handling data or Google access differently, update
   the policy and its date there too.
 
-## When asked for a pull request
+## Opening a pull request
 
-Push the branch if the user agrees, then open the pull request with `gh pr
-create`. If the GitHub CLI isn't installed, give the user a title and
-description to paste in instead, with the link for opening it:
+Push the branch, then open the pull request with `gh pr create` and give
+the user its link. If the GitHub CLI isn't installed, give the user a title
+and description to paste in instead, with the link for opening it:
 `https://github.com/lfpackandship/mailbox-manager/compare/main...<branch>`.
 
 The description is for whoever reviews and merges the branch, so unlike the
