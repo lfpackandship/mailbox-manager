@@ -29,10 +29,6 @@ Work is planned in GitHub issues, and each issue gets its own branch.
 - Otherwise, push only when the user asks.
 - Once a pull request is merged, switch to `main`, pull it, and delete the
   issue's local branch.
-- Each branch from `main` adds its own "Unreleased" section to
-  CHANGELOG.md, so once one pull request is merged, the others conflict
-  there. Update each open branch from `main`, combine the entries under one
-  "Unreleased" section, run the tests, and push.
 
 ## Commits and checking in
 
@@ -41,8 +37,8 @@ the way.
 
 - Make a commit for each task or each separate change, so the history is
   easy to read and any one change can be undone on its own. Three tasks
-  means at least three commits. Each commit has passing tests, its
-  CHANGELOG.md entry, and a message saying what changed and why.
+  means at least three commits. Each commit has passing tests and a
+  message saying what changed and why.
 - Before starting a list of tasks, say how you'll split it into commits and
   ask about anything unclear. Then stop after each task: say what changed,
   as the user would see it, and wait for a go-ahead before the next. Don't
@@ -61,7 +57,6 @@ the way.
 - The code targets Java 11: no records, text blocks, or switch expressions.
 - Match the surrounding code's style and comment density. User-facing text
   is plain and friendly, written for someone who isn't technical.
-- Add each user-visible change to the "Unreleased" section of CHANGELOG.md.
 
 ## Documentation
 
@@ -140,8 +135,7 @@ each one and wait for a yes. Do the rest without asking.
 2. Make the release commit on `main`, the one commit that doesn't go on an
    issue branch, as in the README's release steps: update the README for
    anything in the release that it describes, set the version in
-   `pom.xml`, turn "Unreleased" in CHANGELOG.md into the version and
-   today's date, and commit it as `Release x.y.z`.
+   `pom.xml`, and commit it as `Release x.y.z`.
 3. Ask, then push `main`.
 4. Wait for the tests to pass in GitHub Actions. If you can't see them, ask
    the user to say when they have.
@@ -192,4 +186,6 @@ Download the installer for your computer below and install it over the old versi
 | Linux | mailbox-manager-1.5.2-linux-x64.AppImage |
 ```
 
-Base the notes on the release's CHANGELOG.md entry.
+Base the notes on what's changed since the last release, not on memory:
+the pull requests merged since its tag (`gh pr list --state merged`) and
+`git log v<last>..vx.y.z`.

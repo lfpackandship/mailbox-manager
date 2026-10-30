@@ -5,7 +5,8 @@ to reach them, which business names receive mail there, and when each rental
 ends. It runs on macOS, Windows, and Linux, and keeps all data on your own
 computer.
 
-See [CHANGELOG.md](CHANGELOG.md) for what's new in each release.
+See the [releases page](https://github.com/lfpackandship/mailbox-manager/releases)
+for what's new in each release.
 
 ## Installing
 
@@ -669,9 +670,8 @@ A release is made when it's ready, from whatever has been merged into
 1. Update the version in `pom.xml` and commit it (`Release x.y.z`). Versions
    must be three numbers, x.y.z, because the macOS installer accepts nothing
    else.
-2. Add the release to [CHANGELOG.md](CHANGELOG.md).
-3. Push to `main` and wait for the tests to pass in GitHub Actions.
-4. Tag the commit and push the tag. The tag must match the version in
+2. Push to `main` and wait for the tests to pass in GitHub Actions.
+3. Tag the commit and push the tag. The tag must match the version in
    `pom.xml`, or the build stops before releasing anything.
 
    ```sh
@@ -682,8 +682,8 @@ A release is made when it's ready, from whatever has been merged into
 GitHub Actions then builds the installers and jars on Windows, Linux, and both
 kinds of Mac, installs and starts each app to check that it launches, and
 attaches them all to a GitHub release for the tag. The release notes are
-generated from commit titles; edit the release on GitHub to add a friendlier
-summary from the changelog.
+generated from commit titles; edit the release on GitHub to replace them with
+a friendlier summary of what's new.
 
 From the Actions tab you can also run the **Build** workflow by hand. With the
 tag left empty it builds the installers without releasing them, so you can
