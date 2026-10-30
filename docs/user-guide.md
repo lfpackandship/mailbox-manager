@@ -134,8 +134,10 @@ While a [price change](#raising-prices-from-a-later-date) is coming up, the
 price sheet and reminders show the new prices too, under **New prices from**
 and the day they start, the same way as the price change notices: today's
 price and the new one with an arrow between them, or just the price if it
-isn't changing, and NEW or NO LONGER OFFERED. Once the new prices start, the
-sheet and reminders go back to showing one price in each box.
+isn't changing, and NEW or NO LONGER OFFERED. To print them with only
+today's prices, untick **Show the new prices from** in the print window. Once
+the new prices start, the sheet and reminders go back to showing one price in
+each box.
 
 The shop's name, address, and phone number, the text above and below the
 prices, and the reminders' messages are set in Settings under
