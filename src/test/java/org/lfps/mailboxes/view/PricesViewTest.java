@@ -6,13 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -95,6 +99,43 @@ class PricesViewTest {
       assertTrue(GridPane.getColumnIndex(shortest) < GridPane.getColumnIndex(byDefault));
       assertTrue(GridPane.getColumnIndex(small) < GridPane.getColumnIndex(byDefault));
     });
+  }
+
+  @Test
+  void thePrintedSheetShowsEachPriceUnderItsOwnSizeAndLength() throws SQLException {
+    new BoxInventoryRepository().add(List.of("5"), "Medium");
+    var window = openPrices();
+    // The shop's prices, by size, for 1, 3, 6, and 12 months. No two are the
+    // same, so a price in the wrong row or column would show up.
+    var entered = new LinkedHashMap<String, List<String>>();
+    entered.put("small", List.of("15", "39", "69", "120"));
+    entered.put("medium", List.of("20", "54", "96", "168"));
+    entered.put("large", List.of("30", "81", "144", "252"));
+    var lengths = List.of(1, 3, 6, 12);
+
+    FxTestSupport.run(() -> {
+      entered.forEach((size, amounts) -> {
+        for (var i = 0; i < lengths.size(); i++) {
+          field(window, "price-" + size + "-" + lengths.get(i)).setText(amounts.get(i));
+        }
+      });
+      ((Button) window.getScene().lookup("#pricesSaveButton")).fire();
+    });
+    assertEquals("Saved", text(window));
+
+    var content = PriceSheet.load();
+    assertEquals(lengths, content.lengths);
+    var page = FxTestSupport.call(() -> Printing.layOut(PriceSheet.page(content, LocalDate.of(2026, 10, 29))));
+    var col = 0;
+    for (var size : entered.keySet()) {
+      assertEquals(size, content.columns.get(col).heading.toLowerCase());
+      for (var i = 0; i < lengths.size(); i++) {
+        var id = "sheetPrice-" + lengths.get(i) + "-" + col;
+        assertEquals("$" + entered.get(size).get(i) + ".00", FxTestSupport.call(() -> cellText(page, id)),
+            size + " for " + lengths.get(i) + " months");
+      }
+      col++;
+    }
   }
 
   @Test
@@ -190,6 +231,11 @@ class PricesViewTest {
   /** Returns the text field with the given id on a window. */
   private static TextField field(Stage window, String id) {
     return (TextField) window.getScene().lookup("#" + id);
+  }
+
+  /** Returns the text in a cell of the printed sheet's table of prices. */
+  private static String cellText(Region page, String id) {
+    return ((Label) ((Parent) page.lookup("#" + id)).getChildrenUnmodifiable().get(0)).getText();
   }
 
   /** Returns the message under the Prices window's Save button. */
