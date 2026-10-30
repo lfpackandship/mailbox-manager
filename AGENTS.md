@@ -145,8 +145,11 @@ each one and wait for a yes. Do the rest without asking.
    "GOOGLE_CLIENT_ID isn't set" warning. If they do, the installers can't
    connect to Google Drive, so tell the user. If you can't see the build,
    ask the user to look.
-7. Give the user release notes to paste into the GitHub release (edit the
-   release, replace the generated notes), as described below.
+7. Write the release notes as described below and replace the generated
+   ones with them: `gh release edit vx.y.z --notes-file <file>`. Then give
+   the user the release's link. If the GitHub CLI isn't installed, give the
+   user the notes to paste in instead (edit the release, replace the
+   generated notes).
 
 The release notes are for the people who use the app, not developers.
 Write them like the earlier releases on the releases page:
