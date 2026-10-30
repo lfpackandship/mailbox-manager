@@ -133,8 +133,9 @@ each one and wait for a yes. Do the rest without asking.
 
 1. Switch to `main` and pull it. Check that `git status` is clean.
 2. Make the release commit on `main`, the one commit that doesn't go on an
-   issue branch, as in the README's release steps: update the README for
-   anything in the release that it describes, set the version in
+   issue branch, as in the README's release steps: update the README and
+   the user guide (`docs/user-guide.md`) for anything in the release they
+   describe, set the version in
    `pom.xml`, and commit it as `Release x.y.z`.
 3. Ask, then push `main`.
 4. Wait for the tests to pass in GitHub Actions. If you can't see them, ask
@@ -162,8 +163,9 @@ Write them like the earlier releases on the releases page:
   in the past tense, and that it's fixed.
 - **Installing or upgrading** last, always, with the download table. Say if
   the data is upgraded the first time the new version starts.
-- End with a "See the README for more on …" line for anything new that the
-  README explains further.
+- End with a "See the user guide for more on …" line, linking to
+  `docs/user-guide.md` on GitHub, for anything new that the guide explains
+  further.
 - No commit hashes, code names, file paths inside the app, or developer
   terms. Leave out sections that don't apply.
 
