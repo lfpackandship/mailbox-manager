@@ -23,6 +23,10 @@ public final class PhoneNumberFormatter {
         var newText = change.getControlNewText();
         var caretPosition = Math.min(change.getCaretPosition(), newText.length());
         var digitsBeforeCaret = countDigits(newText.substring(0, caretPosition));
+        // The leading 1 that format drops is no longer there to count.
+        if (digitsBeforeCaret > 0 && hasCountryCode(digitsOf(newText))) {
+          digitsBeforeCaret--;
+        }
 
         var formatted = format(newText);
         change.setText(formatted);
@@ -82,16 +86,41 @@ public final class PhoneNumberFormatter {
   }
 
   /**
+   * Returns just the digits of some text.
+   *
+   * @param text the text, or {@code null}
+   * @return its digits, or an empty string if it has none
+   */
+  private static String digitsOf(String text) {
+    return text == null ? "" : text.replaceAll("[^0-9]", "");
+  }
+
+  /**
+   * Returns whether digits are a 10-digit number with the US country code 1
+   * in front, such as 18476150222, which {@link #format} drops.
+   *
+   * @param digits the digits only
+   * @return {@code true} for 11 digits starting with 1
+   */
+  private static boolean hasCountryCode(String digits) {
+    return digits.length() == 11 && digits.startsWith("1");
+  }
+
+  /**
    * Formats a string of digits (ignoring any other characters) as a US
-   * phone number, truncating to at most 10 digits.
+   * phone number. A leading 1, the country code, is dropped from an 11-digit
+   * number, as in 1-847-615-0222; otherwise only the first 10 digits are
+   * kept.
    *
    * @param input the raw input to format
    * @return the formatted phone number, or a partial prefix if fewer than
    *     10 digits were given
    */
   public static String format(String input) {
-    var digits = input == null ? "" : input.replaceAll("[^0-9]", "");
-    if (digits.length() > 10) {
+    var digits = digitsOf(input);
+    if (hasCountryCode(digits)) {
+      digits = digits.substring(1);
+    } else if (digits.length() > 10) {
       digits = digits.substring(0, 10);
     }
 
