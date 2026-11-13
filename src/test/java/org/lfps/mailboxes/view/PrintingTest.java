@@ -231,6 +231,27 @@ class PrintingTest {
   }
 
   @Test
+  void anyProblemOnThePrintThreadEndsThePrintWithAMessage() {
+    assertEquals("Printing didn't work. Check that the printer is on and try again. (Out of paper)",
+        printFailure(() -> {
+          throw new java.awt.print.PrinterException("Out of paper");
+        }));
+    assertEquals("No printer is set up on this computer.", printFailure(() -> {
+      throw new IllegalStateException("No printer is set up on this computer.");
+    }));
+    // Without these ending the print, the Print buttons would stay stuck
+    // until the app was restarted.
+    assertEquals("Something went wrong while printing. Check that the printer is on and try again.",
+        printFailure(() -> {
+          throw new NullPointerException();
+        }));
+    assertEquals("Something went wrong while printing. Check that the printer is on and try again. "
+        + "(Java heap space)", printFailure(() -> {
+          throw new OutOfMemoryError("Java heap space");
+        }));
+  }
+
+  @Test
   void printsTheRenewalsList() {
     FxTestSupport.run(() -> button(mainWindow, "printListButton").fire());
 
@@ -377,6 +398,23 @@ class PrintingTest {
   /** Returns the label with the given id on a window. */
   private static Label label(Stage window, String id) {
     return (Label) window.getScene().lookup("#" + id);
+  }
+
+  /**
+   * Runs print steps on the print thread, as the real print dialog is, and
+   * returns the message the print fails with, failing if it doesn't fail
+   * within a few seconds.
+   */
+  private static String printFailure(Printing.PrintSteps steps) {
+    try {
+      Printing.onPrintThread(steps).get(5, java.util.concurrent.TimeUnit.SECONDS);
+    } catch (java.util.concurrent.ExecutionException e) {
+      assertTrue(e.getCause() instanceof IllegalStateException, e.getCause().toString());
+      return e.getCause().getMessage();
+    } catch (Exception e) {
+      throw new AssertionError(e);
+    }
+    throw new AssertionError("Expected the print to fail");
   }
 
 }
