@@ -29,6 +29,7 @@ import org.lfps.mailboxes.view.AppWindow;
 import org.lfps.mailboxes.view.MainMenuView;
 import org.lfps.mailboxes.view.SettingsView;
 import org.lfps.mailboxes.view.StartupProblemView;
+import org.lfps.mailboxes.view.UnexpectedErrors;
 import org.lfps.mailboxes.view.WindowPlacement;
 
 /**
@@ -141,12 +142,14 @@ public class App extends Application {
    * last closed, and makes today's backup (see {@link #backUpToday()}). While
    * the app stays open, each new day's backup is made when the date changes.
    * If the data can't be opened and the user doesn't restore a backup, the
-   * app quits without showing the main window.
+   * app quits without showing the main window. From the start, any error
+   * nothing else catches is logged and shown (see {@link UnexpectedErrors}).
    *
    * @param stage the primary window supplied by the JavaFX runtime
    */
   @Override
   public void start(Stage stage) {
+    UnexpectedErrors.install();
     AppWindow.init(getHostServices());
     if (!openData()) {
       quit.run();

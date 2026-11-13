@@ -58,6 +58,8 @@ class AppStartupTest {
 
   private final Runnable realQuit = App.quit;
 
+  private final Thread.UncaughtExceptionHandler realErrorHandler = Thread.getDefaultUncaughtExceptionHandler();
+
   /** Whether a test left the database damaged, so it's removed afterwards for the next test. */
   private boolean damaged;
 
@@ -71,6 +73,8 @@ class AppStartupTest {
     });
     App.startupProblem = realStartupProblem;
     App.quit = realQuit;
+    // Starting the app catches every error; put back how tests handle them.
+    Thread.setDefaultUncaughtExceptionHandler(realErrorHandler);
     if (damaged) {
       Files.deleteIfExists(Database.dataDir().resolve("mailboxes.db"));
     }
