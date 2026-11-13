@@ -422,6 +422,10 @@ Everything is stored in a single database file, `mailboxes.db`, in this folder:
 | Windows | `%APPDATA%\MailboxManager`                        |
 | Linux   | `~/.mailbox-manager`                              |
 
+Only the person signed in to the computer can open this folder, since it
+holds every box holder's details. On Windows and macOS that's already how
+these folders work; on Linux the app sets it up each time it starts.
+
 Each day, the first time the app starts, it saves a copy of the database to
 the `backups` folder inside that folder, named by date
 (`mailboxes-2026-09-26.db`). Each time the app closes, it brings that day's

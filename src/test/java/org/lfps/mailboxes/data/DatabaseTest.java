@@ -51,6 +51,21 @@ class DatabaseTest {
   }
 
   @Test
+  void dataDirIsMadePrivateEvenIfAnOlderVersionMadeItReadableByAll() throws IOException {
+    Files.createDirectories(Database.dataDir());
+    org.junit.jupiter.api.Assumptions.assumeTrue(
+        Files.getFileAttributeView(Database.dataDir(), java.nio.file.attribute.PosixFileAttributeView.class) != null,
+        "Only Unix-style file systems have these permissions");
+    Files.setPosixFilePermissions(Database.dataDir(),
+        java.nio.file.attribute.PosixFilePermissions.fromString("rwxr-xr-x"));
+
+    Database.prepareDataDir();
+
+    assertEquals("rwx------", java.nio.file.attribute.PosixFilePermissions.toString(
+        Files.getPosixFilePermissions(Database.dataDir())));
+  }
+
+  @Test
   void movesLegacyDatabaseFromWorkingDirectory() throws IOException {
     var legacy = Paths.get("mailboxes.db");
     Files.writeString(legacy, "legacy");
