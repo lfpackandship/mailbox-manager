@@ -135,24 +135,51 @@ public final class FakeGoogle {
    */
   public java.util.function.Consumer<String> browser() {
     return url -> new Thread(() -> {
-      var params = GoogleDrive.parseQuery(URI.create(url).getRawQuery());
-      requestedScope = params.get("scope");
-      String code;
-      synchronized (this) {
-        code = "code-" + nextToken++;
-        challenges.put(code, params.get("code_challenge"));
-      }
-      var query = denySignIn
-          ? "error=access_denied&state=" + params.get("state")
-          : "code=" + code + "&state=" + params.get("state");
       try {
-        HttpClient.newHttpClient().send(
-            HttpRequest.newBuilder(URI.create(params.get("redirect_uri") + "/?" + query)).build(),
-            BodyHandlers.discarding());
+        HttpClient.newHttpClient().send(HttpRequest.newBuilder(signInReply(url)).build(), BodyHandlers.discarding());
       } catch (IOException | InterruptedException e) {
         throw new RuntimeException(e);
       }
     }).start();
+  }
+
+  /**
+   * Returns a browser that signs in like {@link #browser()}, but drops the
+   * connection as soon as it has sent Google's reply back to the app, as when
+   * the tab is closed, so the app can't show its "Connected" page.
+   */
+  public java.util.function.Consumer<String> browserThatLeaves() {
+    return url -> new Thread(() -> {
+      var reply = signInReply(url);
+      try (var socket = new java.net.Socket(reply.getHost(), reply.getPort())) {
+        socket.getOutputStream().write(("GET " + reply.getRawPath() + "?" + reply.getRawQuery() + " HTTP/1.1\r\n"
+            + "Host: " + reply.getHost() + ":" + reply.getPort() + "\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+        socket.getOutputStream().flush();
+        // Closes with a reset rather than politely, so the app's attempt to
+        // send its page fails instead of being quietly buffered.
+        socket.setSoLinger(true, 0);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }).start();
+  }
+
+  /**
+   * Plays the user signing in on Google's page: records what the app asked
+   * for, and returns the address Google would send the browser back to.
+   */
+  private URI signInReply(String url) {
+    var params = GoogleDrive.parseQuery(URI.create(url).getRawQuery());
+    requestedScope = params.get("scope");
+    String code;
+    synchronized (this) {
+      code = "code-" + nextToken++;
+      challenges.put(code, params.get("code_challenge"));
+    }
+    var query = denySignIn
+        ? "error=access_denied&state=" + params.get("state")
+        : "code=" + code + "&state=" + params.get("state");
+    return URI.create(params.get("redirect_uri") + "/?" + query);
   }
 
   /** Returns the files in the backups folder, by name. */

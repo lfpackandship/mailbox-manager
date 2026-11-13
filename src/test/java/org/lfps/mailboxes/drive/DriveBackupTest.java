@@ -82,6 +82,16 @@ class DriveBackupTest {
   }
 
   @Test
+  void connectsEvenIfTheBrowserTabIsClosedBeforeTheConnectedPageShows() throws Exception {
+    google.email = "post.office@gmail.com";
+
+    var account = await(DriveBackup.connect(google.browserThatLeaves()));
+
+    assertEquals("post.office@gmail.com", account.email());
+    assertEquals("post.office@gmail.com", DriveBackup.account().email());
+  }
+
+  @Test
   void clickingCancelOnGooglesPageLeavesDriveDisconnected() {
     google.denySignIn = true;
 
