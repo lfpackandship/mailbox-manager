@@ -250,24 +250,26 @@ public class Database {
    * Replaces the current data with a backup. The current data is first saved
    * to the {@code backups} folder, so the restore can be undone by restoring
    * that file. A backup from an older version is upgraded to the current
-   * database layout.
+   * database layout. The upgrade is done on a copy before anything is
+   * replaced, so a backup that can't be upgraded leaves the data as it was.
    *
    * @param backup the backup file to restore
    * @return the backup of the data that was replaced
    * @throws IllegalArgumentException if the file isn't a Mailbox Manager
    *     database, or is damaged
    * @throws RuntimeException if the restore fails; the current data is left
-   *     in place
+   *     in place, and nothing is saved to the {@code backups} folder
    */
   public static Path restore(Path backup) {
     requireMailboxDatabase(backup);
     var saved = BACKUP_DIR.resolve("mailboxes-before-restore-" + LocalDateTime.now().format(TIMESTAMP) + ".db");
     var partial = DATA_DIR.resolve(FILE_NAME + ".partial");
     try {
-      Files.createDirectories(BACKUP_DIR);
-      writeCopy(saved);
       try {
         Files.copy(backup, partial, StandardCopyOption.REPLACE_EXISTING);
+        initSchema(partial);
+        Files.createDirectories(BACKUP_DIR);
+        writeCopy(saved);
         Files.move(partial, DB_PATH, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
       } finally {
         Files.deleteIfExists(partial);
@@ -275,7 +277,6 @@ public class Database {
     } catch (IOException | SQLException e) {
       throw new RuntimeException("Failed to restore " + backup, e);
     }
-    initSchema();
     return saved;
   }
 
@@ -297,6 +298,18 @@ public class Database {
    * @throws RuntimeException if the schema cannot be initialized
    */
   public static void initSchema() {
+    initSchema(DB_PATH);
+  }
+
+  /**
+   * Creates the tables and indexes in a database file and upgrades an older
+   * one, as {@link #initSchema()} does for the app's own database. Used on its
+   * own to upgrade a backup's copy before it's restored.
+   *
+   * @param file the database file; it's created if it doesn't exist
+   * @throws RuntimeException if the schema cannot be initialized
+   */
+  private static void initSchema(Path file) {
     var createMailboxes = "CREATE TABLE IF NOT EXISTS mailboxes ("
         + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
         + "first_name TEXT NOT NULL, "
@@ -405,7 +418,8 @@ public class Database {
         + "mailbox_id INTEGER PRIMARY KEY, "
         + "box_number TEXT NOT NULL)";
 
-    try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
+    try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + file);
+        Statement stmt = conn.createStatement()) {
       stmt.execute(createMailboxes);
       stmt.execute(createBusinessNames);
       stmt.execute(createForwardingAddresses);
