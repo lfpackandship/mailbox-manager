@@ -224,32 +224,20 @@ final class Printing {
    *     cancelled, or with the problem
    */
   private static CompletableFuture<Boolean> printWithSystemDialog(String jobName, List<Region> pages) {
-    var result = new CompletableFuture<Boolean>();
-    var thread = new Thread(() -> {
-      try {
-        var job = PrinterJob.getPrinterJob();
-        // With no printer set up, a Mac explains how to add one itself.
-        if (job.getPrintService() == null && !MAC) {
-          throw new IllegalStateException("No printer is set up on this computer.");
-        }
-        job.setJobName(jobName);
-        job.setPrintable(new Pages(pages));
-        if (!job.printDialog()) {
-          result.complete(false);
-          return;
-        }
-        job.print();
-        result.complete(true);
-      } catch (PrinterException e) {
-        result.completeExceptionally(new IllegalStateException(
-            "Printing didn't work. Check that the printer is on and try again. (" + e.getMessage() + ")", e));
-      } catch (RuntimeException e) {
-        result.completeExceptionally(e);
+    return onPrintThread(() -> {
+      var job = PrinterJob.getPrinterJob();
+      // With no printer set up, a Mac explains how to add one itself.
+      if (job.getPrintService() == null && !MAC) {
+        throw new IllegalStateException("No printer is set up on this computer.");
       }
-    }, "Printing");
-    thread.setDaemon(true);
-    thread.start();
-    return result;
+      job.setJobName(jobName);
+      job.setPrintable(new Pages(pages));
+      if (!job.printDialog()) {
+        return false;
+      }
+      job.print();
+      return true;
+    });
   }
 
   /**
@@ -265,36 +253,77 @@ final class Printing {
    *     cancelled, or with the problem
    */
   private static CompletableFuture<Boolean> printToPaperWithSystemDialog(String jobName, Printable printable) {
+    return onPrintThread(() -> {
+      var job = PrinterJob.getPrinterJob();
+      if (job.getPrintService() == null && !MAC) {
+        throw new IllegalStateException("No printer is set up on this computer.");
+      }
+      job.setJobName(jobName);
+      job.setPrintable(printable);
+      if (!job.printDialog()) {
+        return false;
+      }
+      job.setPrintable(printable, fullPage(job));
+      job.print();
+      return true;
+    });
+  }
+
+  /** A print job's steps, from showing the print dialog to sending the job to the printer. */
+  interface PrintSteps {
+    /**
+     * Shows the print dialog and prints.
+     *
+     * @return {@code true} once printed, or {@code false} if the user cancelled
+     * @throws PrinterException if the printer reports a problem
+     */
+    boolean run() throws PrinterException;
+  }
+
+  /**
+   * Runs a print job on a thread of its own, as the print dialog needs (see
+   * {@link #printWithSystemDialog}), and reports how it went. The result
+   * always completes, whatever goes wrong, so the Print buttons, which wait
+   * for it before allowing another print, never stay stuck.
+   *
+   * @param steps the job's steps
+   * @return completes with {@code true} once printed, {@code false} if the
+   *     user cancelled, or an {@link IllegalStateException} with a message
+   *     suitable for showing to the user
+   */
+  static CompletableFuture<Boolean> onPrintThread(PrintSteps steps) {
     var result = new CompletableFuture<Boolean>();
     var thread = new Thread(() -> {
       try {
-        var job = PrinterJob.getPrinterJob();
-        if (job.getPrintService() == null && !MAC) {
-          throw new IllegalStateException("No printer is set up on this computer.");
-        }
-        job.setJobName(jobName);
-        job.setPrintable(printable);
-        if (!job.printDialog()) {
-          result.complete(false);
-          return;
-        }
-        job.setPrintable(printable, fullPage(job));
-        job.print();
-        result.complete(true);
+        result.complete(steps.run());
       } catch (PrinterException e) {
         result.completeExceptionally(new IllegalStateException(
-            "Printing didn't work. Check that the printer is on and try again. (" + e.getMessage() + ")", e));
+            "Printing didn't work. Check that the printer is on and try again." + detail(e), e));
       } catch (IllegalStateException e) {
+        // Already says what's wrong, such as that no printer is set up.
         result.completeExceptionally(e);
-      } catch (RuntimeException e) {
+      } catch (Throwable e) {
+        // Errors too, such as running out of memory on a large page: this
+        // thread ends here, freeing what it held, and the user can try again.
         result.completeExceptionally(new IllegalStateException(
-            "Something went wrong while printing. Check that the printer is on and try again. ("
-                + e.getMessage() + ")", e));
+            "Something went wrong while printing. Check that the printer is on and try again." + detail(e), e));
       }
     }, "Printing");
     thread.setDaemon(true);
     thread.start();
     return result;
+  }
+
+  /**
+   * Returns a problem's own explanation, to add after a message in brackets.
+   *
+   * @param problem what went wrong
+   * @return such as " (Printer is out of paper)", or nothing if it gives no
+   *     explanation
+   */
+  private static String detail(Throwable problem) {
+    var message = problem.getMessage();
+    return message == null || message.isBlank() ? "" : " (" + message + ")";
   }
 
   /**
