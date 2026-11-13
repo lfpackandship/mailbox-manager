@@ -264,7 +264,7 @@ public class BoxInventoryView {
         inventory.setSize(numbers, size.get());
         reload.accept("");
       } catch (SQLException ex) {
-        error(statusLabel, "Couldn't save the size. Please try again." + Errors.detail(ex));
+        StatusText.showError(statusLabel, "Couldn't save the size. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -284,7 +284,7 @@ public class BoxInventoryView {
         inventory.setOutOfService(numbers, reason.get());
         reload.accept("Marked " + describe(numbers) + " out of service.");
       } catch (SQLException ex) {
-        error(statusLabel, "Couldn't save. Please try again." + Errors.detail(ex));
+        StatusText.showError(statusLabel, "Couldn't save. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -300,7 +300,7 @@ public class BoxInventoryView {
         reload.accept(Character.toUpperCase(describe(numbers).charAt(0)) + describe(numbers).substring(1)
             + (numbers.size() == 1 ? " is" : " are") + " back in service.");
       } catch (SQLException ex) {
-        error(statusLabel, "Couldn't save. Please try again." + Errors.detail(ex));
+        StatusText.showError(statusLabel, "Couldn't save. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -318,7 +318,7 @@ public class BoxInventoryView {
         inventory.remove(numbers);
         reload.accept("Removed " + describe(numbers) + ".");
       } catch (SQLException ex) {
-        error(statusLabel, "Couldn't remove boxes. Please try again." + Errors.detail(ex));
+        StatusText.showError(statusLabel, "Couldn't remove boxes. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -344,9 +344,9 @@ public class BoxInventoryView {
             + (skipped == 0 ? "." : "; " + skipped + " already in the inventory " + (skipped == 1 ? "was" : "were")
                 + " left as " + (skipped == 1 ? "it was." : "they were.")));
       } catch (IllegalArgumentException ex) {
-        error(statusLabel, ex.getMessage());
+        StatusText.showError(statusLabel, ex.getMessage());
       } catch (SQLException ex) {
-        error(statusLabel, "Couldn't add boxes. Please try again." + Errors.detail(ex));
+        StatusText.showError(statusLabel, "Couldn't add boxes. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -380,7 +380,7 @@ public class BoxInventoryView {
           var added = inventory.add(missing, null);
           reload.accept("Added " + added + (added == 1 ? " box." : " boxes."));
         } catch (SQLException ex) {
-          error(statusLabel, "Couldn't add boxes. Please try again." + Errors.detail(ex));
+          StatusText.showError(statusLabel, "Couldn't add boxes. Please try again." + Errors.detail(ex));
         }
       });
       var missingRow = new HBox(10, missingLabel, addMissingBtn);
@@ -607,16 +607,6 @@ public class BoxInventoryView {
     return String.join(", ", boxNumbers.subList(0, shown)) + ", and " + (boxNumbers.size() - shown) + " more";
   }
 
-  /**
-   * Shows a problem in red.
-   *
-   * @param label where to show it
-   * @param message the problem
-   */
-  private static void error(Label label, String message) {
-    label.setStyle("-fx-text-fill: red;");
-    label.setText(message);
-  }
 
   /**
    * Returns text, or an empty string in place of {@code null}.
