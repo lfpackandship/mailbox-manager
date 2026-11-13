@@ -500,6 +500,10 @@ exception: it's kept separately, in `google-drive.properties` in the data
 folder, so it isn't included in backups and restoring doesn't change it. Backups from older versions of the app
 are upgraded automatically when restored.
 
+Each backup is checked before anything is replaced. If one is damaged, for
+example a copy cut off because a USB drive was unplugged too soon, the app
+says so and leaves your current data as it is; try an older backup instead.
+
 ## Running the jar instead
 
 Each release also includes a jar for each system (`…-<platform>.jar`), which
