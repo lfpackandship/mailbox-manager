@@ -42,6 +42,7 @@ import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.InventoryBox;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
+import org.lfps.mailboxes.util.Errors;
 
 /**
  * The box inventory: every physical box, whether it's rented or empty, with
@@ -187,7 +188,7 @@ public class BoxInventoryView {
           .forEach(missing::add);
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
-      statusLabel.setText("Failed to load the box inventory: " + e.getMessage());
+      statusLabel.setText("Couldn't load the box inventory." + Errors.detail(e));
     }
 
     // Each box is counted once: a rented box that's out of service counts as rented.
@@ -263,7 +264,7 @@ public class BoxInventoryView {
         inventory.setSize(numbers, size.get());
         reload.accept("");
       } catch (SQLException ex) {
-        error(statusLabel, "Failed to save the size: " + ex.getMessage());
+        error(statusLabel, "Couldn't save the size. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -283,7 +284,7 @@ public class BoxInventoryView {
         inventory.setOutOfService(numbers, reason.get());
         reload.accept("Marked " + describe(numbers) + " out of service.");
       } catch (SQLException ex) {
-        error(statusLabel, "Failed to save: " + ex.getMessage());
+        error(statusLabel, "Couldn't save. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -299,7 +300,7 @@ public class BoxInventoryView {
         reload.accept(Character.toUpperCase(describe(numbers).charAt(0)) + describe(numbers).substring(1)
             + (numbers.size() == 1 ? " is" : " are") + " back in service.");
       } catch (SQLException ex) {
-        error(statusLabel, "Failed to save: " + ex.getMessage());
+        error(statusLabel, "Couldn't save. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -317,7 +318,7 @@ public class BoxInventoryView {
         inventory.remove(numbers);
         reload.accept("Removed " + describe(numbers) + ".");
       } catch (SQLException ex) {
-        error(statusLabel, "Failed to remove boxes: " + ex.getMessage());
+        error(statusLabel, "Couldn't remove boxes. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -345,7 +346,7 @@ public class BoxInventoryView {
       } catch (IllegalArgumentException ex) {
         error(statusLabel, ex.getMessage());
       } catch (SQLException ex) {
-        error(statusLabel, "Failed to add boxes: " + ex.getMessage());
+        error(statusLabel, "Couldn't add boxes. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -379,7 +380,7 @@ public class BoxInventoryView {
           var added = inventory.add(missing, null);
           reload.accept("Added " + added + (added == 1 ? " box." : " boxes."));
         } catch (SQLException ex) {
-          error(statusLabel, "Failed to add boxes: " + ex.getMessage());
+          error(statusLabel, "Couldn't add boxes. Please try again." + Errors.detail(ex));
         }
       });
       var missingRow = new HBox(10, missingLabel, addMissingBtn);
@@ -420,7 +421,7 @@ public class BoxInventoryView {
       }
       empty = emptyBoxes();
     } catch (SQLException e) {
-      var failed = new Alert(AlertType.ERROR, "Failed to load the box inventory: " + e.getMessage());
+      var failed = new Alert(AlertType.ERROR, "Couldn't load the box inventory." + Errors.detail(e));
       failed.initOwner(owner);
       AppWindow.applyTextSize(failed);
       failed.show();

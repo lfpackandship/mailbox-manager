@@ -106,7 +106,7 @@ class AppStartupTest {
         .map(w -> ((javafx.scene.control.DialogPane) w.getScene().getRoot()).getContentText())
         .findFirst()
         .orElseThrow());
-    assertTrue(warning.contains("could not be copied to your second backup folder: The second backup folder "
+    assertTrue(warning.contains("could not be copied to your second backup folder. The second backup folder "
         + unplugged + " can't be found."), warning);
   }
 

@@ -30,6 +30,7 @@ import org.lfps.mailboxes.data.PriceRepository;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.RentalLengths;
 
 /**
@@ -72,7 +73,7 @@ final class PriceChangeView {
       sizes = PriceRepository.cheapestFirst(new BoxInventoryRepository().sizes(), current);
       message = settings.get(Setting.PRICE_CHANGE_MESSAGE);
     } catch (SQLException e) {
-      showError(resultLabel, "Failed to load prices: " + e.getMessage());
+      showError(resultLabel, "Couldn't load prices." + Errors.detail(e));
     }
     var today = current;
 
@@ -135,7 +136,7 @@ final class PriceChangeView {
         prices.scheduleChange(startsOn, changed);
         settings.put(Setting.PRICE_CHANGE_MESSAGE, messageField.getText().strip());
       } catch (SQLException ex) {
-        showError(resultLabel, "Failed to save: " + ex.getMessage());
+        showError(resultLabel, "Couldn't save. Please try again." + Errors.detail(ex));
         return false;
       }
       grid.show(entered);
@@ -162,7 +163,7 @@ final class PriceChangeView {
         }
         PriceSheetView.showNotices(mainWindow, boxes, prices.findChange());
       } catch (SQLException ex) {
-        showError(resultLabel, "Couldn't load the boxes: " + ex.getMessage());
+        showError(resultLabel, "Couldn't load the boxes." + Errors.detail(ex));
       }
     });
 
@@ -175,7 +176,7 @@ final class PriceChangeView {
       try {
         prices.cancelChange();
       } catch (SQLException ex) {
-        showError(resultLabel, "Failed to cancel: " + ex.getMessage());
+        showError(resultLabel, "Couldn't cancel. Please try again." + Errors.detail(ex));
         return;
       }
       dateField.setValue(null);

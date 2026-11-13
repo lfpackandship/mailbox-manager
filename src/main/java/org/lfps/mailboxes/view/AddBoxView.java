@@ -17,6 +17,7 @@ import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.MailHold;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
+import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.Validators;
 
 /**
@@ -231,7 +232,7 @@ public class AddBoxView {
             + "next box.");
       } catch (SQLException ex) {
         resultLabel.setStyle("-fx-text-fill: red;");
-        resultLabel.setText("Failed to save: " + ex.getMessage());
+        resultLabel.setText("Couldn't save. Please try again." + Errors.detail(ex));
       }
     });
 

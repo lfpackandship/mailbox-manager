@@ -32,6 +32,7 @@ import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.PrintedLabel;
+import org.lfps.mailboxes.util.Errors;
 
 /**
  * The Print Forwarding Label window, opened with "Print Label…" on a box's
@@ -247,7 +248,7 @@ final class ForwardingLabelView {
         record = labels.record(mailbox.getId(), label.to, LocalDateTime.now());
       } catch (SQLException ex) {
         resultLabel.setStyle("-fx-text-fill: red;");
-        resultLabel.setText("Couldn't give the label a number, so it wasn't printed: " + ex.getMessage());
+        resultLabel.setText("Couldn't give the label a number, so it wasn't printed. Please try again." + Errors.detail(ex));
         return;
       }
       Printing.printLabel("Forwarding label " + record.getNumber() + ", box " + mailbox.getBoxNumber(),

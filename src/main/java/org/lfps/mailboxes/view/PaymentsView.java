@@ -36,6 +36,7 @@ import org.lfps.mailboxes.model.DepositOutcome;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
 import org.lfps.mailboxes.util.BoxNumbers;
+import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.Money;
 
 /**
@@ -140,7 +141,7 @@ public class PaymentsView {
       }
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
-      statusLabel.setText("Failed to load payments: " + e.getMessage());
+      statusLabel.setText("Couldn't load payments." + Errors.detail(e));
     }
 
     var fromField = new DatePicker(from);
@@ -294,7 +295,7 @@ public class PaymentsView {
         refresh.run();
       } catch (SQLException ex) {
         statusLabel.setStyle("-fx-text-fill: red;");
-        statusLabel.setText("Failed to delete: " + ex.getMessage());
+        statusLabel.setText("Couldn't delete. Please try again." + Errors.detail(ex));
       }
     });
 

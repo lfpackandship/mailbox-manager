@@ -27,6 +27,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 
+import org.lfps.mailboxes.util.Errors;
+
 /**
  * Prints the lists on Manage Boxes, Renewals, and Payments, or saves them as
  * a spreadsheet (a CSV file, which Excel and Google Sheets open). Both use
@@ -143,7 +145,7 @@ final class TableOutput {
       // accented letters come out right.
       Files.writeString(file.toPath(), "﻿" + csv(tables), StandardCharsets.UTF_8);
     } catch (IOException e) {
-      throw new IllegalStateException("Couldn't save " + file.getName() + ": " + e.getMessage());
+      throw new IllegalStateException("Couldn't save " + file.getName() + "." + Errors.detail(e), e);
     }
     return "Saved " + file;
   }

@@ -7,6 +7,7 @@ import javafx.stage.Window;
 import org.lfps.mailboxes.data.BoxInventoryRepository;
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.InventoryBox;
+import org.lfps.mailboxes.util.Errors;
 
 /**
  * Checks a box number entered on the Add and Edit Box forms: that it's free
@@ -36,7 +37,7 @@ final class BoxNumberChecks {
       }
       return "";
     } catch (SQLException e) {
-      return "Could not check box number: " + e.getMessage() + "\n";
+      return "Couldn't check the box number. Please try again." + Errors.detail(e) + "\n";
     }
   }
 

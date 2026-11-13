@@ -27,6 +27,7 @@ import javafx.stage.Stage;
 import org.lfps.mailboxes.data.RentalHistoryRepository;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
+import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.Money;
 
 /**
@@ -71,7 +72,7 @@ final class BoxDetailsView {
     try {
       history = describeHistory(new RentalHistoryRepository().findForMailbox(mailbox.getId()));
     } catch (SQLException e) {
-      history = "Couldn't load the rental history: " + e.getMessage();
+      history = "Couldn't load the rental history." + Errors.detail(e);
     }
 
     var grid = new GridPane();

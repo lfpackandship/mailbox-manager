@@ -30,6 +30,7 @@ import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.SystemInfo;
 
 /**
@@ -337,7 +338,7 @@ public final class AppWindow {
     try {
       boxes = RenewalsView.dueBoxes();
     } catch (SQLException e) {
-      inform(stage, AlertType.ERROR, "Couldn't load the boxes", e.getMessage());
+      inform(stage, AlertType.ERROR, "Couldn't load the boxes", "Couldn't load the boxes." + Errors.detail(e));
       return;
     }
     if (boxes.isEmpty()) {

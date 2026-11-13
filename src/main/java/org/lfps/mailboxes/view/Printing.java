@@ -27,6 +27,8 @@ import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 
+import org.lfps.mailboxes.util.Errors;
+
 /**
  * Prints pages, such as renewal reminders, through the computer's own print
  * dialog: the Mac's Print window, with its preview and Save as PDF, or the
@@ -184,7 +186,7 @@ final class Printing {
         }
         pdf.finish();
       } catch (IOException | PrinterException e) {
-        throw new IllegalStateException("Couldn't save " + file.getFileName() + ": " + e.getMessage(), e);
+        throw new IllegalStateException("Couldn't save " + file.getFileName() + "." + Errors.detail(e), e);
       }
     }).whenComplete((done, error) -> Platform.runLater(() -> {
       if (error != null) {
@@ -298,7 +300,7 @@ final class Printing {
         result.complete(steps.run());
       } catch (PrinterException e) {
         result.completeExceptionally(new IllegalStateException(
-            "Printing didn't work. Check that the printer is on and try again." + detail(e), e));
+            "Printing didn't work. Check that the printer is on and try again." + Errors.detail(e), e));
       } catch (IllegalStateException e) {
         // Already says what's wrong, such as that no printer is set up.
         result.completeExceptionally(e);
@@ -306,7 +308,7 @@ final class Printing {
         // Errors too, such as running out of memory on a large page: this
         // thread ends here, freeing what it held, and the user can try again.
         result.completeExceptionally(new IllegalStateException(
-            "Something went wrong while printing. Check that the printer is on and try again." + detail(e), e));
+            "Something went wrong while printing. Check that the printer is on and try again." + Errors.detail(e), e));
       }
     }, "Printing");
     thread.setDaemon(true);
@@ -314,17 +316,6 @@ final class Printing {
     return result;
   }
 
-  /**
-   * Returns a problem's own explanation, to add after a message in brackets.
-   *
-   * @param problem what went wrong
-   * @return such as " (Printer is out of paper)", or nothing if it gives no
-   *     explanation
-   */
-  private static String detail(Throwable problem) {
-    var message = problem.getMessage();
-    return message == null || message.isBlank() ? "" : " (" + message + ")";
-  }
 
   /**
    * Returns the page chosen in the print dialog with as much of the paper
@@ -460,7 +451,7 @@ final class Printing {
         Thread.currentThread().interrupt();
         throw new PrinterException("Printing was stopped.");
       } catch (ExecutionException e) {
-        throw new PrinterException("Couldn't draw the page: " + e.getCause().getMessage());
+        throw new PrinterException("Couldn't draw the page." + Errors.detail(e.getCause()));
       }
     }
 

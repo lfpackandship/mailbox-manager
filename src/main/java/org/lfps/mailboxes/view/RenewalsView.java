@@ -27,6 +27,7 @@ import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
+import org.lfps.mailboxes.util.Errors;
 
 /**
  * Lists open mailboxes whose box rental has already expired and those
@@ -56,7 +57,7 @@ public class RenewalsView {
       upcoming = upcoming(mailboxes, today, windowDays);
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
-      statusLabel.setText("Failed to load mailboxes: " + e.getMessage());
+      statusLabel.setText("Couldn't load mailboxes." + Errors.detail(e));
     }
 
     var pastDueTable = buildTable(today);

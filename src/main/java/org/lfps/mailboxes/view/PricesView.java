@@ -23,6 +23,7 @@ import org.lfps.mailboxes.data.BoxInventoryRepository;
 import org.lfps.mailboxes.data.PriceRepository;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
+import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.RentalLengths;
 
 /**
@@ -68,7 +69,7 @@ final class PricesView {
       savedDescriptions = prices.findDescriptions();
       sizes = PriceRepository.cheapestFirst(new BoxInventoryRepository().sizes(), saved);
     } catch (SQLException e) {
-      showError(resultLabel, "Failed to load prices: " + e.getMessage());
+      showError(resultLabel, "Couldn't load prices." + Errors.detail(e));
     }
 
     // Leave a row under the size headings for what each size measures.
@@ -122,7 +123,7 @@ final class PricesView {
         prices.save(toSave);
         prices.saveDescriptions(descriptions);
       } catch (SQLException ex) {
-        showError(resultLabel, "Failed to save: " + ex.getMessage());
+        showError(resultLabel, "Couldn't save. Please try again." + Errors.detail(ex));
         return;
       }
       priceGrid.show(toSave);
@@ -203,7 +204,7 @@ final class PricesView {
               + ". Until then, adding or renewing a box uses the prices above. To see or change the new prices, "
               + "or print notices, click Price Change….";
     } catch (SQLException e) {
-      return "Couldn't check for a price change: " + e.getMessage();
+      return "Couldn't check for a price change." + Errors.detail(e);
     }
   }
 

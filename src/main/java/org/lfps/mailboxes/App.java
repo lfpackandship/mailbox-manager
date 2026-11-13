@@ -119,12 +119,12 @@ public class App extends Application {
     try {
       Database.backupDaily();
     } catch (RuntimeException e) {
-      backupProblems.add("Today's backup could not be made: " + Errors.rootMessage(e));
+      backupProblems.add("Today's backup could not be made." + Errors.detail(e));
     }
     try {
       Database.copyToSecondBackupFolder();
     } catch (RuntimeException e) {
-      backupProblems.add("Today's backup could not be copied to your second backup folder: " + Errors.rootMessage(e));
+      backupProblems.add("Today's backup could not be copied to your second backup folder." + Errors.reason(e));
     }
     if (!backupProblems.isEmpty()) {
       showBackupWarning(stage, backupProblems);
