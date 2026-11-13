@@ -47,9 +47,13 @@ final class RestoreView {
   /** Matches the name of a daily backup, capturing its date. */
   private static final Pattern DAILY = Pattern.compile("mailboxes-(\\d{4}-\\d{2}-\\d{2})\\.db");
 
-  /** Matches the name of the backup saved before a restore, capturing its date and time. */
+  /**
+   * Matches the name of the backup saved before a restore, capturing its date
+   * and time. A number after the time, as in {@code …-143005-2.db}, means
+   * more than one was saved in that second.
+   */
   private static final Pattern BEFORE_RESTORE =
-      Pattern.compile("mailboxes-before-restore-(\\d{4}-\\d{2}-\\d{2}-\\d{6})\\.db");
+      Pattern.compile("mailboxes-before-restore-(\\d{4}-\\d{2}-\\d{2}-\\d{6})(?:-\\d+)?\\.db");
 
   /** Matches the name of a backup saved with Back Up Now, capturing its date and time. */
   private static final Pattern EXPORTED = Pattern.compile("mailboxes-backup-(\\d{4}-\\d{2}-\\d{2}-\\d{6})\\.db");

@@ -256,6 +256,9 @@ public class Database {
    * that file. A backup from an older version is upgraded to the current
    * database layout. The upgrade is done on a copy before anything is
    * replaced, so a backup that can't be upgraded leaves the data as it was.
+   * If the current data is too damaged to be read, as when the app can't
+   * open it at startup, the damaged file itself is saved instead, so the
+   * restore still works and the file is kept in case it can be recovered.
    *
    * @param backup the backup file to restore
    * @return the backup of the data that was replaced
@@ -266,14 +269,22 @@ public class Database {
    */
   public static Path restore(Path backup) {
     requireMailboxDatabase(backup);
-    var saved = BACKUP_DIR.resolve("mailboxes-before-restore-" + LocalDateTime.now().format(TIMESTAMP) + ".db");
+    var saved = unusedName(BACKUP_DIR, "mailboxes-before-restore-" + LocalDateTime.now().format(TIMESTAMP));
     var partial = DATA_DIR.resolve(FILE_NAME + ".partial");
     try {
       try {
         Files.copy(backup, partial, StandardCopyOption.REPLACE_EXISTING);
         initSchema(partial);
         Files.createDirectories(BACKUP_DIR);
-        writeCopy(saved);
+        try {
+          writeCopy(saved);
+        } catch (SQLException unreadable) {
+          if (!Files.exists(DB_PATH)) {
+            throw unreadable;
+          }
+          // No one else has it open, so a plain copy is the file as it is.
+          Files.copy(DB_PATH, saved);
+        }
         Files.move(partial, DB_PATH, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
       } finally {
         Files.deleteIfExists(partial);
@@ -585,6 +596,24 @@ public class Database {
       problem.initCause(e);
       throw problem;
     }
+  }
+
+  /**
+   * Returns a file name for a backup that isn't taken, so an earlier backup
+   * is never replaced: the name itself, or with a number added if two are
+   * saved in the same second, such as
+   * {@code mailboxes-before-restore-2026-09-26-143005-2.db}.
+   *
+   * @param folder the folder the backup goes in
+   * @param stem the name wanted, without {@code .db}
+   * @return the file to write; it doesn't exist yet
+   */
+  private static Path unusedName(Path folder, String stem) {
+    var path = folder.resolve(stem + ".db");
+    for (var n = 2; Files.exists(path); n++) {
+      path = folder.resolve(stem + "-" + n + ".db");
+    }
+    return path;
   }
 
   /**

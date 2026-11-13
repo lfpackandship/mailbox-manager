@@ -31,6 +31,9 @@ class RestoreDescribeTest {
   void describesDataSavedBeforeARestore() {
     assertEquals("Data saved before a restore on " + AFTERNOON_TEXT,
         RestoreView.describe(Path.of("mailboxes-before-restore-2026-09-26-143005.db")));
+    // The second saved in the same second.
+    assertEquals("Data saved before a restore on " + AFTERNOON_TEXT,
+        RestoreView.describe(Path.of("mailboxes-before-restore-2026-09-26-143005-2.db")));
   }
 
   @Test
