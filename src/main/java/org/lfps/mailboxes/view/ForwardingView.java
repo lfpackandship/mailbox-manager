@@ -40,6 +40,7 @@ import org.lfps.mailboxes.model.ForwardingAddress;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.PrintedLabel;
 import org.lfps.mailboxes.util.BoxNumbers;
+import org.lfps.mailboxes.util.Errors;
 
 /**
  * The Forwarding screen, opened from File → Forwarding: everything about
@@ -114,7 +115,7 @@ public class ForwardingView {
     try {
       mailboxes = new MailboxRepository().findAll();
     } catch (SQLException e) {
-      error(statusLabel, "Failed to load the boxes: " + e.getMessage());
+      error(statusLabel, "Couldn't load the boxes." + Errors.detail(e));
     }
     var boxes = mailboxes;
 
@@ -142,7 +143,7 @@ public class ForwardingView {
         var byId = boxes.stream().collect(Collectors.toMap(Mailbox::getId, Function.identity()));
         allLabels.setAll(labelRows(new LabelRepository().findAll(), byId));
       } catch (SQLException e) {
-        error(statusLabel, "Failed to load the labels printed: " + e.getMessage());
+        error(statusLabel, "Couldn't load the labels printed." + Errors.detail(e));
       }
     };
 

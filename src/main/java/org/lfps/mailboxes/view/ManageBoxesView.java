@@ -12,6 +12,7 @@ import org.lfps.mailboxes.data.LabelRepository;
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.util.BoxNumbers;
+import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.Money;
 
 import java.util.stream.Collectors;
@@ -217,7 +218,7 @@ public class ManageBoxesView {
       }
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
-      statusLabel.setText("Failed to load mailboxes: " + e.getMessage());
+      statusLabel.setText("Couldn't load mailboxes." + Errors.detail(e));
     }
     var mailboxes = new FilteredList<>(allMailboxes);
     // A filtered list can't be reordered, so sort a view of it instead;
@@ -315,7 +316,7 @@ public class ManageBoxesView {
         refresh.run();
       } catch (SQLException ex) {
         statusLabel.setStyle("-fx-text-fill: red;");
-        statusLabel.setText("Failed to save: " + ex.getMessage());
+        statusLabel.setText("Couldn't save. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -340,7 +341,7 @@ public class ManageBoxesView {
         refresh.run();
       } catch (SQLException ex) {
         statusLabel.setStyle("-fx-text-fill: red;");
-        statusLabel.setText("Failed to delete: " + ex.getMessage());
+        statusLabel.setText("Couldn't delete. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -366,7 +367,7 @@ public class ManageBoxesView {
         refresh.run();
       } catch (SQLException ex) {
         statusLabel.setStyle("-fx-text-fill: red;");
-        statusLabel.setText("Failed to restore: " + ex.getMessage());
+        statusLabel.setText("Couldn't restore. Please try again." + Errors.detail(ex));
       }
     });
 
@@ -388,7 +389,7 @@ public class ManageBoxesView {
         refresh.run();
       } catch (SQLException ex) {
         statusLabel.setStyle("-fx-text-fill: red;");
-        statusLabel.setText("Failed to delete: " + ex.getMessage());
+        statusLabel.setText("Couldn't delete. Please try again." + Errors.detail(ex));
       }
     });
 

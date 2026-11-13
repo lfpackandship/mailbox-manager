@@ -278,7 +278,7 @@ class SettingsFeaturesTest {
     });
 
     var message = resultText(window);
-    assertTrue(message.startsWith("Saved, but today's backup couldn't be copied: The second backup folder "
+    assertTrue(message.startsWith("Saved, but today's backup couldn't be copied. The second backup folder "
         + unplugged + " can't be found."), message);
     assertEquals(unplugged.toString(), settings.get(Setting.SECOND_BACKUP_FOLDER));
   }

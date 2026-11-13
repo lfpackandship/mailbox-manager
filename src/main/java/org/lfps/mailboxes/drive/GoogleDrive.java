@@ -38,6 +38,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import org.lfps.mailboxes.drive.DriveException.Problem;
+import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.Json;
 
 /**
@@ -168,7 +169,7 @@ public final class GoogleDrive {
     try {
       return new SignIn();
     } catch (IOException e) {
-      throw new DriveException(Problem.OTHER, "Couldn't start signing in: " + e.getMessage(), e);
+      throw new DriveException(Problem.OTHER, "Couldn't start signing in." + Errors.detail(e), e);
     }
   }
 
@@ -594,7 +595,7 @@ public final class GoogleDrive {
       body.write(Files.readAllBytes(file));
       body.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
     } catch (IOException e) {
-      throw new DriveException(Problem.OTHER, "Couldn't read " + file + ": " + e.getMessage(), e);
+      throw new DriveException(Problem.OTHER, "Couldn't read " + file + "." + Errors.detail(e), e);
     }
     send(authorized(token, uploadBase + "/files?uploadType=multipart&fields=id")
         .header("Content-Type", "multipart/related; boundary=" + boundary)

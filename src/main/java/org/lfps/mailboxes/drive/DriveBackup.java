@@ -18,6 +18,7 @@ import org.lfps.mailboxes.data.Database;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.drive.DriveException.Problem;
+import org.lfps.mailboxes.util.Errors;
 
 /**
  * Backs up to Google Drive: connecting and disconnecting the user's Google
@@ -250,7 +251,7 @@ public final class DriveBackup {
     if (cause instanceof CancellationException) {
       return new DriveException(Problem.CANCELLED, "Signing in was cancelled.", cause);
     }
-    return new DriveException(Problem.OTHER, String.valueOf(cause.getMessage()), cause);
+    return new DriveException(Problem.OTHER, "Something went wrong with Google Drive." + Errors.detail(cause), cause);
   }
 
   /** Not used: backups are made with static methods. */

@@ -121,7 +121,7 @@ final class RestoreView {
     try {
       backupList.setItems(FXCollections.observableArrayList(Database.listBackups()));
     } catch (RuntimeException e) {
-      errorLabel.setText("Couldn't list the backups: " + Errors.rootMessage(e));
+      errorLabel.setText("Couldn't list the backups." + Errors.detail(e));
     }
 
     var restoreSelectedBtn = new Button("Restore");
@@ -280,7 +280,7 @@ final class RestoreView {
       showStatus(errorLabel, e.getMessage(), true);
       return false;
     } catch (RuntimeException e) {
-      showStatus(errorLabel, "Couldn't restore the backup: " + Errors.rootMessage(e), true);
+      showStatus(errorLabel, "Couldn't restore the backup. Your current data hasn't changed." + Errors.detail(e), true);
       return false;
     }
 

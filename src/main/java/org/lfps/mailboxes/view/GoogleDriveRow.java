@@ -17,6 +17,7 @@ import javafx.stage.Window;
 import org.lfps.mailboxes.drive.DriveAccount;
 import org.lfps.mailboxes.drive.DriveBackup;
 import org.lfps.mailboxes.drive.DriveException.Problem;
+import org.lfps.mailboxes.util.Errors;
 
 /**
  * The Google Drive part of the Settings window: whether backups are copied to
@@ -153,7 +154,7 @@ final class GoogleDriveRow extends VBox {
       DriveBackup.disconnect();
       showAccount(null);
     } catch (RuntimeException ex) {
-      showDetail("Couldn't disconnect: " + ex.getMessage(), true);
+      showDetail("Couldn't disconnect. Please try again." + Errors.detail(ex), true);
     }
   }
 

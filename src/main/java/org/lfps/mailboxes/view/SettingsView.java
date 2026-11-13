@@ -189,7 +189,7 @@ public class SettingsView {
         entry.getValue().setText(repository.get(entry.getKey()));
       }
     } catch (SQLException e) {
-      showError(resultLabel, "Failed to load settings: " + e.getMessage());
+      showError(resultLabel, "Couldn't load settings." + Errors.detail(e));
     }
 
     var chooseSecondFolderBtn = new Button("Choose…");
@@ -355,7 +355,7 @@ public class SettingsView {
           repository.put(entry.getKey(), entry.getValue().getText().strip());
         }
       } catch (SQLException ex) {
-        showError(resultLabel, "Failed to save: " + ex.getMessage());
+        showError(resultLabel, "Couldn't save. Please try again." + Errors.detail(ex));
         return;
       }
 
@@ -369,7 +369,7 @@ public class SettingsView {
         Database.copyToSecondBackupFolder();
         showSuccess(resultLabel, "Saved");
       } catch (RuntimeException ex) {
-        showError(resultLabel, "Saved, but today's backup couldn't be copied: " + Errors.rootMessage(ex));
+        showError(resultLabel, "Saved, but today's backup couldn't be copied." + Errors.reason(ex));
       }
     });
 
@@ -418,7 +418,7 @@ public class SettingsView {
     try {
       saved = Database.exportBackup(Database.backupDir());
     } catch (RuntimeException e) {
-      throw new IllegalStateException("Couldn't save the backup: " + Errors.rootMessage(e), e);
+      throw new IllegalStateException("Couldn't save the backup." + Errors.detail(e), e);
     }
     var message = "Saved a backup to " + saved;
 
@@ -434,8 +434,8 @@ public class SettingsView {
     try {
       Files.copy(saved, copy);
     } catch (IOException e) {
-      throw new IllegalStateException(message + ", but couldn't save a copy to " + folder + ": "
-          + Errors.rootMessage(e), e);
+      throw new IllegalStateException(message + ", but couldn't save a copy to " + folder + "."
+          + Errors.detail(e), e);
     }
     return message + ", and a copy to " + copy;
   }

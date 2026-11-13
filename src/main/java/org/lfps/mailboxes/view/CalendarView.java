@@ -26,6 +26,7 @@ import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.data.Setting;
 import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.util.Errors;
 
 /**
  * Shows a month-grid calendar with open mailboxes marked on the day their box
@@ -65,7 +66,7 @@ public class CalendarView {
           .collect(Collectors.groupingBy(Mailbox::getEndDate));
     } catch (SQLException e) {
       statusLabel.setStyle("-fx-text-fill: red;");
-      statusLabel.setText("Failed to load mailboxes: " + e.getMessage());
+      statusLabel.setText("Couldn't load mailboxes." + Errors.detail(e));
     }
 
     var prevBtn = new Button("< Prev");

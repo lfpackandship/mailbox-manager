@@ -237,7 +237,7 @@ final class ImportBoxesView {
       showStatus("Saved the template to " + file + ". Open it in Excel, Google Sheets, or Numbers to fill it in.",
           false);
     } catch (IOException e) {
-      showStatus("Couldn't save the template: " + Errors.rootMessage(e), true);
+      showStatus("Couldn't save the template." + Errors.detail(e), true);
     }
   }
 
@@ -274,7 +274,7 @@ final class ImportBoxesView {
       read = ImportReader.read(file.toPath());
     } catch (IllegalArgumentException | IOException e) {
       clear();
-      showStatus("Couldn't read " + file.getName() + ". " + Errors.rootMessage(e), true);
+      showStatus("Couldn't read " + file.getName() + "." + Errors.reason(e), true);
       return;
     }
     rows.clear();
@@ -305,7 +305,7 @@ final class ImportBoxesView {
     try {
       results = ImportCheck.againstDatabase().check(rows);
     } catch (SQLException e) {
-      showStatus("Couldn't check the boxes against those recorded: " + e.getMessage(), true);
+      showStatus("Couldn't check the boxes against those recorded." + Errors.detail(e), true);
       return;
     }
     problems.setAll(results.stream().filter(result -> !result.isOk()).collect(Collectors.toList()));
@@ -448,7 +448,7 @@ final class ImportBoxesView {
       clear();
       showStatus("Added " + boxes(added) + " from " + fileName + ". They're on Manage Boxes.", false);
     } catch (SQLException e) {
-      showStatus("Couldn't add the boxes, so none were added: " + e.getMessage(), true);
+      showStatus("Couldn't add the boxes, so none were added. Please try again." + Errors.detail(e), true);
     }
   }
 

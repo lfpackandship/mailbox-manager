@@ -21,6 +21,7 @@ import javafx.stage.Stage;
 import org.lfps.mailboxes.data.RentalHistoryRepository;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.model.RentalPeriod;
+import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.util.Money;
 
 /**
@@ -203,8 +204,8 @@ final class RenewBoxView {
         stage.close();
         onSaved.run();
       } catch (SQLException ex) {
-        errorLabel.setText((editing ? "Failed to save the changes: " : "Failed to save the renewal: ")
-            + ex.getMessage());
+        errorLabel.setText((editing ? "Couldn't save the changes." : "Couldn't save the renewal.")
+            + " Please try again." + Errors.detail(ex));
       }
     });
 

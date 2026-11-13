@@ -33,6 +33,7 @@ import javafx.util.StringConverter;
 import org.lfps.mailboxes.data.BoxInventoryRepository;
 import org.lfps.mailboxes.data.PriceRepository;
 import org.lfps.mailboxes.model.Mailbox;
+import org.lfps.mailboxes.util.Errors;
 
 /**
  * A window for printing the price sheet, either plain for new customers, as
@@ -168,7 +169,7 @@ final class PriceSheetView {
         loadedAfter = PriceSheet.loadAfter(loadedChange);
       }
     } catch (SQLException e) {
-      showError(resultLabel, "Couldn't load the prices: " + e.getMessage());
+      showError(resultLabel, "Couldn't load the prices." + Errors.detail(e));
       loaded = null;
     }
     var content = loaded;
