@@ -69,7 +69,7 @@ final class PricesView {
       savedDescriptions = prices.findDescriptions();
       sizes = PriceRepository.cheapestFirst(new BoxInventoryRepository().sizes(), saved);
     } catch (SQLException e) {
-      showError(resultLabel, "Couldn't load prices." + Errors.detail(e));
+      StatusText.showError(resultLabel, "Couldn't load prices." + Errors.detail(e));
     }
 
     // Leave a row under the size headings for what each size measures.
@@ -114,7 +114,7 @@ final class PricesView {
       try {
         toSave = priceGrid.read();
       } catch (IllegalArgumentException ex) {
-        showError(resultLabel, ex.getMessage());
+        StatusText.showError(resultLabel, ex.getMessage());
         return;
       }
       var descriptions = new HashMap<String, String>();
@@ -123,7 +123,7 @@ final class PricesView {
         prices.save(toSave);
         prices.saveDescriptions(descriptions);
       } catch (SQLException ex) {
-        showError(resultLabel, "Couldn't save. Please try again." + Errors.detail(ex));
+        StatusText.showError(resultLabel, "Couldn't save. Please try again." + Errors.detail(ex));
         return;
       }
       priceGrid.show(toSave);
@@ -208,16 +208,6 @@ final class PricesView {
     }
   }
 
-  /**
-   * Shows a problem in red.
-   *
-   * @param label where to show it
-   * @param message the problem
-   */
-  private static void showError(Label label, String message) {
-    label.setStyle("-fx-text-fill: red;");
-    label.setText(message);
-  }
 
   /** Not used: the window is built with static methods. */
   private PricesView() {

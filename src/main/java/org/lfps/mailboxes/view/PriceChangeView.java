@@ -73,7 +73,7 @@ final class PriceChangeView {
       sizes = PriceRepository.cheapestFirst(new BoxInventoryRepository().sizes(), current);
       message = settings.get(Setting.PRICE_CHANGE_MESSAGE);
     } catch (SQLException e) {
-      showError(resultLabel, "Couldn't load prices." + Errors.detail(e));
+      StatusText.showError(resultLabel, "Couldn't load prices." + Errors.detail(e));
     }
     var today = current;
 
@@ -110,7 +110,7 @@ final class PriceChangeView {
       var startsOn = dateField.getValue();
       if (startsOn == null || !startsOn.isAfter(LocalDate.now())) {
         dateField.requestFocus();
-        showError(resultLabel, "Choose a day after today for the new prices to start. To change prices "
+        StatusText.showError(resultLabel, "Choose a day after today for the new prices to start. To change prices "
             + "starting today, use the Prices window instead.");
         return false;
       }
@@ -118,7 +118,7 @@ final class PriceChangeView {
       try {
         entered = grid.read();
       } catch (IllegalArgumentException ex) {
-        showError(resultLabel, ex.getMessage());
+        StatusText.showError(resultLabel, ex.getMessage());
         return false;
       }
       // Only the prices that differ from today's make up the change.
@@ -129,14 +129,14 @@ final class PriceChangeView {
         }
       }
       if (changed.isEmpty()) {
-        showError(resultLabel, "The new prices are the same as today's. Change the ones that are going up.");
+        StatusText.showError(resultLabel, "The new prices are the same as today's. Change the ones that are going up.");
         return false;
       }
       try {
         prices.scheduleChange(startsOn, changed);
         settings.put(Setting.PRICE_CHANGE_MESSAGE, messageField.getText().strip());
       } catch (SQLException ex) {
-        showError(resultLabel, "Couldn't save. Please try again." + Errors.detail(ex));
+        StatusText.showError(resultLabel, "Couldn't save. Please try again." + Errors.detail(ex));
         return false;
       }
       grid.show(entered);
@@ -163,7 +163,7 @@ final class PriceChangeView {
         }
         PriceSheetView.showNotices(mainWindow, boxes, prices.findChange());
       } catch (SQLException ex) {
-        showError(resultLabel, "Couldn't load the boxes." + Errors.detail(ex));
+        StatusText.showError(resultLabel, "Couldn't load the boxes." + Errors.detail(ex));
       }
     });
 
@@ -176,7 +176,7 @@ final class PriceChangeView {
       try {
         prices.cancelChange();
       } catch (SQLException ex) {
-        showError(resultLabel, "Couldn't cancel. Please try again." + Errors.detail(ex));
+        StatusText.showError(resultLabel, "Couldn't cancel. Please try again." + Errors.detail(ex));
         return;
       }
       dateField.setValue(null);
@@ -232,16 +232,6 @@ final class PriceChangeView {
         .collect(Collectors.toList());
   }
 
-  /**
-   * Shows a problem in red.
-   *
-   * @param label where to show it
-   * @param message the problem
-   */
-  private static void showError(Label label, String message) {
-    label.setStyle("-fx-text-fill: red;");
-    label.setText(message);
-  }
 
   /** Not used: the window is built with static methods. */
   private PriceChangeView() {

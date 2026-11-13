@@ -189,7 +189,7 @@ public class SettingsView {
         entry.getValue().setText(repository.get(entry.getKey()));
       }
     } catch (SQLException e) {
-      showError(resultLabel, "Couldn't load settings." + Errors.detail(e));
+      StatusText.showError(resultLabel, "Couldn't load settings." + Errors.detail(e));
     }
 
     var chooseSecondFolderBtn = new Button("Choose…");
@@ -209,9 +209,9 @@ public class SettingsView {
     backUpNowBtn.setId("backUpNowButton");
     backUpNowBtn.setOnAction(e -> {
       try {
-        showSuccess(resultLabel, backUpNow(stage));
+        StatusText.showSuccess(resultLabel, backUpNow(stage));
       } catch (IllegalStateException ex) {
-        showError(resultLabel, ex.getMessage());
+        StatusText.showError(resultLabel, ex.getMessage());
       }
     });
 
@@ -337,7 +337,7 @@ public class SettingsView {
       }
 
       if (errors.length() > 0) {
-        showError(resultLabel, errors.toString().trim());
+        StatusText.showError(resultLabel, errors.toString().trim());
         showField(tabs, firstBadField[0]);
         return;
       }
@@ -355,7 +355,7 @@ public class SettingsView {
           repository.put(entry.getKey(), entry.getValue().getText().strip());
         }
       } catch (SQLException ex) {
-        showError(resultLabel, "Couldn't save. Please try again." + Errors.detail(ex));
+        StatusText.showError(resultLabel, "Couldn't save. Please try again." + Errors.detail(ex));
         return;
       }
 
@@ -367,9 +367,9 @@ public class SettingsView {
       // folder that can't be written to is noticed now rather than tomorrow.
       try {
         Database.copyToSecondBackupFolder();
-        showSuccess(resultLabel, "Saved");
+        StatusText.showSuccess(resultLabel, "Saved");
       } catch (RuntimeException ex) {
-        showError(resultLabel, "Saved, but today's backup couldn't be copied." + Errors.reason(ex));
+        StatusText.showError(resultLabel, "Saved, but today's backup couldn't be copied." + Errors.reason(ex));
       }
     });
 
@@ -593,28 +593,6 @@ public class SettingsView {
     area.setWrapText(true);
     area.setStyle("-fx-pref-width: 24em;");
     return area;
-  }
-
-  /**
-   * Shows a problem in red.
-   *
-   * @param label where to show it
-   * @param message the problem
-   */
-  private static void showError(Label label, String message) {
-    label.setStyle("-fx-text-fill: red;");
-    label.setText(message);
-  }
-
-  /**
-   * Shows that something worked, in green.
-   *
-   * @param label where to show it
-   * @param message what worked
-   */
-  private static void showSuccess(Label label, String message) {
-    label.setStyle("-fx-text-fill: green;");
-    label.setText(message);
   }
 
   /**

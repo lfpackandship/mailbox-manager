@@ -115,7 +115,7 @@ public class ForwardingView {
     try {
       mailboxes = new MailboxRepository().findAll();
     } catch (SQLException e) {
-      error(statusLabel, "Couldn't load the boxes." + Errors.detail(e));
+      StatusText.showError(statusLabel, "Couldn't load the boxes." + Errors.detail(e));
     }
     var boxes = mailboxes;
 
@@ -143,7 +143,7 @@ public class ForwardingView {
         var byId = boxes.stream().collect(Collectors.toMap(Mailbox::getId, Function.identity()));
         allLabels.setAll(labelRows(new LabelRepository().findAll(), byId));
       } catch (SQLException e) {
-        error(statusLabel, "Couldn't load the labels printed." + Errors.detail(e));
+        StatusText.showError(statusLabel, "Couldn't load the labels printed." + Errors.detail(e));
       }
     };
 
@@ -455,16 +455,6 @@ public class ForwardingView {
     });
   }
 
-  /**
-   * Shows a problem in red.
-   *
-   * @param status where to show it
-   * @param message what went wrong
-   */
-  private static void error(Label status, String message) {
-    status.setStyle("-fx-text-fill: red;");
-    status.setText(message);
-  }
 
   /** Not used: the screen is built with static methods. */
   private ForwardingView() {

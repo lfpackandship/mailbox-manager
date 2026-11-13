@@ -169,7 +169,7 @@ final class PriceSheetView {
         loadedAfter = PriceSheet.loadAfter(loadedChange);
       }
     } catch (SQLException e) {
-      showError(resultLabel, "Couldn't load the prices." + Errors.detail(e));
+      StatusText.showError(resultLabel, "Couldn't load the prices." + Errors.detail(e));
       loaded = null;
     }
     var content = loaded;
@@ -386,16 +386,6 @@ final class PriceSheetView {
         : PriceSheet.page(content, after, startsOn, box, size, today);
   }
 
-  /**
-   * Shows a problem in red.
-   *
-   * @param label where to show it
-   * @param message the problem
-   */
-  private static void showError(Label label, String message) {
-    label.setStyle("-fx-text-fill: red;");
-    label.setText(message);
-  }
 
   /** Not used: the window is built with static methods. */
   private PriceSheetView() {
