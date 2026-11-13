@@ -53,6 +53,12 @@ public class Database {
   private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss");
 
   /**
+   * The error code SQLite gives a database file that's damaged, such as one
+   * cut off part way, as opposed to a file that isn't a database at all.
+   */
+  private static final int SQLITE_CORRUPT = 11;
+
+  /**
    * Returns the directory holding the database and its backups.
    *
    * @return the per-user data directory
@@ -249,7 +255,7 @@ public class Database {
    * @param backup the backup file to restore
    * @return the backup of the data that was replaced
    * @throws IllegalArgumentException if the file isn't a Mailbox Manager
-   *     database
+   *     database, or is damaged
    * @throws RuntimeException if the restore fails; the current data is left
    *     in place
    */
@@ -522,30 +528,44 @@ public class Database {
   }
 
   /**
-   * Checks that a file is a Mailbox Manager database, before restoring it.
+   * Checks that a file is a Mailbox Manager database and isn't damaged, before
+   * restoring it, so a backup that can't be used is turned away before
+   * anything is changed. A copy cut off part way, or with garbage in the
+   * middle, still has the first page that lists the tables, so it's checked
+   * page by page as well.
    *
    * @param file the file
-   * @throws IllegalArgumentException if it isn't, with a message suitable for
-   *     showing to the user
+   * @throws IllegalArgumentException if it isn't a backup, or is damaged,
+   *     with a message suitable for showing to the user
    */
   private static void requireMailboxDatabase(Path file) {
     var notABackup = new IllegalArgumentException(
         file.getFileName() + " isn't a Mailbox Manager backup.");
+    var damaged = new IllegalArgumentException(
+        file.getFileName() + " is damaged, so it can't be restored. Try an older backup.");
     if (!Files.isRegularFile(file)) {
       throw notABackup;
     }
     var config = new SQLiteConfig();
     config.setReadOnly(true);
     try (Connection conn = config.createConnection("jdbc:sqlite:" + file);
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'mailboxes'")) {
-      if (!rs.next()) {
-        throw notABackup;
+        Statement stmt = conn.createStatement()) {
+      try (ResultSet rs = stmt.executeQuery(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'mailboxes'")) {
+        if (!rs.next()) {
+          throw notABackup;
+        }
+      }
+      // Reads every page; a sound file answers with a single "ok".
+      try (ResultSet rs = stmt.executeQuery("PRAGMA quick_check")) {
+        if (!rs.next() || !"ok".equals(rs.getString(1))) {
+          throw damaged;
+        }
       }
     } catch (SQLException e) {
-      notABackup.initCause(e);
-      throw notABackup;
+      var problem = e.getErrorCode() == SQLITE_CORRUPT ? damaged : notABackup;
+      problem.initCause(e);
+      throw problem;
     }
   }
 

@@ -98,6 +98,29 @@ class BackupTest {
   }
 
   @Test
+  void restoreRefusesADamagedBackupAndLeavesDataAlone() throws IOException, SQLException {
+    mailboxes.insert(box("101"));
+    var backup = largeBackup();
+    var bytes = Files.readAllBytes(backup);
+    // A copy cut off part way, as when a USB drive is pulled out too soon.
+    var cutOff = Files.write(elsewhere.resolve("cut-off.db"), java.util.Arrays.copyOf(bytes, bytes.length / 2));
+    // A copy the right size but with garbage in the middle. The first page,
+    // which lists the tables, is intact, so it still looks like a backup.
+    var garbled = bytes.clone();
+    java.util.Arrays.fill(garbled, bytes.length / 2, bytes.length / 2 + 4096, (byte) 0x5a);
+    var damaged = Files.write(elsewhere.resolve("damaged.db"), garbled);
+
+    for (var file : List.of(cutOff, damaged)) {
+      var error = assertThrows(IllegalArgumentException.class, () -> Database.restore(file));
+      assertEquals(file.getFileName() + " is damaged, so it can't be restored. Try an older backup.",
+          error.getMessage());
+    }
+
+    assertEquals(List.of("101"), boxNumbers(mailboxes.findAll()));
+    assertTrue(Database.listBackups().isEmpty(), Database.listBackups().toString());
+  }
+
+  @Test
   void restoreUpgradesABackupFromAnOlderVersion() throws SQLException {
     // The layout used before box names, end dates, and settings existed.
     var old = elsewhere.resolve("old.db");
@@ -209,6 +232,21 @@ class BackupTest {
   /** Makes a box with the given number and a holder. */
   private static Mailbox box(String boxNumber) {
     return new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "(555) 123-4567", null, null, null, null);
+  }
+
+  /**
+   * Saves a backup of the current data, padded with a table of filler so it
+   * spans many pages, as a real shop's backup does.
+   */
+  private Path largeBackup() throws SQLException {
+    var backup = Database.exportBackup(elsewhere);
+    try (var conn = java.sql.DriverManager.getConnection("jdbc:sqlite:" + backup);
+        var stmt = conn.createStatement()) {
+      stmt.execute("CREATE TABLE filler (x BLOB)");
+      stmt.execute("WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 300) "
+          + "INSERT INTO filler SELECT randomblob(100) FROM n");
+    }
+    return backup;
   }
 
   /** Returns the boxes' numbers, in the same order. */
