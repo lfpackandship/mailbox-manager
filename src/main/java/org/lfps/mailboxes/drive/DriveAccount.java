@@ -12,6 +12,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Properties;
 
 import org.lfps.mailboxes.data.Database;
+import org.lfps.mailboxes.util.OwnerOnly;
 
 /**
  * The Google account backups are uploaded to, as saved after signing in.
@@ -119,7 +120,9 @@ public final class DriveAccount {
   }
 
   /**
-   * Saves the account, replacing any saved before.
+   * Saves the account, replacing any saved before. The file is made private
+   * to the computer's current user (see {@link OwnerOnly}) before the sign-in
+   * is written to it, so no one else can read it even for a moment.
    *
    * @throws RuntimeException if the file can't be written
    */
@@ -134,6 +137,10 @@ public final class DriveAccount {
     var partial = file.resolveSibling(FILE_NAME + ".partial");
     try {
       Files.createDirectories(file.getParent());
+      // Made empty and private first; writing keeps the permissions.
+      Files.deleteIfExists(partial);
+      Files.createFile(partial);
+      OwnerOnly.restrict(partial);
       try (Writer out = Files.newBufferedWriter(partial, StandardCharsets.UTF_8)) {
         props.store(out, "Mailbox Manager's Google Drive sign-in. Delete this file to disconnect.");
       }

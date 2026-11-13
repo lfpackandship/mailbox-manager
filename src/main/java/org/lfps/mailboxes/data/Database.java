@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.lfps.mailboxes.util.OwnerOnly;
 import org.sqlite.SQLiteConfig;
 
 /**
@@ -78,9 +79,11 @@ public class Database {
   }
 
   /**
-   * Creates the data directory if needed and, on first run, moves a
+   * Creates the data directory if needed, makes it private to the computer's
+   * current user (see {@link OwnerOnly}), and, on first run, moves a
    * {@code mailboxes.db} left in the working directory by older versions
-   * into it.
+   * into it. The folder is made private each time, so a folder made by an
+   * older version is made private too.
    *
    * @throws RuntimeException if the directory cannot be created or the old
    *     database cannot be moved
@@ -88,6 +91,7 @@ public class Database {
   public static void prepareDataDir() {
     try {
       Files.createDirectories(DATA_DIR);
+      OwnerOnly.restrict(DATA_DIR);
       var legacy = Paths.get(FILE_NAME).toAbsolutePath();
       if (!Files.exists(DB_PATH) && Files.exists(legacy)) {
         Files.move(legacy, DB_PATH);

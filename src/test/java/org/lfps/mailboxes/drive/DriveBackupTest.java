@@ -92,6 +92,19 @@ class DriveBackupTest {
   }
 
   @Test
+  void theSavedSignInCanBeReadOnlyByThisComputersUser() throws Exception {
+    var file = Database.dataDir().resolve("google-drive.properties");
+    org.junit.jupiter.api.Assumptions.assumeTrue(
+        Files.getFileAttributeView(Database.dataDir(), java.nio.file.attribute.PosixFileAttributeView.class) != null,
+        "Only Unix-style file systems have these permissions");
+
+    await(DriveBackup.connect(google.browser()));
+
+    assertEquals("rw-------", java.nio.file.attribute.PosixFilePermissions.toString(
+        Files.getPosixFilePermissions(file)));
+  }
+
+  @Test
   void clickingCancelOnGooglesPageLeavesDriveDisconnected() {
     google.denySignIn = true;
 
