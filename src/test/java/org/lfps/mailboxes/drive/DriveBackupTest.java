@@ -177,6 +177,24 @@ class DriveBackupTest {
   }
 
   @Test
+  void anOldBackupThatCantBeDeletedDoesntFailTheUpload() throws Exception {
+    new SettingsRepository().put(Setting.BACKUPS_TO_KEEP, "1");
+    google.addBackup("mailboxes-2020-01-01.db");
+    google.addBackup("mailboxes-2020-01-02.db");
+    google.undeletable = "mailboxes-2020-01-02.db";
+    await(DriveBackup.connect(google.browser()));
+    Database.backupDaily();
+
+    var account = await(DriveBackup.backUpTodayInBackground());
+
+    assertNotNull(account.lastBackup());
+    assertNotNull(DriveBackup.account().lastBackup());
+    // The other old one is still deleted.
+    assertEquals(List.of("mailboxes-2020-01-02.db", Database.todaysBackup().getFileName().toString()),
+        google.backupNames());
+  }
+
+  @Test
   void listsTheBackupsInGoogleDriveNewestFirst() throws Exception {
     google.addBackup("mailboxes-2026-09-01.db");
     google.addBackup("mailboxes-2026-09-03.db");

@@ -300,7 +300,10 @@ public final class GoogleDrive {
 
   /**
    * Uploads a daily backup to the backups folder if it isn't there yet, then
-   * deletes all but the newest daily backups there.
+   * deletes all but the newest daily backups there. An old backup that can't
+   * be deleted, as when it was already deleted from another computer, is left
+   * for the next upload to try again, and doesn't make this one fail, since
+   * the backup is safely in Google Drive by then.
    *
    * @param refreshToken the saved sign-in
    * @param backup the backup file to upload
@@ -316,15 +319,25 @@ public final class GoogleDrive {
     var name = backup.getFileName().toString();
     if (files.stream().noneMatch(f -> f.name.equals(name))) {
       uploadFile(token, folderId, backup);
+      // Counted among those kept, with no id as it's never deleted here.
       files.add(new DriveFile("", name));
     }
     var old = files.stream()
         .filter(f -> isDailyBackup.test(f.name))
         .sorted(Comparator.comparing((DriveFile f) -> f.name).reversed())
         .skip(Math.max(1, backupsToKeep))
+        .filter(f -> !f.id.isEmpty())
         .collect(Collectors.toList());
     for (var file : old) {
-      send(authorized(token, apiBase + "/files/" + file.id).DELETE(), REQUEST_TIMEOUT);
+      try {
+        send(authorized(token, apiBase + "/files/" + file.id).DELETE(), REQUEST_TIMEOUT);
+      } catch (DriveException e) {
+        // Offline, signed out, or stopped: the rest would fail the same way,
+        // each after a wait, so leave them all for next time.
+        if (e.problem() != Problem.OTHER) {
+          return;
+        }
+      }
     }
   }
 

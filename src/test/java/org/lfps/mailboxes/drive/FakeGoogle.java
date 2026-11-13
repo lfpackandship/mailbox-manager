@@ -70,6 +70,12 @@ public final class FakeGoogle {
   /** How many backups have been downloaded. */
   public int downloads;
 
+  /**
+   * The name of a file that can't be deleted, as when it was already deleted
+   * from another computer, or {@code null} if all can be.
+   */
+  public volatile String undeletable;
+
   private final HttpServer server;
   private final String base;
   private final GoogleDrive previous = DriveBackup.drive;
@@ -274,7 +280,12 @@ public final class FakeGoogle {
       return;
     }
     if (path.startsWith("/drive/v3/files/") && method.equals("DELETE")) {
-      files.remove(path.substring("/drive/v3/files/".length()));
+      var id = path.substring("/drive/v3/files/".length());
+      if (files.containsKey(id) && files.get(id).name.equals(undeletable)) {
+        reply(exchange, 404, "{\"error\":{\"message\":\"File not found: " + id + ".\"}}");
+        return;
+      }
+      files.remove(id);
       reply(exchange, 204, "");
       return;
     }
