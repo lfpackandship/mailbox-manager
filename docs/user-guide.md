@@ -426,7 +426,10 @@ Only the person signed in to the computer can open this folder, since it
 holds every box holder's details. On Windows and macOS that's already how
 these folders work; on Linux the app sets it up each time it starts.
 
-If something unexpected goes wrong, the app writes the details in
+If something unexpected goes wrong, the app shows a "Something went wrong"
+message, since what you just did may not have finished: check whether it
+worked, and if not, try again. If it keeps happening, close the app and open it
+again. The app also writes the details in
 `errors.log` in the same folder. It's only useful to whoever helps you with a
 problem, so send it to them if they ask. It never grows past about 1 MB: once
 it's full it's renamed `errors-old.log` and a new one is started. It isn't
