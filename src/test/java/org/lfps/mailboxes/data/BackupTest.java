@@ -121,6 +121,34 @@ class BackupTest {
   }
 
   @Test
+  void restoringTwiceInOneSecondKeepsBothSavedCopies() throws SQLException {
+    mailboxes.insert(box("101"));
+    var backup = Database.exportBackup(elsewhere);
+
+    // Fast enough that both usually fall in the same second, which the name
+    // goes down to; either way, neither may replace the other.
+    var first = Database.restore(backup);
+    var second = Database.restore(backup);
+
+    assertFalse(first.equals(second), first + " and " + second);
+    assertTrue(Files.exists(first) && Files.exists(second));
+  }
+
+  @Test
+  void restoreWorksOverDamagedDataAndKeepsTheDamagedFile() throws IOException, SQLException {
+    mailboxes.insert(box("101"));
+    var backup = Database.exportBackup(elsewhere);
+    var damaged = "not a database any more".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    Files.write(Database.dataDir().resolve("mailboxes.db"), damaged);
+
+    var saved = Database.restore(backup);
+
+    assertEquals(List.of("101"), boxNumbers(mailboxes.findAll()));
+    assertTrue(saved.getFileName().toString().startsWith("mailboxes-before-restore-"), saved.toString());
+    assertTrue(java.util.Arrays.equals(damaged, Files.readAllBytes(saved)));
+  }
+
+  @Test
   void restoreThatCantBeUpgradedLeavesDataAlone() throws SQLException {
     mailboxes.insert(box("101"));
     var backup = Database.exportBackup(elsewhere);

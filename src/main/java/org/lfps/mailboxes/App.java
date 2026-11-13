@@ -1,5 +1,6 @@
 package org.lfps.mailboxes;
 
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import org.lfps.mailboxes.util.Errors;
 import org.lfps.mailboxes.view.AppWindow;
 import org.lfps.mailboxes.view.MainMenuView;
 import org.lfps.mailboxes.view.SettingsView;
+import org.lfps.mailboxes.view.StartupProblemView;
 import org.lfps.mailboxes.view.WindowPlacement;
 
 /**
@@ -49,8 +51,72 @@ public class App extends Application {
   /** Checks every {@link #DAY_CHECK_INTERVAL} for a new day; {@code null} until the app starts. */
   private Timeline dayCheck;
 
+  /**
+   * Where the data that couldn't be opened at startup was saved when a backup
+   * was restored in its place, so the user can be told once the main window
+   * is open; {@code null} if nothing was restored.
+   */
+  private Path restoredAtStart;
+
+  /** Asks which backup to restore when the data can't be opened at startup. */
+  interface StartupProblem {
+    /**
+     * Says the data couldn't be opened, and asks for a backup to restore.
+     *
+     * @param problem why the data couldn't be opened
+     * @param restoreProblem why the backup chosen last time couldn't be
+     *     restored, or {@code null} the first time
+     * @return the backup to restore, or {@code null} to quit
+     */
+    Path chooseBackup(RuntimeException problem, RuntimeException restoreProblem);
+  }
+
+  /**
+   * Asks which backup to restore when the data can't be opened. Replaceable
+   * so tests can answer without a real dialog.
+   */
+  static StartupProblem startupProblem = StartupProblemView::chooseBackup;
+
+  /** Closes the app. Replaceable so tests can check it without closing JavaFX. */
+  static Runnable quit = Platform::exit;
+
   /** Makes the app; JavaFX calls this when it starts. */
   public App() {
+  }
+
+  /**
+   * Prepares the data folder and opens the database, upgrading it if it's
+   * from an older version. If that fails, as when the disk is full or the
+   * file is damaged, the problem is written in the {@link ErrorLog} and the
+   * user is told, and offered to restore a backup, after which it's tried
+   * again; they can keep trying backups until one works or they quit. A
+   * backup restored is kept in {@link #restoredAtStart}.
+   *
+   * @return {@code true} once the data is open, or {@code false} if the user
+   *     chose to quit
+   */
+  private boolean openData() {
+    RuntimeException restoreProblem = null;
+    while (true) {
+      try {
+        Database.prepareDataDir();
+        Database.initSchema();
+        return true;
+      } catch (RuntimeException e) {
+        ErrorLog.record("Opening the data as the app started", e);
+        var backup = startupProblem.chooseBackup(e, restoreProblem);
+        if (backup == null) {
+          return false;
+        }
+        try {
+          restoredAtStart = Database.restore(backup);
+          restoreProblem = null;
+        } catch (RuntimeException r) {
+          ErrorLog.record("Restoring " + backup + " as the app started", r);
+          restoreProblem = r;
+        }
+      }
+    }
   }
 
   /**
@@ -70,24 +136,31 @@ public class App extends Application {
   }
 
   /**
-   * Locates the database, initializes its schema, erases boxes deleted more
+   * Opens the database (see {@link #openData()}), erases boxes deleted more
    * than 30 days ago, shows the main menu where the window was when the app
    * last closed, and makes today's backup (see {@link #backUpToday()}). While
    * the app stays open, each new day's backup is made when the date changes.
+   * If the data can't be opened and the user doesn't restore a backup, the
+   * app quits without showing the main window.
    *
    * @param stage the primary window supplied by the JavaFX runtime
    */
   @Override
   public void start(Stage stage) {
     AppWindow.init(getHostServices());
-    Database.prepareDataDir();
-    Database.initSchema();
+    if (!openData()) {
+      quit.run();
+      return;
+    }
     eraseOldDeletedBoxes();
 
     stage.setTitle("Mailbox Manager");
     WindowPlacement.restore(stage);
     this.stage = stage;
     MainMenuView.show(stage);
+    if (restoredAtStart != null) {
+      showRestored(stage, restoredAtStart);
+    }
 
     backUpToday();
     // The shop's computer may be left on with the app open for days, so a
@@ -144,16 +217,20 @@ public class App extends Application {
    * Saves where the main window is and how big, so it opens the same way next
    * time, and brings today's backup up to date so it has the day's work.
    * JavaFX calls this when the app closes, however it's closed. A backup
-   * problem isn't shown then, only written in the {@link ErrorLog}.
+   * problem isn't shown then, only written in the {@link ErrorLog}. If the
+   * data couldn't be opened and the app quit, nothing is saved, as there's
+   * nothing sound to save.
    */
   @Override
   public void stop() {
     if (dayCheck != null) {
       dayCheck.stop();
     }
-    if (stage != null) {
-      WindowPlacement.save(stage);
+    // Set only once the data has opened and the main window is showing.
+    if (stage == null) {
+      return;
     }
+    WindowPlacement.save(stage);
     try {
       Database.updateTodaysBackup();
     } catch (RuntimeException e) {
@@ -162,6 +239,23 @@ public class App extends Application {
       // start warns if backups can't be made.
       ErrorLog.record("Bringing today's backup up to date as the app closed", e);
     }
+  }
+
+  /**
+   * Says that a backup was restored because the data couldn't be opened, and
+   * where the data it replaced was kept. It doesn't wait to be closed.
+   *
+   * @param owner the main window
+   * @param saved where the data that couldn't be opened was saved
+   */
+  private static void showRestored(Stage owner, Path saved) {
+    var alert = new Alert(AlertType.INFORMATION, "Mailbox Manager is using the backup you chose. The data that "
+        + "couldn't be opened was kept as " + saved.getFileName() + " in the backups folder.");
+    alert.initOwner(owner);
+    alert.setTitle("Backup Restored");
+    alert.setHeaderText("Backup restored");
+    AppWindow.applyTextSize(alert);
+    alert.show();
   }
 
   /**

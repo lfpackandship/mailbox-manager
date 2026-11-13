@@ -515,6 +515,20 @@ Each backup is checked before anything is replaced. If one is damaged, for
 example a copy cut off because a USB drive was unplugged too soon, the app
 says so and leaves your current data as it is; try an older backup instead.
 
+### If the app can't open your data
+
+If the app can't open your data when it starts, for example because the disk
+is full or the data file is damaged, it says so instead of opening, and shows
+where the data folder is.
+
+- If the disk is full, click **Quit**, make some space, and open the app
+  again.
+- Otherwise, click **Restore a Backup…** and choose one, usually the newest
+  in the `backups` folder. The app opens with that backup, and keeps the file
+  it couldn't open in the `backups` folder, listed as "Data saved before a
+  restore". If the backup can't be restored either, the app says why and lets
+  you choose another.
+
 ## Running the jar instead
 
 Each release also includes a jar for each system (`…-<platform>.jar`), which

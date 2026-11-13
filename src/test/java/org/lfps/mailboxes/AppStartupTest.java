@@ -1,10 +1,12 @@
 package org.lfps.mailboxes;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -26,10 +28,12 @@ import org.lfps.mailboxes.data.SettingsRepository;
 import org.lfps.mailboxes.data.TestSandbox;
 import org.lfps.mailboxes.model.Mailbox;
 import org.lfps.mailboxes.view.FxTestSupport;
+import org.lfps.mailboxes.view.StartupProblemView;
 
 /**
  * Tests for starting the app: it opens normally after the daily backup, and
- * still opens, with a warning, when a backup can't be made or copied. Also
+ * still opens, with a warning, when a backup can't be made or copied; and
+ * when the data can't be opened, offers to restore a backup or quit. Also
  * covers backing up when the app closes and when the date changes while it's
  * open.
  */
@@ -50,6 +54,13 @@ class AppStartupTest {
   /** The apps started by a test, stopped after it so their day checks don't run on. */
   private final List<App> started = new ArrayList<>();
 
+  private final App.StartupProblem realStartupProblem = App.startupProblem;
+
+  private final Runnable realQuit = App.quit;
+
+  /** Whether a test left the database damaged, so it's removed afterwards for the next test. */
+  private boolean damaged;
+
   @AfterEach
   void cleanUp() throws IOException {
     FxTestSupport.run(() -> {
@@ -58,6 +69,11 @@ class AppStartupTest {
         window.hide();
       }
     });
+    App.startupProblem = realStartupProblem;
+    App.quit = realQuit;
+    if (damaged) {
+      Files.deleteIfExists(Database.dataDir().resolve("mailboxes.db"));
+    }
     // Undo the failures set up below, if any.
     try {
       new SettingsRepository().put(Setting.SECOND_BACKUP_FOLDER, "");
@@ -67,6 +83,65 @@ class AppStartupTest {
     if (Files.isRegularFile(BACKUP_DIR)) {
       Files.delete(BACKUP_DIR);
     }
+  }
+
+  @Test
+  void damagedDataCanBeReplacedWithABackupAsTheAppStarts() throws IOException, SQLException {
+    var backup = backupWithBox("101");
+    damageTheData();
+    var asked = new ArrayList<RuntimeException>();
+    App.startupProblem = (problem, restoreProblem) -> {
+      asked.add(restoreProblem);
+      return backup;
+    };
+
+    var mainWindow = startApp();
+
+    assertTrue(FxTestSupport.call(mainWindow::isShowing));
+    assertEquals(java.util.Collections.singletonList(null), asked);
+    assertEquals(List.of("101"), boxNumbersIn(Database.dataDir().resolve("mailboxes.db")));
+    assertTrue(windowTitles().contains("Backup Restored"), windowTitles().toString());
+    assertTrue(Files.readString(org.lfps.mailboxes.data.ErrorLog.file()).contains("Opening the data as the app started"));
+  }
+
+  @Test
+  void choosingQuitWhenTheDataCantBeOpenedClosesTheApp() throws IOException {
+    damageTheData();
+    // Left by an earlier test, if any; checked below that none is made.
+    Files.deleteIfExists(Database.todaysBackup());
+    var quit = new java.util.concurrent.atomic.AtomicBoolean();
+    App.startupProblem = (problem, restoreProblem) -> null;
+    App.quit = () -> quit.set(true);
+
+    var mainWindow = startApp();
+
+    assertTrue(quit.get());
+    assertFalse(FxTestSupport.call(mainWindow::isShowing));
+    // Nothing is backed up from data that couldn't be opened, when starting or closing.
+    FxTestSupport.run(() -> started.forEach(App::stop));
+    assertFalse(Files.exists(Database.todaysBackup()));
+  }
+
+  @Test
+  void aBackupThatCantBeRestoredAsksAgainAndSaysWhy() throws IOException, SQLException {
+    var good = backupWithBox("101");
+    damageTheData();
+    var notABackup = Files.writeString(Database.dataDir().resolve("elsewhere-notes.db"), "notes");
+    var asked = new ArrayList<RuntimeException>();
+    App.startupProblem = (problem, restoreProblem) -> {
+      asked.add(restoreProblem);
+      return asked.size() == 1 ? notABackup : good;
+    };
+
+    var mainWindow = startApp();
+
+    assertTrue(FxTestSupport.call(mainWindow::isShowing));
+    assertEquals(2, asked.size());
+    assertEquals("elsewhere-notes.db isn't a Mailbox Manager backup.", asked.get(1).getMessage());
+    var message = StartupProblemView.message(new RuntimeException("file is not a database"), asked.get(1));
+    assertTrue(message.startsWith("elsewhere-notes.db isn't a Mailbox Manager backup.\n\n"), message);
+    assertTrue(message.contains("(file is not a database)"), message);
+    assertTrue(message.endsWith("Your data folder is " + Database.dataDir()), message);
   }
 
   @Test
@@ -136,6 +211,25 @@ class AppStartupTest {
 
     FxTestSupport.run(() -> app.backUpIfNewDay(LocalDate.now().plusDays(1)));
     assertTrue(Files.exists(Database.todaysBackup()));
+  }
+
+  /** Saves a backup holding one box with the given number, and returns it. */
+  private static Path backupWithBox(String boxNumber) throws SQLException {
+    Database.prepareDataDir();
+    Database.initSchema();
+    try (var conn = Database.connect(); var stmt = conn.createStatement()) {
+      stmt.execute("DELETE FROM mailboxes");
+    }
+    new MailboxRepository().insert(new Mailbox(0, "Ada", "Lovelace", null, boxNumber, null, "", null, null, null,
+        null));
+    return Database.exportBackup(Database.dataDir().resolve("elsewhere"));
+  }
+
+  /** Overwrites the database with something that isn't one, as a damaged file would be. */
+  private void damageTheData() throws IOException {
+    Database.prepareDataDir();
+    Files.writeString(Database.dataDir().resolve("mailboxes.db"), "not a database any more");
+    damaged = true;
   }
 
   /** Starts the app in a new window, as when it's opened, and returns the window. */
