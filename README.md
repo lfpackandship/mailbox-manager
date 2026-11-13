@@ -107,7 +107,7 @@ the repository so that copies of the code don't use your Google project.
 src/main/java/org/lfps/mailboxes/
   App.java        start-up: data folder, database schema, backups, main window
   Launcher.java   entry point of the jar and installers, which hands off to App
-  data/           database access, one repository per kind of record
+  data/           database access, one repository per kind of record, and the error log
   drive/          Google Drive backups
   importing/      Import Boxes: the template, reading .xlsx and .csv, checking rows
   model/          boxes, rentals, addresses, labels, notes, and mail holds
