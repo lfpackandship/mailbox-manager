@@ -121,6 +121,26 @@ class BackupTest {
   }
 
   @Test
+  void restoreThatCantBeUpgradedLeavesDataAlone() throws SQLException {
+    mailboxes.insert(box("101"));
+    var backup = Database.exportBackup(elsewhere);
+    // Sound, but with a table where the upgrade adds an index of that name,
+    // so upgrading it fails.
+    try (var conn = java.sql.DriverManager.getConnection("jdbc:sqlite:" + backup);
+        var stmt = conn.createStatement()) {
+      stmt.execute("DROP INDEX business_names_mailbox");
+      stmt.execute("CREATE TABLE business_names_mailbox (x)");
+    }
+    mailboxes.insert(box("102"));
+
+    assertThrows(RuntimeException.class, () -> Database.restore(backup));
+
+    assertEquals(List.of("101", "102"), boxNumbers(mailboxes.findAll()));
+    assertTrue(Database.listBackups().isEmpty(), Database.listBackups().toString());
+    assertFalse(Files.exists(Database.dataDir().resolve("mailboxes.db.partial")));
+  }
+
+  @Test
   void restoreUpgradesABackupFromAnOlderVersion() throws SQLException {
     // The layout used before box names, end dates, and settings existed.
     var old = elsewhere.resolve("old.db");
