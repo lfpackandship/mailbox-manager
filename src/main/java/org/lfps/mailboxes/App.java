@@ -18,6 +18,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import org.lfps.mailboxes.data.Database;
+import org.lfps.mailboxes.data.ErrorLog;
 import org.lfps.mailboxes.data.MailboxRepository;
 import org.lfps.mailboxes.drive.DriveBackup;
 import org.lfps.mailboxes.drive.DriveException;
@@ -56,13 +57,15 @@ public class App extends Application {
    * Erases for good the boxes deleted more than 30 days ago, which until then
    * are kept under Recently deleted on Manage Boxes to be restored. Their
    * payments are kept. If it fails, they're simply erased the next time the
-   * app starts, so the user isn't troubled with it.
+   * app starts, so the user isn't troubled with it; the problem is only
+   * written in the {@link ErrorLog}.
    */
   private static void eraseOldDeletedBoxes() {
     try {
       new MailboxRepository().eraseDeletedBefore(LocalDate.now().minusDays(30));
     } catch (SQLException e) {
-      // Tried again at the next start.
+      // Tried again at the next start; only written down.
+      ErrorLog.record("Erasing boxes deleted more than 30 days ago", e);
     }
   }
 
@@ -140,7 +143,8 @@ public class App extends Application {
   /**
    * Saves where the main window is and how big, so it opens the same way next
    * time, and brings today's backup up to date so it has the day's work.
-   * JavaFX calls this when the app closes, however it's closed.
+   * JavaFX calls this when the app closes, however it's closed. A backup
+   * problem isn't shown then, only written in the {@link ErrorLog}.
    */
   @Override
   public void stop() {
@@ -156,6 +160,7 @@ public class App extends Application {
       // Not shown, as the app is closing, and it may be closed several
       // times a day. Today's earlier backup is still there, and the next
       // start warns if backups can't be made.
+      ErrorLog.record("Bringing today's backup up to date as the app closed", e);
     }
   }
 
