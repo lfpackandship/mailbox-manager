@@ -473,7 +473,8 @@ new day, if it's left open), to a folder in your Google Drive called
 **Mailbox Manager Backups**. It isn't uploaded again each time the app
 closes, so a day's work reaches Google Drive in the next day's backup. The app
 deletes old backups there the same way it does on the computer, keeping as
-many as **Daily backups to keep** says. The app can only see the files it
+many as **Daily backups to keep** says. If an old one can't be deleted, the app
+tries again with the next day's backup. The app can only see the files it
 puts in your Google Drive, not anything else there.
 
 Settings shows when the last backup was uploaded. If an upload fails, for
