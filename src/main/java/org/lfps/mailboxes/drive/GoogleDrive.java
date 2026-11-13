@@ -251,12 +251,15 @@ public final class GoogleDrive {
 
     /**
      * Handles the browser arriving back from Google: shows the user a page
-     * saying whether it worked, and finishes the sign-in.
+     * saying whether it worked, and finishes the sign-in. The sign-in is
+     * finished whatever happens, even if the page can't be shown (as when
+     * the tab was closed) or something unexpected goes wrong, so the app
+     * never waits out {@value GoogleDrive#SIGN_IN_MINUTES} minutes for a
+     * sign-in that's already over.
      *
      * @param exchange the browser's request
-     * @throws IOException if the page can't be sent to the browser
      */
-    private void handle(HttpExchange exchange) throws IOException {
+    private void handle(HttpExchange exchange) {
       var params = parseQuery(exchange.getRequestURI().getRawQuery());
       // Ignore anything but Google's reply, such as the browser asking for an icon.
       if (!state.equals(params.get("state")) || result.isDone()) {
@@ -274,15 +277,23 @@ public final class GoogleDrive {
             : new DriveException(Problem.OTHER, "Google couldn't sign you in (" + params.get("error") + ")."));
         return;
       }
+      DriveAccount account;
       try {
-        var account = exchangeCode(params.getOrDefault("code", ""), verifier, redirectUri);
-        respond(exchange, 200, "Connected",
-            "Mailbox Manager is connected to Google Drive. You can close this tab and go back to the app.");
-        result.complete(account);
+        account = exchangeCode(params.getOrDefault("code", ""), verifier, redirectUri);
       } catch (DriveException e) {
         respond(exchange, 200, "Not connected", e.getMessage() + " You can close this tab.");
         result.completeExceptionally(e);
+        return;
+      } catch (RuntimeException e) {
+        respond(exchange, 200, "Not connected",
+            "Something went wrong while connecting to Google Drive. Please try again. You can close this tab.");
+        result.completeExceptionally(new DriveException(Problem.OTHER,
+            "Something went wrong while connecting to Google Drive. Please try again.", e));
+        return;
       }
+      respond(exchange, 200, "Connected",
+          "Mailbox Manager is connected to Google Drive. You can close this tab and go back to the app.");
+      result.complete(account);
     }
   }
 
@@ -700,23 +711,28 @@ public final class GoogleDrive {
   }
 
   /**
-   * Shows a short page in the browser, such as to say signing in worked.
+   * Shows a short page in the browser, such as to say signing in worked. If
+   * the page can't be sent, as when the tab was closed, nothing more is
+   * done: the page is only a courtesy, and the app says how it went either way.
    *
    * @param exchange the browser's request
    * @param status the HTTP status to reply with
    * @param title the page's heading
    * @param message the text under the heading
-   * @throws IOException if the page can't be sent
    */
-  private static void respond(HttpExchange exchange, int status, String title, String message) throws IOException {
+  private static void respond(HttpExchange exchange, int status, String title, String message) {
     var html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>Mailbox Manager – " + title
         + "</title></head><body style=\"font-family: sans-serif; margin: 3em;\"><h1>" + title
         + "</h1><p>" + escapeHtml(message) + "</p></body></html>";
     var bytes = html.getBytes(StandardCharsets.UTF_8);
-    exchange.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
-    exchange.sendResponseHeaders(status, bytes.length);
-    try (var out = exchange.getResponseBody()) {
-      out.write(bytes);
+    try {
+      exchange.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
+      exchange.sendResponseHeaders(status, bytes.length);
+      try (var out = exchange.getResponseBody()) {
+        out.write(bytes);
+      }
+    } catch (IOException browserLeft) {
+      exchange.close();
     }
   }
 
